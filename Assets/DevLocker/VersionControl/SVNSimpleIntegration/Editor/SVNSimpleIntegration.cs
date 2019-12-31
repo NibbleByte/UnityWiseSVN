@@ -82,11 +82,16 @@ namespace DevLocker.VersionControl.SVN
 			public VCProperty PropertyStatus;
 			public VCTreeConflictStatus TreeConflictStatus;
 
+			public string Path;
+
 			public bool IsConflicted => 
 				Status == VCFileStatus.Conflicted || 
 				PropertyStatus == VCProperty.Conflicted ||
 				TreeConflictStatus == VCTreeConflictStatus.TreeConflict;
 		}
+
+		public static readonly string ProjectRoot;
+		public static readonly string ProjectDataPath;
 
 		public static bool Enabled { get; private set; }
 		public static bool TemporaryDisabled => m_TemporaryDisabledCount > 0;	// Temporarily disable the integration (by code).
@@ -171,6 +176,9 @@ namespace DevLocker.VersionControl.SVN
 
 		static SVNSimpleIntegration()
 		{
+			ProjectDataPath = Application.dataPath;
+			ProjectRoot = Path.GetDirectoryName(Application.dataPath);
+
 			Enabled = EditorPrefs.GetBool("SVNIntegration", true);
 
 			if (File.Exists(PROJECT_PREFERENCES_PATH)) {
@@ -384,79 +392,118 @@ namespace DevLocker.VersionControl.SVN
 		}
 
 
-		public static StatusData GetStatus(string path)
+		private static bool IsCriticalError(string error, out string displayMessage)
+		{
+			// svn: warning: W155010: The node '...' was not found.
+			// This can be returned when path is under unversioned directory. In that case we consider it is unversioned as well.
+			if (error.Contains("W155010")) {
+				displayMessage = string.Empty;
+				return false;
+			}
+
+			// svn: warning: W155007: '...' is not a working copy!
+			// This can be returned when project is not a valid svn checkout. (Probably)
+			if (error.Contains("W155007")) {
+				displayMessage = string.Empty;
+				return false;
+			}
+
+			// System.ComponentModel.Win32Exception (0x80004005): ApplicationName='...', CommandLine='...', Native error= The system cannot find the file specified.
+			// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
+			// This is allowed only if there isn't ProjectPreference specified CLI path.
+			if (error.Contains("0x80004005") && string.IsNullOrEmpty(m_ProjectPreferences.SvnCLIPath)) {
+				displayMessage = $"SVN CLI (Command Line Interface) not found. " +
+					$"Please install it or specify path to a valid svn.exe in the svn project preferences at:\n{PROJECT_PREFERENCES_MENU}\n\n" +
+					$"You can disable the SVN integration from:\n{TURN_OFF_MENU}";
+
+				return false;
+			}
+
+			// Same as above but the specified svn.exe in the project preferences is missing.
+			if (error.Contains("0x80004005") && !string.IsNullOrEmpty(m_ProjectPreferences.SvnCLIPath)) {
+				displayMessage = $"Cannot find the specified in the svn project preferences svn.exe:\n{m_ProjectPreferences.SvnCLIPath}\n\n" +
+					$"You can reconfigure the svn project preferences at:\n{PROJECT_PREFERENCES_MENU}\n\n" +
+					$"You can disable the SVN integration from:\n{TURN_OFF_MENU}";
+
+				return false;
+			}
+
+			displayMessage = "SVN error happened while processing the assets. Check the logs.";
+			return true;
+		}
+
+		static StatusData fff;
+		private static IEnumerable<StatusData> ExtractStatuses(string output)
+		{
+			using (var sr = new StringReader(output)) {
+				string line;
+				while ((line = sr.ReadLine()) != null) {
+
+					// Last status was deleted / added+, so this is telling us where it moved to / from. Skip it.
+					if (line.Length > 8 && line[8] == '>')
+						continue;
+
+					// Rules are described in "svn help status".
+					var statusData = new StatusData();
+					statusData.Status = m_FileStatusMap[line[0]];
+					statusData.PropertyStatus = m_PropertyStatusMap[line[1]];
+					statusData.TreeConflictStatus = m_ConflictStatusMap[line[6]];
+
+					// 7 columns plus space; Length+1 to skip '/'
+					statusData.Path = line.Substring(8).Remove(0, ProjectRoot.Length + 1);
+
+					yield return statusData;
+				}
+			}
+
+		}
+
+		public static IEnumerable<StatusData> GetStatuses(string path, string depth = "infinity")
 		{
 			// File can be missing, if it was deleted by svn.
-//			if (!File.Exists(path) && !Directory.Exists(path)) {
-//				if (!Silent) {
-//					EditorUtility.DisplayDialog("SVN Error", "SVN error happened while processing the assets. Check the logs.", "I will!");
-//				}
-//				throw new IOException($"Trying to get status for file {path} that does not exist!");
-//			}
+			//if (!File.Exists(path) && !Directory.Exists(path)) {
+			//	if (!Silent) {
+			//		EditorUtility.DisplayDialog("SVN Error", "SVN error happened while processing the assets. Check the logs.", "I will!");
+			//	}
+			//	throw new IOException($"Trying to get status for file {path} that does not exist!");
+			//}
 
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth=empty \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT * 4);
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth={depth} \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT * 4);
 
-			#region Error checking
 			if (!string.IsNullOrEmpty(result.error)) {
+				string displayMessage;
+				bool isCritical = IsCriticalError(result.error, out displayMessage);
 
-				// svn: warning: W155010: The node '...' was not found.
-				// This can be returned when path is under unversioned directory. In that case we consider it is unversioned as well.
-				if (result.error.Contains("W155010"))
-					return new StatusData() {Status = VCFileStatus.Unversioned};
-
-				// svn: warning: W155007: '...' is not a working copy!
-				// This can be returned when project is not a valid svn checkout. (Probably)
-				if (result.error.Contains("W155007"))
-					return new StatusData() {Status = VCFileStatus.Unversioned};
-
-				// System.ComponentModel.Win32Exception (0x80004005): ApplicationName='...', CommandLine='...', Native error= The system cannot find the file specified.
-				// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
-				// This is allowed only if there isn't ProjectPreference specified CLI path.
-				if (result.error.Contains("0x80004005") && string.IsNullOrEmpty(m_ProjectPreferences.SvnCLIPath)) {
-					if (!Silent) {
-						EditorUtility.DisplayDialog(
-						"SVN Error",
-						$"SVN CLI (Command Line Interface) not found. " +
-						$"Please install it or specify path to a valid svn.exe in the svn project preferences at:\n{PROJECT_PREFERENCES_MENU}\n\n" +
-						$"You can disable the SVN integration from:\n{TURN_OFF_MENU}",
-						"I will!");
-					}
-					return new StatusData() { Status = VCFileStatus.Unversioned };
+				if (!string.IsNullOrEmpty(displayMessage) && !Silent) {
+					EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
 				}
 
-				// Same as above but the specified svn.exe in the project preferences is missing.
-				if (result.error.Contains("0x80004005") && !string.IsNullOrEmpty(m_ProjectPreferences.SvnCLIPath)) {
-					if (!Silent) {
-						EditorUtility.DisplayDialog(
-						"SVN Error",
-						$"Cannot find the specified in the svn project preferences svn.exe:\n{m_ProjectPreferences.SvnCLIPath}\n\n" +
-						$"You can reconfigure the svn project preferences at:\n{PROJECT_PREFERENCES_MENU}\n\n" +
-						$"You can disable the SVN integration from:\n{TURN_OFF_MENU}",
-						"I will!");
-					}
-					return new StatusData() { Status = VCFileStatus.Unversioned };
+				if (isCritical) {
+					throw new IOException($"Trying to get status for file {path} caused error:\n{result.error}!");
+				} else {
+					return Enumerable.Empty<StatusData>();
 				}
-
-				if (!Silent) {
-					EditorUtility.DisplayDialog(
-						"SVN Error",
-						"SVN error happened while processing the assets. Check the logs.",
-						"I will!");
-				}
-
-				throw new IOException($"Trying to get status for file {path} caused error:\n{result.error}!");
-			}
-			#endregion
-
-			if (string.IsNullOrEmpty(result.output.Trim())) {
-				return new StatusData();
 			}
 
-			// Rules are described in "svn help status".
-			var statusData = new StatusData();
-			statusData.Status = m_FileStatusMap[result.output[0]];
-			statusData.PropertyStatus = m_PropertyStatusMap[result.output[1]];
-			statusData.TreeConflictStatus = m_ConflictStatusMap[result.output[6]];
+			// If no info is returned for path, the status is normal.
+			if (string.IsNullOrWhiteSpace(result.output) && depth == "empty") {
+				return Enumerable.Repeat(new StatusData() { Status = VCFileStatus.Normal, Path = path }, 1);
+			}
+
+			return ExtractStatuses(result.output);
+		}
+
+		public static StatusData GetStatus(string path)
+		{
+			// Optimization: empty depth will return nothing if status is normal.
+			// If path is modified, added, deleted, unversioned, it will return proper value.
+			var statusData = GetStatuses(path, "empty").FirstOrDefault();
+
+			// If no path was found, error happened.
+			if (string.IsNullOrEmpty(statusData.Path)) {
+				// Fallback to unversioned as we don't touch them.
+				statusData.Status = VCFileStatus.Unversioned;
+			}
 
 			return statusData;
 		}
@@ -470,23 +517,22 @@ namespace DevLocker.VersionControl.SVN
 
 		public static bool HasConflictsAny(string path)
 		{
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth=infinity \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT * 4);
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth=infinity \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT * 4); ;
 
 			if (!string.IsNullOrEmpty(result.error)) {
 
-				// svn: warning: W155010: The node '...' was not found.
-				// This can be returned, when path is under unversioned directory. In that case we consider it is unversioned as well.
-				if (result.error.Contains("W155010"))
-					return false;
+				string displayMessage;
+				bool isCritical = IsCriticalError(result.error, out displayMessage);
 
-				if (!Silent) {
-					EditorUtility.DisplayDialog(
-						"SVN Error",
-						"SVN error happened while processing the assets. Check the logs.",
-						"I will!");
+				if (!string.IsNullOrEmpty(displayMessage) && !Silent) {
+					EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
 				}
 
-				throw new IOException($"Trying to get status for file {path} caused error {result.error}!");
+				if (isCritical) {
+					throw new IOException($"Trying to get status for file {path} caused error:\n{result.error}!");
+				} else {
+					return false;
+				}
 			}
 
 			return result.output.Contains("Summary of conflicts:");

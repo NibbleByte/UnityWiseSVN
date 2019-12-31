@@ -12,7 +12,7 @@ namespace DevLocker.VersionControl.SVN
 		[MenuItem("Assets/SVN/Check Changes All", false, -1000)]
 		internal static void CheckChangesAll()
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:repostatus /path:\"{GetRootPath()}\"", false);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:repostatus /path:\"{SVNSimpleIntegration.ProjectRoot}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -29,7 +29,7 @@ namespace DevLocker.VersionControl.SVN
 		
 		public static void Update(string filePath)
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:update /path:\"{GetRootPath() + filePath}\"", true);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:update /path:\"{SVNSimpleIntegration.ProjectRoot + filePath}\"", true);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -38,7 +38,7 @@ namespace DevLocker.VersionControl.SVN
 		[MenuItem("Assets/SVN/Update All", false, -950)]
 		private static void UpdateAll()
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:update /path:\"{GetRootPath()}\"", true);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:update /path:\"{SVNSimpleIntegration.ProjectRoot}\"", true);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -47,7 +47,7 @@ namespace DevLocker.VersionControl.SVN
 		[MenuItem("Assets/SVN/Commit All", false, -900)]
 		private static void CommitAll()
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:commit /path:\"{GetRootPath()}\"", false);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:commit /path:\"{SVNSimpleIntegration.ProjectRoot}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -89,12 +89,15 @@ namespace DevLocker.VersionControl.SVN
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
+
+			// Files are added directly without user interface. Folders will pop out user interface.
+			SVNOverlayIcons.InvalidateDatabase();
 		}
 
 		[MenuItem("Assets/SVN/Revert All", false, -800)]
 		private static void RevertAll()
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:revert /path:\"{GetRootPath()}\"", false);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:revert /path:\"{SVNSimpleIntegration.ProjectRoot}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -112,7 +115,7 @@ namespace DevLocker.VersionControl.SVN
 		[MenuItem("Assets/SVN/Resolve All", false, -800)]
 		private static void ResolveAll()
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:resolve /path:\"{GetRootPath()}\"", false);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:resolve /path:\"{SVNSimpleIntegration.ProjectRoot}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -121,7 +124,7 @@ namespace DevLocker.VersionControl.SVN
 		[MenuItem("Assets/SVN/Show Log All", false, -500)]
 		private static void ShowLogAll()
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:log /path:\"{GetRootPath()}\"", false);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:log /path:\"{SVNSimpleIntegration.ProjectRoot}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -148,15 +151,10 @@ namespace DevLocker.VersionControl.SVN
 		[MenuItem("Assets/SVN/Cleanup", false, -500)]
 		private static void Cleanup()
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:cleanup /path:\"{GetRootPath()}\"", true);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:cleanup /path:\"{SVNSimpleIntegration.ProjectRoot}\"", true);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
-		}
-
-		private static string GetRootPath()
-		{
-			return Path.GetDirectoryName(Application.dataPath);
 		}
 
 		private static string GetContextPaths(string[] guids, bool includeMeta)
