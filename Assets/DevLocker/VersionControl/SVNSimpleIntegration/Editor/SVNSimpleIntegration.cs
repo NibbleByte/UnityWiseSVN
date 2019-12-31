@@ -443,6 +443,12 @@ namespace DevLocker.VersionControl.SVN
 					if (line.Length > 8 && line[8] == '>')
 						continue;
 
+					// If there are any conflicts, the report will have two additional lines like this:
+					// Summary of conflicts:
+					// Text conflicts: 1
+					if (line.StartsWith("Summary", StringComparison.Ordinal))
+						break;
+
 					// Rules are described in "svn help status".
 					var statusData = new StatusData();
 					statusData.Status = m_FileStatusMap[line[0]];

@@ -10,8 +10,23 @@ namespace DevLocker.VersionControl.SVN
 	[InitializeOnLoad]
 	public static class SVNOverlayIcons
 	{
-		private const string INVALID_GUID = "000000000000000000000000000000000";
+		private const string INVALID_GUID = "00000000000000000000000000000000";
+		private const string ASSETS_FOLDER_GUID = "00000000000000001000000000000000";
 		private static SVNOverlayIconsDatabase m_Database;
+
+		// Note: not all of these are rendered. Check the Database icons.
+		private readonly static VCFileStatus[] StatusShowPriority = new VCFileStatus[] {
+			VCFileStatus.Conflicted, 
+			VCFileStatus.Obstructed, 
+			VCFileStatus.Modified,
+			VCFileStatus.Added,
+			VCFileStatus.Deleted,
+			VCFileStatus.Missing,
+			VCFileStatus.Replaced,
+			VCFileStatus.Ignored,
+			VCFileStatus.Unversioned,
+			VCFileStatus.Normal,
+		};
 
 		static SVNOverlayIcons()
 		{
@@ -19,10 +34,15 @@ namespace DevLocker.VersionControl.SVN
 
 			m_Database = Resources.FindObjectsOfTypeAll<SVNOverlayIconsDatabase>().FirstOrDefault();
 			if (m_Database == null) {
+				// TODO: Remove debug logs.
 				Debug.LogError("SVNOverlayIconsDatabase not found! Creating new one.");
 
 				m_Database = ScriptableObject.CreateInstance<SVNOverlayIconsDatabase>();
 				m_Database.name = "SVNOverlayIconsDatabase";
+
+				// Setting this flag will tell Unity NOT to destroy this object on assembly reload (as no scene references this object).
+				// We're essentially leaking this object. But we can still find it with Resources.FindObjectsOfTypeAll() after reload.
+				// More info on this: https://blogs.unity3d.com/2012/10/25/unity-serialization/
 				m_Database.hideFlags = HideFlags.HideAndDontSave;
 
 				InvalidateDatabase();
@@ -47,12 +67,15 @@ namespace DevLocker.VersionControl.SVN
 
 		private static void ItemOnGUI(string guid, Rect selectionRect)
 		{
-			if (string.IsNullOrEmpty(guid) || guid.Equals(INVALID_GUID, StringComparison.Ordinal))
+			if (string.IsNullOrEmpty(guid) || guid.StartsWith("00000000", StringComparison.Ordinal))
+				// Cause what are the chances of having a guid starting with so many zeroes?!
+				//|| guid.Equals(INVALID_GUID, StringComparison.Ordinal)
+				//|| guid.Equals(ASSETS_FOLDER_GUID, StringComparison.Ordinal)
 				return;
 
 			GUIContent icon = null;
 
-			foreach(var status in m_Database.SupportedStatuses) {
+			foreach(var status in StatusShowPriority) {
 				if (m_Database.HasGUID(status, guid)) {
 					icon = m_Database.GetIconContent(status);
 					break;
@@ -102,13 +125,16 @@ namespace DevLocker.VersionControl.SVN
 
 				// Conflicted file got reimported? Fuck this, just refresh.
 				if (status == VCFileStatus.Conflicted) {
+					m_Database.AddGUID(VCFileStatus.Conflicted, AssetDatabase.AssetPathToGUID(path));
 					InvalidateDatabase();
 					return;
 				}
 
-				// TODO: Test replaced files.
+				if (status == VCFileStatus.Normal)
+					continue;
+
 				// Every time the user saves a file it will get reimported. If we already know it is modified, don't refresh every time.
-				bool wasModifiedGuid = m_Database.HasGUID(VCFileStatus.Modified, AssetDatabase.AssetPathToGUID(path));
+				bool wasModifiedGuid = m_Database.AddGUID(status, AssetDatabase.AssetPathToGUID(path));
 
 				if (status != VCFileStatus.Normal && !wasModifiedGuid) {
 					InvalidateDatabase();
@@ -127,6 +153,7 @@ namespace DevLocker.VersionControl.SVN
 		{
 			m_Database.ClearAll();
 
+			// TODO: Remove debug logs.
 			Debug.LogWarning("Update Database");
 
 			// TODO: Do this in thread.
@@ -149,8 +176,7 @@ namespace DevLocker.VersionControl.SVN
 					continue;
 				}
 
-				// TODO: Test conflicted files and folders.
-				// TODO: Unversioned folders do not show recursively their sub folders and files as unversioned since they are not returnd by the svn status command.
+				// TODO: Test tree conflicts.
 
 				m_Database.AddGUID(status.Status, AssetDatabase.AssetPathToGUID(status.Path));
 				AddModifiedFolders(status.Status, status.Path);
@@ -161,6 +187,9 @@ namespace DevLocker.VersionControl.SVN
 
 		private static void AddModifiedFolders(VCFileStatus status, string path)
 		{
+			if (status == VCFileStatus.Unversioned || status == VCFileStatus.Ignored)
+				return;
+
 			if (status != VCFileStatus.Modified && status != VCFileStatus.Conflicted) {
 				status = VCFileStatus.Modified;
 			}
@@ -168,7 +197,16 @@ namespace DevLocker.VersionControl.SVN
 			path = Path.GetDirectoryName(path);
 
 			while (!string.IsNullOrEmpty(path)) {
-				m_Database.AddGUID(status, AssetDatabase.AssetPathToGUID(path));
+				var guid = AssetDatabase.AssetPathToGUID(path);
+
+				bool moveToNext = m_Database.HasGUID(VCFileStatus.Added, guid)
+					? false		// Added folders should not be shown as modified.
+					: m_Database.AddGUID(status, guid);
+
+				// If already exists, upper folders should be added as well.
+				if (!moveToNext)
+					return;
+
 				path = Path.GetDirectoryName(path);
 			}
 		}
@@ -186,8 +224,6 @@ namespace DevLocker.VersionControl.SVN
 		// Icons are stored in the database so we don't reload them every time.
 		[SerializeField] private GUIContent[] Icons = new GUIContent[0];
 
-		public VCFileStatus[] SupportedStatuses { get; private set; }
-
 		// Is update pending?
 		// If last update didn't make it, this flag will still be true.
 		// Useful if assembly reload happens and stops the work of the database update.
@@ -201,14 +237,9 @@ namespace DevLocker.VersionControl.SVN
 				Icons[(int)VCFileStatus.Added] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNAddedIcon"));
 				Icons[(int)VCFileStatus.Modified] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNModifiedIcon"));
 				Icons[(int)VCFileStatus.Deleted] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNDeletedIcon"));
-				Icons[(int)VCFileStatus.Conflicted] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNConflictedIcon"));
+				Icons[(int)VCFileStatus.Conflicted] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNConflictIcon"));
 				Icons[(int)VCFileStatus.Unversioned] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNUnversionedIcon"));
 			}
-
-			SupportedStatuses = Icons
-				.Select((c, i) => (VCFileStatus)i)
-				.Where(s => Icons[(int)s] != null && Icons[(int)s].image != null)
-				.ToArray();
 		}
 
 		public GUIContent GetIconContent(VCFileStatus status)
