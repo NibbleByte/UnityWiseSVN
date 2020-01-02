@@ -18,6 +18,16 @@ namespace DevLocker.VersionControl.SVN
 		private const string ASSETS_FOLDER_GUID = "00000000000000001000000000000000";
 		private static SVNOverlayIconsDatabase m_Database;
 
+		public static bool Enabled { get; private set; }
+		public static double AutoRefreshInterval { get; private set; } // seconds; Less than 0 will disable it.
+		private static double m_LastRefreshTime;
+
+		// The Overlay icons can be enabled, but the SVN integration to be disabled as a whole.
+		private static bool IsActive => Enabled && SVNSimpleIntegration.Enabled;
+
+		private static bool DoTraceLogs => (SVNSimpleIntegration.TraceLogs & SVNTraceLogs.OverlayIcons) != 0;
+
+		// Filled in by a worker thread.
 		private static SVNSimpleIntegration.StatusData[] m_PendingStatuses;
 
 		// Note: not all of these are rendered. Check the Database icons.
@@ -36,35 +46,76 @@ namespace DevLocker.VersionControl.SVN
 
 		static SVNOverlayIcons()
 		{
-			EditorApplication.projectWindowItemOnGUI += ItemOnGUI;
+			Enabled = EditorPrefs.GetBool("SVNOverlayIcons", true);
+			AutoRefreshInterval = EditorPrefs.GetInt("SVNOverlayIconsRefreshInverval", 60);
 
-			m_Database = Resources.FindObjectsOfTypeAll<SVNOverlayIconsDatabase>().FirstOrDefault();
-			if (m_Database == null) {
-				// TODO: Remove debug logs.
-				Debug.LogError("SVNOverlayIconsDatabase not found! Creating new one.");
-
-				m_Database = ScriptableObject.CreateInstance<SVNOverlayIconsDatabase>();
-				m_Database.name = "SVNOverlayIconsDatabase";
-
-				// Setting this flag will tell Unity NOT to destroy this object on assembly reload (as no scene references this object).
-				// We're essentially leaking this object. But we can still find it with Resources.FindObjectsOfTypeAll() after reload.
-				// More info on this: https://blogs.unity3d.com/2012/10/25/unity-serialization/
-				m_Database.hideFlags = HideFlags.HideAndDontSave;
-
-				InvalidateDatabase();
-			}
+			// NOTE: This checks SVNSimpleIntegration.Enabled which is set by its static constructor.
+			// This might cause a race condition, but C# says it will call them in the right order. Hope this is true.
+			PreferencesChanged();
 
 			// Assembly reload might have killed the working thread leaving pending update.
 			// Do it again.
-			if (m_Database.PendingUpdate) {
+			if (m_Database && m_Database.PendingUpdate) {
 				StartDatabaseUpdate();
+			}
+		}
+
+		public static void SavePreferences(bool enabled, double autoRefreshInverval)
+		{
+			Enabled = enabled;
+			AutoRefreshInterval = autoRefreshInverval;
+
+			EditorPrefs.SetBool("SVNOverlayIcons", Enabled);
+			EditorPrefs.SetInt("SVNOverlayIconsRefreshInverval", (int) AutoRefreshInterval);
+
+			PreferencesChanged();
+		}
+
+		private static void PreferencesChanged()
+		{
+			if (IsActive) {
+
+				m_Database = Resources.FindObjectsOfTypeAll<SVNOverlayIconsDatabase>().FirstOrDefault();
+				if (m_Database == null) {
+
+					if (DoTraceLogs) {
+						Debug.Log("SVNOverlayIconsDatabase not found. Creating new one.");
+					}
+
+					m_Database = ScriptableObject.CreateInstance<SVNOverlayIconsDatabase>();
+					m_Database.name = "SVNOverlayIconsDatabase";
+
+					// Setting this flag will tell Unity NOT to destroy this object on assembly reload (as no scene references this object).
+					// We're essentially leaking this object. But we can still find it with Resources.FindObjectsOfTypeAll() after reload.
+					// More info on this: https://blogs.unity3d.com/2012/10/25/unity-serialization/
+					m_Database.hideFlags = HideFlags.HideAndDontSave;
+
+					InvalidateDatabase();
+				}
+
+				EditorApplication.projectWindowItemOnGUI -= ItemOnGUI;
+				EditorApplication.projectWindowItemOnGUI += ItemOnGUI;
+
+				EditorApplication.update -= AutoRefresh;
+				EditorApplication.update += AutoRefresh;
+
+				m_LastRefreshTime = EditorApplication.timeSinceStartup;
+
+			} else {
+				if (m_Database) {
+					UnityEngine.Object.DestroyImmediate(m_Database);
+					m_Database = null;
+				}
+
+				EditorApplication.projectWindowItemOnGUI -= ItemOnGUI;
+				EditorApplication.update -= AutoRefresh;
 			}
 		}
 
 		[MenuItem("Assets/SVN/Refresh Overlay Icons", false, 195)]
 		public static void InvalidateDatabase()
 		{
-			if (m_Database.PendingUpdate)
+			if (!IsActive || m_Database.PendingUpdate)
 				return;
 
 			m_Database.PendingUpdate = true;
@@ -111,6 +162,9 @@ namespace DevLocker.VersionControl.SVN
 		
 		internal static void PostProcessAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets)
 		{
+			if (!IsActive)
+				return;
+
 			if (deletedAssets.Length > 0 || movedAssets.Length > 0) {
 				InvalidateDatabase();
 				return;
@@ -169,8 +223,9 @@ namespace DevLocker.VersionControl.SVN
 
 		private static void StartDatabaseUpdate()
 		{
-			// TODO: Remove debug logs.
-			Debug.LogWarning($"Started Update Database {EditorApplication.timeSinceStartup}");
+			if (DoTraceLogs) {
+				Debug.Log($"Started Update Database at {EditorApplication.timeSinceStartup:0.00}");
+			}
 
 			// Listen for the thread result in the main thread.
 			// Just in case, remove previous updates.
@@ -197,10 +252,15 @@ namespace DevLocker.VersionControl.SVN
 			if (m_PendingStatuses == null)
 				return;
 
-			// TODO: Remove debug logs.
-			Debug.LogWarning($"Finished Update Database {EditorApplication.timeSinceStartup}");
+			if (DoTraceLogs) {
+				Debug.Log($"Finished Update Database at {EditorApplication.timeSinceStartup:0.00}");
+			}
 
 			EditorApplication.update -= WaitAndFinishDatabaseUpdate;
+
+			// If preferences were changed while waiting.
+			if (!IsActive)
+				return;
 
 			m_Database.ClearAll();
 
@@ -226,6 +286,16 @@ namespace DevLocker.VersionControl.SVN
 
 			// Mark update as finished.
 			m_Database.PendingUpdate = false;
+		}
+
+		private static void AutoRefresh()
+		{
+			if (AutoRefreshInterval <= 0.0f || EditorApplication.timeSinceStartup - m_LastRefreshTime < AutoRefreshInterval)
+				return;
+
+			m_LastRefreshTime = EditorApplication.timeSinceStartup;
+
+			InvalidateDatabase();
 		}
 
 		private static void AddModifiedFolders(VCFileStatus status, string path)

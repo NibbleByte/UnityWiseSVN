@@ -43,6 +43,15 @@ namespace DevLocker.VersionControl.SVN
 		TreeConflict
 	}
 
+	[Flags]
+	public enum SVNTraceLogs
+	{
+		None = 0,
+		SVNOperations = 1 << 0,
+		OverlayIcons = 1 << 4,
+		All = ~0,
+	}
+
 	// SVN console commands: https://tortoisesvn.net/docs/nightly/TortoiseSVN_en/tsvn-cli-main.html
 	[InitializeOnLoad]
 	public class SVNSimpleIntegration : UnityEditor.AssetModificationProcessor
@@ -99,6 +108,8 @@ namespace DevLocker.VersionControl.SVN
 		public static bool TemporaryDisabled => m_TemporaryDisabledCount > 0;	// Temporarily disable the integration (by code).
 		public static bool Silent => m_SilenceCount > 0;	// Do not show dialogs
 
+		public static SVNTraceLogs TraceLogs { get; private set; } = SVNTraceLogs.SVNOperations;
+
 		private static int m_SilenceCount = 0;
 		private static int m_TemporaryDisabledCount = 0;
 
@@ -113,7 +124,7 @@ namespace DevLocker.VersionControl.SVN
 		}
 
 		private const string PROJECT_PREFERENCES_PATH = "ProjectSettings/SVNSimpleIntegration.prefs";
-		private static ProjectPreferences m_ProjectPreferences = new ProjectPreferences() { SvnCLIPath = string.Empty, Exclude = new List<string>() };
+		internal static ProjectPreferences m_ProjectPreferences = new ProjectPreferences() { SvnCLIPath = string.Empty, Exclude = new List<string>() };
 
 		private static string SVN_Command => string.IsNullOrEmpty(m_ProjectPreferences.SvnCLIPath) 
 			? "svn" 
@@ -128,6 +139,15 @@ namespace DevLocker.VersionControl.SVN
 			public StringBuilder Builder = new StringBuilder();
 
 			public ShellUtils.ShellResult Result;
+
+			private bool m_LogOutput;
+			private bool m_Silent;
+
+			public ResultReporter(bool logOutput, bool silent)
+			{
+				m_LogOutput = logOutput;
+				m_Silent = silent;
+			}
 
 			public void Append(string str)
 			{
@@ -149,11 +169,11 @@ namespace DevLocker.VersionControl.SVN
 				if (Builder.Length > 0) {
 					if (Result.HasErrors) {
 						Debug.LogError(Builder);
-						if (!Silent) {
+						if (!m_Silent) {
 							EditorUtility.DisplayDialog("SVN Error",
 								"SVN error happened while processing the assets. Check the logs.", "I will!");
 						}
-					} else {
+					} else if (m_LogOutput) {
 						Debug.Log(Builder);
 					}
 				}
@@ -168,7 +188,7 @@ namespace DevLocker.VersionControl.SVN
 
 		private static ResultReporter CreateLogger()
 		{
-			var logger = new ResultReporter();
+			var logger = new ResultReporter((TraceLogs & SVNTraceLogs.SVNOperations) != 0, Silent);
 			logger.AppendLine("SVN Operations:");
 
 			return logger;
@@ -182,14 +202,21 @@ namespace DevLocker.VersionControl.SVN
 			ProjectRoot = Path.GetDirectoryName(Application.dataPath);
 
 			Enabled = EditorPrefs.GetBool("SVNIntegration", true);
+			TraceLogs = (SVNTraceLogs) EditorPrefs.GetInt("SVNTraceLogs", (int)SVNTraceLogs.SVNOperations);
 
 			if (File.Exists(PROJECT_PREFERENCES_PATH)) {
 				m_ProjectPreferences = JsonUtility.FromJson<ProjectPreferences>(File.ReadAllText(PROJECT_PREFERENCES_PATH));
 			}
 		}
 
-		internal static void SaveProjectPreferences(ProjectPreferences preferences)
+		internal static void SavePreferences(bool enabled, SVNTraceLogs traceLogs, ProjectPreferences preferences)
 		{
+			Enabled = enabled;
+			TraceLogs = traceLogs;
+
+			EditorPrefs.SetBool("SVNIntegration", Enabled);
+			EditorPrefs.SetInt("SVNTraceLogs", (int)TraceLogs);
+
 			m_ProjectPreferences = preferences;
 			m_ProjectPreferences.Exclude.RemoveAll(p => string.IsNullOrWhiteSpace(p));
 
@@ -210,7 +237,7 @@ namespace DevLocker.VersionControl.SVN
 				if (!isMeta && !Silent) {
 					EditorUtility.DisplayDialog(
 						"Deleted file",
-						$"The desired location\n\"{path}\"\nis marked as deleted in SVN. The file will be replaced in SVN with the new one.\n\nIf this is an automated change, consider adding this file to the exclusion list in the project preferences:\n\"{PROJECT_PREFERENCES_MENU}\"\n...or change your tool to silence the integration.",
+						$"The desired location\n\"{path}\"\nis marked as deleted in SVN. The file will be replaced in SVN with the new one.\n\nIf this is an automated change, consider adding this file to the exclusion list in the project preferences:\n\"{SVNSimpleIntegrationProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n...or change your tool to silence the integration.",
 						"Replace");
 				}
 
@@ -415,8 +442,8 @@ namespace DevLocker.VersionControl.SVN
 			// This is allowed only if there isn't ProjectPreference specified CLI path.
 			if (error.Contains("0x80004005") && string.IsNullOrEmpty(m_ProjectPreferences.SvnCLIPath)) {
 				displayMessage = $"SVN CLI (Command Line Interface) not found. " +
-					$"Please install it or specify path to a valid svn.exe in the svn project preferences at:\n{PROJECT_PREFERENCES_MENU}\n\n" +
-					$"You can disable the SVN integration from:\n{TURN_OFF_MENU}";
+					$"Please install it or specify path to a valid svn.exe in the svn preferences at:\n{SVNSimpleIntegrationProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
+					$"You can also disable the SVN integration.";
 
 				return false;
 			}
@@ -424,8 +451,8 @@ namespace DevLocker.VersionControl.SVN
 			// Same as above but the specified svn.exe in the project preferences is missing.
 			if (error.Contains("0x80004005") && !string.IsNullOrEmpty(m_ProjectPreferences.SvnCLIPath)) {
 				displayMessage = $"Cannot find the specified in the svn project preferences svn.exe:\n{m_ProjectPreferences.SvnCLIPath}\n\n" +
-					$"You can reconfigure the svn project preferences at:\n{PROJECT_PREFERENCES_MENU}\n\n" +
-					$"You can disable the SVN integration from:\n{TURN_OFF_MENU}";
+					$"You can reconfigure the svn preferences at:\n{SVNSimpleIntegrationProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
+					$"You can also disable the SVN integration.";
 
 				return false;
 			}
@@ -581,8 +608,8 @@ namespace DevLocker.VersionControl.SVN
 			m_TemporaryDisabledCount--;
 		}
 
-
-		[MenuItem("Assets/SVN/Selected Status", false, 200)]
+		// Use for debug.
+		//[MenuItem("Assets/SVN/Selected Status", false, 200)]
 		private static void StatusSelected()
 		{
 			if (Selection.assetGUIDs.Length == 0)
@@ -597,70 +624,6 @@ namespace DevLocker.VersionControl.SVN
 			}
 
 			Debug.Log($"Status for {path}\n{(string.IsNullOrEmpty(result.output) ? "No Changes" : result.output)}", Selection.activeObject);
-		}
-
-		private const string PROJECT_PREFERENCES_MENU = "Assets/SVN/Project Preferences";
-		[MenuItem(PROJECT_PREFERENCES_MENU, false, 200)]
-		private static void ShowProjectPreferences()
-		{
-			var window = EditorWindow.GetWindow<SVNSimpleIntegrationProjectPreferencesWindow>(true, "SVN Project Preferences");
-			window.ProjectPreferences = m_ProjectPreferences;
-			window.ShowUtility();
-			window.position = new Rect(600f, 400f, 400f, 250f);
-		}
-
-		[MenuItem("Assets/SVN/Turn On", true, 200)]
-		private static bool SVNEnableValidate() => !Enabled;
-
-		[MenuItem("Assets/SVN/Turn On", false, 200)]
-		private static void SVNEnable()
-		{
-			Enabled = true;
-			EditorPrefs.SetBool("SVNIntegration", Enabled);
-		}
-
-		private const string TURN_OFF_MENU = "Assets/SVN/Turn Off";
-		[MenuItem(TURN_OFF_MENU, true, 200)]
-		private static bool SVNDisableValidate() =>	Enabled;
-
-		[MenuItem(TURN_OFF_MENU, false, 200)]
-		private static void SVNDisable()
-		{
-			Enabled = false;
-			EditorPrefs.SetBool("SVNIntegration", Enabled);
-
-			EditorUtility.DisplayDialog("SVN Integration", $"You have turned off the SVN integration.", "Ok");
-		}
-	}
-
-	internal class SVNSimpleIntegrationProjectPreferencesWindow : EditorWindow
-	{
-		public SVNSimpleIntegration.ProjectPreferences ProjectPreferences;
-
-		private Vector2 m_Scroll;
-
-		private void OnGUI()
-		{
-			EditorGUILayout.LabelField("Project Preferences:", EditorStyles.boldLabel);
-
-			EditorGUILayout.HelpBox("These settings will be saved in the ProjectSettings folder. Feel free to add them to your version control system.", MessageType.Info);
-
-			m_Scroll = EditorGUILayout.BeginScrollView(m_Scroll);
-
-			var so = new SerializedObject(this);
-			var sp = so.FindProperty("ProjectPreferences");
-
-			EditorGUILayout.PropertyField(sp, true);
-
-			so.ApplyModifiedProperties();
-
-			EditorGUILayout.EndScrollView();
-
-			if (GUILayout.Button("Save")) {
-				ProjectPreferences.SvnCLIPath = ProjectPreferences.SvnCLIPath.Trim();
-				SVNSimpleIntegration.SaveProjectPreferences(ProjectPreferences);
-				Close();
-			}
 		}
 	}
 }
