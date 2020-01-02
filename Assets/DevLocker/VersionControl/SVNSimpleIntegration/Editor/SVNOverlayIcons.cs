@@ -244,6 +244,7 @@ namespace DevLocker.VersionControl.SVN
 				// Deleted svn file can still exist for some reason. Need to show it as deleted.
 				// If file doesn't exists, skip it as we can't show it anyway.
 				.Where(s => s.Status != VCFileStatus.Deleted || File.Exists(s.Path))
+				.Where(s => s.Status != VCFileStatus.Missing)
 				.ToList();
 
 			for(int i = 0, count = statuses.Count; i < count; ++i) {
