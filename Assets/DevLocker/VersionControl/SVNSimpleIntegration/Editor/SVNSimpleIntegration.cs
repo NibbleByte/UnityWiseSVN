@@ -93,6 +93,8 @@ namespace DevLocker.VersionControl.SVN
 		public static readonly string ProjectRoot;
 		public static readonly string ProjectDataPath;
 
+		public static event Action ShowChangesUI;
+
 		public static bool Enabled { get; private set; }
 		public static bool TemporaryDisabled => m_TemporaryDisabledCount > 0;	// Temporarily disable the integration (by code).
 		public static bool Silent => m_SilenceCount > 0;	// Do not show dialogs
@@ -281,7 +283,7 @@ namespace DevLocker.VersionControl.SVN
 					$"Failed to move the files\n\"{oldPath}\"\nbecause it has conflicts. Resolve them first!",
 					"Check changes",
 					"Cancel")) {
-					TortoiseSVNIntegrationMenus.CheckChangesAll();
+					ShowChangesUI?.Invoke();
 				}
 
 				return AssetMoveResult.FailedMove;
@@ -327,7 +329,7 @@ namespace DevLocker.VersionControl.SVN
 					$"Failed to move the files to \n\"{directory}\"\nbecause it has conflicts. Resolve them first!",
 					"Check changes",
 					"Cancel")) {
-					TortoiseSVNIntegrationMenus.CheckChangesAll();
+					ShowChangesUI?.Invoke();
 				}
 
 				return false;
