@@ -240,11 +240,26 @@ namespace DevLocker.VersionControl.SVN
 		private static void GatherSVNStatuses()
 		{
 			// Will get statuses of all added / modified / deleted / conflicted / unversioned files. Only normal files won't be listed.
-			m_PendingStatuses = SVNSimpleIntegration.GetStatuses(SVNSimpleIntegration.ProjectDataPath, "infinity", false, SVNSimpleIntegration.COMMAND_TIMEOUT * 8)
+			var statuses = SVNSimpleIntegration.GetStatuses(SVNSimpleIntegration.ProjectDataPath, "infinity", false, SVNSimpleIntegration.COMMAND_TIMEOUT * 8)
 				// Deleted svn file can still exist for some reason. Need to show it as deleted.
 				// If file doesn't exists, skip it as we can't show it anyway.
 				.Where(s => s.Status != VCFileStatus.Deleted || File.Exists(s.Path))
-				.ToArray();
+				.ToList();
+
+			for(int i = 0, count = statuses.Count; i < count; ++i) {
+				var statusData = statuses[i];
+
+				// Statuses for entries under unversioned directories are not returned. Add them manually.
+				if (statusData.Status == VCFileStatus.Unversioned && Directory.Exists(statusData.Path)) {
+					var paths = Directory.EnumerateFileSystemEntries(statusData.Path, "*", SearchOption.AllDirectories);
+					statuses.AddRange(paths
+						.Select(path => path.Replace(SVNSimpleIntegration.ProjectRoot, ""))
+						.Select(path => new SVNSimpleIntegration.StatusData() { Status = VCFileStatus.Unversioned, Path = path })
+						);
+				}
+			}
+
+			m_PendingStatuses = statuses.ToArray();
 		}
 
 		private static void WaitAndFinishDatabaseUpdate()
