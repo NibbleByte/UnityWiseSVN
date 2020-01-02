@@ -117,7 +117,7 @@ namespace DevLocker.VersionControl.SVN
 			? "svn" 
 			: Path.Combine(Path.GetDirectoryName(Application.dataPath), m_ProjectPreferences.SvnCLIPath);
 
-		private const int COMMAND_TIMEOUT = 35000;	// Milliseconds
+		internal const int COMMAND_TIMEOUT = 35000;	// Milliseconds
 
 		#region Logging
 
@@ -464,7 +464,7 @@ namespace DevLocker.VersionControl.SVN
 
 		}
 
-		public static IEnumerable<StatusData> GetStatuses(string path, string depth = "infinity")
+		public static IEnumerable<StatusData> GetStatuses(string path, string depth = "infinity", bool raiseError = true, int timeout = COMMAND_TIMEOUT)
 		{
 			// File can be missing, if it was deleted by svn.
 			//if (!File.Exists(path) && !Directory.Exists(path)) {
@@ -474,9 +474,13 @@ namespace DevLocker.VersionControl.SVN
 			//	throw new IOException($"Trying to get status for file {path} that does not exist!");
 			//}
 
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth={depth} \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT * 4);
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth={depth} \"{SVNFormatPath(path)}\"", timeout);
 
 			if (!string.IsNullOrEmpty(result.error)) {
+
+				if (!raiseError)
+					return Enumerable.Empty<StatusData>();
+
 				string displayMessage;
 				bool isCritical = IsCriticalError(result.error, out displayMessage);
 

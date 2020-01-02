@@ -7,12 +7,18 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.SVN
 {
+	/// <summary>
+	/// Renders SVN overlay icons in the project windows.
+	/// Hooks up to Unity file changes API and refreshes when needed to.
+	/// </summary>
 	[InitializeOnLoad]
 	public static class SVNOverlayIcons
 	{
 		private const string INVALID_GUID = "00000000000000000000000000000000";
 		private const string ASSETS_FOLDER_GUID = "00000000000000001000000000000000";
 		private static SVNOverlayIconsDatabase m_Database;
+
+		private static SVNSimpleIntegration.StatusData[] m_PendingStatuses;
 
 		// Note: not all of these are rendered. Check the Database icons.
 		private readonly static VCFileStatus[] StatusShowPriority = new VCFileStatus[] {
@@ -55,6 +61,7 @@ namespace DevLocker.VersionControl.SVN
 			}
 		}
 
+		[MenuItem("Assets/SVN/Refresh Overlay Icons", false, 195)]
 		public static void InvalidateDatabase()
 		{
 			if (m_Database.PendingUpdate)
@@ -116,6 +123,11 @@ namespace DevLocker.VersionControl.SVN
 			}
 
 			foreach(var path in importedAssets) {
+
+				// ProjectSettings, Packages are imported too but we're not interested.
+				if (!path.StartsWith("Assets", StringComparison.Ordinal))
+					continue;
+
 				var status = SVNSimpleIntegration.GetStatus(path).Status;
 
 				// If status is normal but asset was imported, maybe the meta changed. Use that status instead.
@@ -130,19 +142,25 @@ namespace DevLocker.VersionControl.SVN
 					return;
 				}
 
-				if (status == VCFileStatus.Normal)
+				var guid = AssetDatabase.AssetPathToGUID(path);
+
+				if (status == VCFileStatus.Normal) {
+
+					// Check if just switched to normal from something else.
+					var knownStatus = m_Database.GetKnownStatus(guid);
+					if (knownStatus != VCFileStatus.None) {
+						m_Database.RemoveGUID(knownStatus, guid);
+						InvalidateDatabase();
+						return;
+					}
+
 					continue;
-
-				// Every time the user saves a file it will get reimported. If we already know it is modified, don't refresh every time.
-				bool wasModifiedGuid = m_Database.AddGUID(status, AssetDatabase.AssetPathToGUID(path));
-
-				if (status != VCFileStatus.Normal && !wasModifiedGuid) {
-					InvalidateDatabase();
-					return;
 				}
 
-				// Changed back to normal.
-				if (status == VCFileStatus.Normal && wasModifiedGuid) {
+				// Every time the user saves a file it will get reimported. If we already know it is modified, don't refresh every time.
+				bool addedGuid = m_Database.AddGUID(status, guid);
+
+				if (addedGuid) {
 					InvalidateDatabase();
 					return;
 				}
@@ -151,22 +169,46 @@ namespace DevLocker.VersionControl.SVN
 
 		private static void StartDatabaseUpdate()
 		{
-			m_Database.ClearAll();
-
 			// TODO: Remove debug logs.
-			Debug.LogWarning("Update Database");
+			Debug.LogWarning($"Started Update Database {EditorApplication.timeSinceStartup}");
 
-			// TODO: Do this in thread.
-			// TODO: GetStatuses is not thread safe? It calls Debug.LogError?
-			var statuses = SVNSimpleIntegration.GetStatuses(SVNSimpleIntegration.ProjectDataPath);
+			// Listen for the thread result in the main thread.
+			// Just in case, remove previous updates.
+			EditorApplication.update -= WaitAndFinishDatabaseUpdate;
+			EditorApplication.update += WaitAndFinishDatabaseUpdate;
 
+			var gatherStatusesThread = new System.Threading.Thread(GatherSVNStatuses);
+			gatherStatusesThread.Start();
+		}
+
+		// Executed in a worker thread.
+		private static void GatherSVNStatuses()
+		{
 			// Will get statuses of all added / modified / deleted / conflicted / unversioned files. Only normal files won't be listed.
-			foreach (var status in statuses) {
-
+			m_PendingStatuses = SVNSimpleIntegration.GetStatuses(SVNSimpleIntegration.ProjectDataPath, "infinity", false, SVNSimpleIntegration.COMMAND_TIMEOUT * 8)
 				// Deleted svn file can still exist for some reason. Need to show it as deleted.
 				// If file doesn't exists, skip it as we can't show it anyway.
-				if (status.Status == VCFileStatus.Deleted && !File.Exists(status.Path))
-					continue;
+				.Where(s => s.Status != VCFileStatus.Deleted || File.Exists(s.Path))
+				.ToArray();
+		}
+
+		private static void WaitAndFinishDatabaseUpdate()
+		{
+			if (m_PendingStatuses == null)
+				return;
+
+			// TODO: Remove debug logs.
+			Debug.LogWarning($"Finished Update Database {EditorApplication.timeSinceStartup}");
+
+			EditorApplication.update -= WaitAndFinishDatabaseUpdate;
+
+			m_Database.ClearAll();
+
+			var statuses = m_PendingStatuses;
+			m_PendingStatuses = null;
+
+			// Process the gathered statuses in the main thread, since Unity API is not thread-safe.
+			foreach (var status in statuses) {
 
 				// Meta statuses are also considered. They are shown as the asset status.
 				if (status.Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase)) {
@@ -182,6 +224,7 @@ namespace DevLocker.VersionControl.SVN
 				AddModifiedFolders(status.Status, status.Path);
 			}
 
+			// Mark update as finished.
 			m_Database.PendingUpdate = false;
 		}
 
@@ -245,6 +288,26 @@ namespace DevLocker.VersionControl.SVN
 		public GUIContent GetIconContent(VCFileStatus status)
 		{
 			return Icons[(int)status];
+		}
+
+		public VCFileStatus GetKnownStatus(string guid)
+		{
+			if (Added.Contains(guid))
+				return VCFileStatus.Added;
+
+			if (Modified.Contains(guid))
+				return VCFileStatus.Modified;
+
+			if (Deleted.Contains(guid))
+				return VCFileStatus.Deleted;
+
+			if (Conflicted.Contains(guid))
+				return VCFileStatus.Conflicted;
+
+			if (Unversioned.Contains(guid))
+				return VCFileStatus.Unversioned;
+
+			return VCFileStatus.None;
 		}
 
 		public bool HasGUID(VCFileStatus status, string guid)
