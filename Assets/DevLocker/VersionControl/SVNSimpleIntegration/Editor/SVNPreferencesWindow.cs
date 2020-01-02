@@ -37,7 +37,7 @@ namespace DevLocker.VersionControl.SVN
 
 				EditorGUI.BeginDisabledGroup(!m_EnableIntegration);
 
-				m_EnableOverlayIcons = EditorGUILayout.Toggle("Enable Overlay Icons", m_EnableOverlayIcons);
+				m_EnableOverlayIcons = EditorGUILayout.Toggle(new GUIContent("Enable Overlay Icons", "Enables overlay icons in the project windows."), m_EnableOverlayIcons);
 				EditorGUI.BeginDisabledGroup(!m_EnableOverlayIcons);
 				m_AutoRefreshInterval = EditorGUILayout.IntField(new GUIContent("Overlay icons refresh interval", "How much seconds to wait for the next overlay icons refresh.\nNOTE: -1 will deactivate it."), m_AutoRefreshInterval);
 				EditorGUI.EndDisabledGroup();
@@ -51,21 +51,23 @@ namespace DevLocker.VersionControl.SVN
 
 			EditorGUILayout.LabelField("Project Preferences:", EditorStyles.boldLabel);
 			{
-				EditorGUILayout.HelpBox("These settings will be saved in the ProjectSettings folder. Feel free to add them to your version control system.", MessageType.Info);
+				EditorGUILayout.HelpBox("These settings will be saved in the ProjectSettings folder. Feel free to add them to your version control system.\nAs always, check the tooltips.", MessageType.Info);
 
 				m_ProjectPreferencesScroll = EditorGUILayout.BeginScrollView(m_ProjectPreferencesScroll);
 
 				var so = new SerializedObject(this);
 				var sp = so.FindProperty("m_ProjectPreferences");
 
-				EditorGUILayout.PropertyField(sp, true);
+				// HACK: Tooltips were not showing, that is why I manually add them.
+				EditorGUILayout.PropertyField(sp.FindPropertyRelative("SvnCLIPath"), new GUIContent("SVN CLI Path", SVNSimpleIntegration.ProjectPreferences.SVN_CLI_PATH_TOOLTIP), false);
+				EditorGUILayout.PropertyField(sp.FindPropertyRelative("Exclude"), new GUIContent("Exclude Paths", SVNSimpleIntegration.ProjectPreferences.EXCLUDE_TOOLTIP), true);
 
 				so.ApplyModifiedProperties();
 
 				EditorGUILayout.EndScrollView();
 			}
 
-			if (GUILayout.Button("Save")) {
+			if (GUILayout.Button("Save & Close")) {
 				m_ProjectPreferences.SvnCLIPath = m_ProjectPreferences.SvnCLIPath.Trim();
 
 				// NOTE: Order is important.

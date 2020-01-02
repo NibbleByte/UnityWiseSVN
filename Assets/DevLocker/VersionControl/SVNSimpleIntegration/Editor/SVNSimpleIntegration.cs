@@ -116,10 +116,12 @@ namespace DevLocker.VersionControl.SVN
 		[Serializable]
 		internal struct ProjectPreferences
 		{
-			[Tooltip("If you desire to use specific SVN CLI (svn.exe) located in the project, write down its path relative to the root folder.")]
+			public const string SVN_CLI_PATH_TOOLTIP = "If you desire to use specific SVN CLI (svn.exe) located in the project, write down its path relative to the root folder.";
+			[Tooltip(SVN_CLI_PATH_TOOLTIP)]
 			public string SvnCLIPath;
 
-			[Tooltip("Asset paths that will be ignored by the SVN integrations. Use with caution.")]
+			public const string EXCLUDE_TOOLTIP = "Asset paths that will be ignored by the SVN integrations. Use with caution.";
+			[Tooltip(EXCLUDE_TOOLTIP)]
 			public List<string> Exclude;
 		}
 
