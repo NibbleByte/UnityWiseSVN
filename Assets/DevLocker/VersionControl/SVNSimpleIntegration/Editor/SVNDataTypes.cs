@@ -46,8 +46,8 @@ namespace DevLocker.VersionControl.SVN
 
 	public enum VCRemoteFileStatus
 	{
+		None,
 		Modified,
-		None
 	}
 
 	[Flags]

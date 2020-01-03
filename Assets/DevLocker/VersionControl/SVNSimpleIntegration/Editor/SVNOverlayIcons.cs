@@ -110,6 +110,10 @@ namespace DevLocker.VersionControl.SVN
 
 			m_Database.PendingUpdate = true;
 
+			// Will be done on assembly reload.
+			if (EditorApplication.isCompiling)
+				return;
+
 			StartDatabaseUpdate();
 		}
 
@@ -269,7 +273,7 @@ namespace DevLocker.VersionControl.SVN
 				};
 
 				// Will get statuses of all added / modified / deleted / conflicted / unversioned files. Only normal files won't be listed.
-				var statuses = SVNSimpleIntegration.GetStatuses(SVNSimpleIntegration.ProjectDataPath, statusOptions)
+				var statuses = SVNSimpleIntegration.GetStatuses("Assets", statusOptions)
 					// Deleted svn file can still exist for some reason. Need to show it as deleted.
 					// If file doesn't exists, skip it as we can't show it anyway.
 					.Where(s => s.Status != VCFileStatus.Deleted || File.Exists(s.Path))
@@ -444,9 +448,9 @@ namespace DevLocker.VersionControl.SVN
 			
 			if (LockStatusIcons.Length == 0) {
 				LockStatusIcons = new GUIContent[Enum.GetValues(typeof(VCLockStatus)).Length];
-				LockStatusIcons[(int)VCLockStatus.LockedHere] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNLockedIcon"));
-				LockStatusIcons[(int)VCLockStatus.LockedOther] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNLockedIcon"));
-				LockStatusIcons[(int)VCLockStatus.LockedButStolen] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNLockedIcon"));
+				LockStatusIcons[(int)VCLockStatus.LockedHere] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNLockedIcon"), "You have locked this file.");
+				LockStatusIcons[(int)VCLockStatus.LockedOther] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNLockedIcon"), "Someone else locked this file.");
+				LockStatusIcons[(int)VCLockStatus.LockedButStolen] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNLockedIcon"), "Your lock was stolen by someone else.");
 				// TODO: Change icons.
 			}
 		}

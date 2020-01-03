@@ -55,7 +55,6 @@ namespace DevLocker.VersionControl.SVN
 		};
 
 		public static readonly string ProjectRoot;
-		public static readonly string ProjectDataPath;
 
 		public static event Action ShowChangesUI;
 
@@ -155,7 +154,6 @@ namespace DevLocker.VersionControl.SVN
 
 		static SVNSimpleIntegration()
 		{
-			ProjectDataPath = Application.dataPath;
 			ProjectRoot = Path.GetDirectoryName(Application.dataPath);
 
 			Enabled = EditorPrefs.GetBool("SVNIntegration", true);
@@ -462,13 +460,18 @@ namespace DevLocker.VersionControl.SVN
 						statusData.RemoteStatus = m_RemoteStatusMap[line[8]];
 					}
 
-					// Length+1 to skip '/'
-					statusData.Path = line.Substring(pathStart).Remove(0, ProjectRoot.Length + 1);
+					statusData.Path = line.Substring(pathStart);
+
+					// NOTE: If you pass absolute path to svn, the output will be with absolute path -> always pass relative path and we'll be good.
+					// If path is not relative, make it.
+					//if (!statusData.Path.StartsWith("Assets", StringComparison.Ordinal)) {
+					//	// Length+1 to skip '/'
+					//	statusData.Path = statusData.Path.Remove(0, ProjectRoot.Length + 1);
+					//}
 
 					yield return statusData;
 				}
 			}
-
 		}
 
 		public static IEnumerable<SVNStatusData> GetStatuses(string path, SVNStatusDataOptions options)
