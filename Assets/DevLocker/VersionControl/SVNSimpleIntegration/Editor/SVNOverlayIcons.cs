@@ -31,11 +31,15 @@ namespace DevLocker.VersionControl.SVN
 		// Filled in by a worker thread.
 		private static SVNStatusData[] m_PendingStatuses;
 
+		private static System.Threading.Thread m_WorkerThread;
+
 		static SVNOverlayIcons()
 		{
 			Enabled = EditorPrefs.GetBool("SVNOverlayIcons", true);
 			CheckLockStatus = EditorPrefs.GetBool("SVNCheckLockStatus", false);
 			AutoRefreshInterval = EditorPrefs.GetInt("SVNOverlayIconsRefreshInverval", 60);
+
+			AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
 
 			// NOTE: This checks SVNSimpleIntegration.Enabled which is set by its static constructor.
 			// This might cause a race condition, but C# says it will call them in the right order. Hope this is true.
@@ -45,6 +49,14 @@ namespace DevLocker.VersionControl.SVN
 			// Do it again.
 			if (m_Database && m_Database.PendingUpdate) {
 				StartDatabaseUpdate();
+			}
+		}
+
+		private static void OnBeforeAssemblyReload()
+		{
+			// Do it before Unity does it. Cause Unity aborts the thread badly sometimes :(
+			if (m_WorkerThread != null && m_WorkerThread.IsAlive) {
+				m_WorkerThread.Abort();
 			}
 		}
 
@@ -257,8 +269,8 @@ namespace DevLocker.VersionControl.SVN
 			EditorApplication.update -= WaitAndFinishDatabaseUpdate;
 			EditorApplication.update += WaitAndFinishDatabaseUpdate;
 
-			var gatherStatusesThread = new System.Threading.Thread(GatherSVNStatuses);
-			gatherStatusesThread.Start();
+			m_WorkerThread = new System.Threading.Thread(GatherSVNStatuses);
+			m_WorkerThread.Start();
 		}
 
 		// Executed in a worker thread.
@@ -295,7 +307,11 @@ namespace DevLocker.VersionControl.SVN
 
 				m_PendingStatuses = statuses.ToArray();
 
-			} catch(Exception ex) {
+			}
+			// Most probably the assembly got reloaded and the thread was aborted.
+			catch (System.Threading.ThreadAbortException) {
+				System.Threading.Thread.ResetAbort();
+			} catch (Exception ex) {
 				Debug.LogException(ex);
 
 				m_PendingStatuses = new SVNStatusData[0];
@@ -312,6 +328,7 @@ namespace DevLocker.VersionControl.SVN
 			}
 
 			EditorApplication.update -= WaitAndFinishDatabaseUpdate;
+			m_WorkerThread = null;
 
 			// If preferences were changed while waiting.
 			if (!IsActive)
