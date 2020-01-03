@@ -19,6 +19,7 @@ namespace DevLocker.VersionControl.SVN
 		private static SVNOverlayIconsDatabase m_Database;
 
 		public static bool Enabled { get; private set; }
+		public static bool CheckLockStatus { get; private set; }
 		public static double AutoRefreshInterval { get; private set; } // seconds; Less than 0 will disable it.
 		private static double m_LastRefreshTime;
 
@@ -28,25 +29,12 @@ namespace DevLocker.VersionControl.SVN
 		private static bool DoTraceLogs => (SVNSimpleIntegration.TraceLogs & SVNTraceLogs.OverlayIcons) != 0;
 
 		// Filled in by a worker thread.
-		private static SVNSimpleIntegration.StatusData[] m_PendingStatuses;
-
-		// Note: not all of these are rendered. Check the Database icons.
-		private readonly static VCFileStatus[] StatusShowPriority = new VCFileStatus[] {
-			VCFileStatus.Conflicted, 
-			VCFileStatus.Obstructed, 
-			VCFileStatus.Modified,
-			VCFileStatus.Added,
-			VCFileStatus.Deleted,
-			VCFileStatus.Missing,
-			VCFileStatus.Replaced,
-			VCFileStatus.Ignored,
-			VCFileStatus.Unversioned,
-			VCFileStatus.Normal,
-		};
+		private static SVNStatusData[] m_PendingStatuses;
 
 		static SVNOverlayIcons()
 		{
 			Enabled = EditorPrefs.GetBool("SVNOverlayIcons", true);
+			CheckLockStatus = EditorPrefs.GetBool("SVNCheckLockStatus", false);
 			AutoRefreshInterval = EditorPrefs.GetInt("SVNOverlayIconsRefreshInverval", 60);
 
 			// NOTE: This checks SVNSimpleIntegration.Enabled which is set by its static constructor.
@@ -60,12 +48,14 @@ namespace DevLocker.VersionControl.SVN
 			}
 		}
 
-		public static void SavePreferences(bool enabled, double autoRefreshInverval)
+		public static void SavePreferences(bool enabled, bool checkLockStatus, double autoRefreshInverval)
 		{
 			Enabled = enabled;
+			CheckLockStatus = checkLockStatus;
 			AutoRefreshInterval = autoRefreshInverval;
 
 			EditorPrefs.SetBool("SVNOverlayIcons", Enabled);
+			EditorPrefs.SetBool("SVNCheckLockStatus", CheckLockStatus);
 			EditorPrefs.SetInt("SVNOverlayIconsRefreshInverval", (int) AutoRefreshInterval);
 
 			PreferencesChanged();
@@ -115,7 +105,7 @@ namespace DevLocker.VersionControl.SVN
 		[MenuItem("Assets/SVN/Refresh Overlay Icons", false, 195)]
 		public static void InvalidateDatabase()
 		{
-			if (!IsActive || m_Database.PendingUpdate)
+			if (!IsActive || m_Database.PendingUpdate || SVNSimpleIntegration.TemporaryDisabled)
 				return;
 
 			m_Database.PendingUpdate = true;
@@ -131,16 +121,44 @@ namespace DevLocker.VersionControl.SVN
 				//|| guid.Equals(ASSETS_FOLDER_GUID, StringComparison.Ordinal)
 				return;
 
-			GUIContent icon = null;
+			//
+			// Lock Status
+			//
+			var statusData = m_Database.GetKnownStatusData(guid);
 
-			foreach(var status in StatusShowPriority) {
-				if (m_Database.HasGUID(status, guid)) {
-					icon = m_Database.GetIconContent(status);
-					break;
+			if (CheckLockStatus && statusData.LockStatus != VCLockStatus.NoLock) {
+				var lockStatusIcon = m_Database.GetLockStatusIconContent(statusData.LockStatus);
+
+				if (lockStatusIcon != null) {
+					var iconRect = new Rect(selectionRect);
+					if (iconRect.width > iconRect.height) {
+						iconRect.x += iconRect.width - iconRect.height;
+						iconRect.width = iconRect.height;
+					} else {
+						// Project view has zoomed in items. Scale up the icons, but keep a limit so it doesn't hide the item preview image.
+						float yAdjustment = Mathf.Clamp(iconRect.width - 48, 0, float.PositiveInfinity);
+						var width = iconRect.width - yAdjustment;
+						iconRect.x += iconRect.width - width;
+						iconRect.width = width;
+						iconRect.height = width;
+
+						// Compensate for the height change.
+						iconRect.y += yAdjustment;
+
+						iconRect.x += 8;
+					}
+
+					GUI.Label(iconRect, lockStatusIcon);
 				}
 			}
 
-			if (icon != null) {
+
+			//
+			// File Status
+			//
+			GUIContent fileStatusIcon = m_Database.GetFileStatusIconContent(statusData.Status);
+
+			if (fileStatusIcon != null) {
 				var iconRect = new Rect(selectionRect);
 				if (iconRect.width > iconRect.height) {
 					iconRect.width = iconRect.height;
@@ -155,7 +173,7 @@ namespace DevLocker.VersionControl.SVN
 				}
 
 				iconRect.y += 4;
-				GUI.Label(iconRect, icon);
+				GUI.Label(iconRect, fileStatusIcon);
 			}
 		}
 
@@ -182,28 +200,31 @@ namespace DevLocker.VersionControl.SVN
 				if (!path.StartsWith("Assets", StringComparison.Ordinal))
 					continue;
 
-				var status = SVNSimpleIntegration.GetStatus(path).Status;
+				var statusData = SVNSimpleIntegration.GetStatus(path);
 
 				// If status is normal but asset was imported, maybe the meta changed. Use that status instead.
-				if (status == VCFileStatus.Normal) {
-					status = SVNSimpleIntegration.GetStatus(path + ".meta").Status;
-				}
-
-				// Conflicted file got reimported? Fuck this, just refresh.
-				if (status == VCFileStatus.Conflicted) {
-					m_Database.AddGUID(VCFileStatus.Conflicted, AssetDatabase.AssetPathToGUID(path));
-					InvalidateDatabase();
-					return;
+				if (statusData.Status == VCFileStatus.Normal && !statusData.IsConflicted) {
+					statusData = SVNSimpleIntegration.GetStatus(path + ".meta");
+					statusData.Path = path;
 				}
 
 				var guid = AssetDatabase.AssetPathToGUID(path);
 
-				if (status == VCFileStatus.Normal) {
+				// Conflicted file got reimported? Fuck this, just refresh.
+				if (statusData.IsConflicted) {
+					m_Database.SetStatusData(guid, statusData, true);
+					InvalidateDatabase();
+					return;
+				}
+
+
+				if (statusData.Status == VCFileStatus.Normal) {
 
 					// Check if just switched to normal from something else.
-					var knownStatus = m_Database.GetKnownStatus(guid);
-					if (knownStatus != VCFileStatus.None) {
-						m_Database.RemoveGUID(knownStatus, guid);
+					var knownStatusData = m_Database.GetKnownStatusData(guid);
+					// Normal might be present in the database if it is locked.
+					if (knownStatusData.Status != VCFileStatus.None && knownStatusData.Status != VCFileStatus.Normal) {
+						m_Database.RemoveStatusData(guid);
 						InvalidateDatabase();
 						return;
 					}
@@ -212,9 +233,9 @@ namespace DevLocker.VersionControl.SVN
 				}
 
 				// Every time the user saves a file it will get reimported. If we already know it is modified, don't refresh every time.
-				bool addedGuid = m_Database.AddGUID(status, guid);
+				bool changed = m_Database.SetStatusData(guid, statusData, true);
 
-				if (addedGuid) {
+				if (changed) {
 					InvalidateDatabase();
 					return;
 				}
@@ -239,28 +260,42 @@ namespace DevLocker.VersionControl.SVN
 		// Executed in a worker thread.
 		private static void GatherSVNStatuses()
 		{
-			// Will get statuses of all added / modified / deleted / conflicted / unversioned files. Only normal files won't be listed.
-			var statuses = SVNSimpleIntegration.GetStatuses(SVNSimpleIntegration.ProjectDataPath, "infinity", false, SVNSimpleIntegration.COMMAND_TIMEOUT * 8)
-				// Deleted svn file can still exist for some reason. Need to show it as deleted.
-				// If file doesn't exists, skip it as we can't show it anyway.
-				.Where(s => s.Status != VCFileStatus.Deleted || File.Exists(s.Path))
-				.Where(s => s.Status != VCFileStatus.Missing)
-				.ToList();
+			try {
+				var statusOptions = new SVNStatusDataOptions() {
+					Depth = SVNStatusDataOptions.SearchDepth.Infinity,
+					RaiseError = false,
+					Timeout = SVNSimpleIntegration.COMMAND_TIMEOUT * 8,
+					Offline = !CheckLockStatus,
+				};
 
-			for(int i = 0, count = statuses.Count; i < count; ++i) {
-				var statusData = statuses[i];
+				// Will get statuses of all added / modified / deleted / conflicted / unversioned files. Only normal files won't be listed.
+				var statuses = SVNSimpleIntegration.GetStatuses(SVNSimpleIntegration.ProjectDataPath, statusOptions)
+					// Deleted svn file can still exist for some reason. Need to show it as deleted.
+					// If file doesn't exists, skip it as we can't show it anyway.
+					.Where(s => s.Status != VCFileStatus.Deleted || File.Exists(s.Path))
+					.Where(s => s.Status != VCFileStatus.Missing)
+					.ToList();
 
-				// Statuses for entries under unversioned directories are not returned. Add them manually.
-				if (statusData.Status == VCFileStatus.Unversioned && Directory.Exists(statusData.Path)) {
-					var paths = Directory.EnumerateFileSystemEntries(statusData.Path, "*", SearchOption.AllDirectories);
-					statuses.AddRange(paths
-						.Select(path => path.Replace(SVNSimpleIntegration.ProjectRoot, ""))
-						.Select(path => new SVNSimpleIntegration.StatusData() { Status = VCFileStatus.Unversioned, Path = path })
-						);
+				for (int i = 0, count = statuses.Count; i < count; ++i) {
+					var statusData = statuses[i];
+
+					// Statuses for entries under unversioned directories are not returned. Add them manually.
+					if (statusData.Status == VCFileStatus.Unversioned && Directory.Exists(statusData.Path)) {
+						var paths = Directory.EnumerateFileSystemEntries(statusData.Path, "*", SearchOption.AllDirectories);
+						statuses.AddRange(paths
+							.Select(path => path.Replace(SVNSimpleIntegration.ProjectRoot, ""))
+							.Select(path => new SVNStatusData() { Status = VCFileStatus.Unversioned, Path = path })
+							);
+					}
 				}
-			}
 
-			m_PendingStatuses = statuses.ToArray();
+				m_PendingStatuses = statuses.ToArray();
+
+			} catch(Exception ex) {
+				Debug.LogException(ex);
+
+				m_PendingStatuses = new SVNStatusData[0];
+			}
 		}
 
 		private static void WaitAndFinishDatabaseUpdate()
@@ -284,20 +319,33 @@ namespace DevLocker.VersionControl.SVN
 			m_PendingStatuses = null;
 
 			// Process the gathered statuses in the main thread, since Unity API is not thread-safe.
-			foreach (var status in statuses) {
+			foreach (var foundStatusData in statuses) {
+
+				// Because structs can't be modified in foreach.
+				var statusData = foundStatusData;
 
 				// Meta statuses are also considered. They are shown as the asset status.
-				if (status.Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase)) {
-					var assetPath = status.Path.Substring(0, status.Path.LastIndexOf(".meta"));
-					m_Database.AddGUID(status.Status, AssetDatabase.AssetPathToGUID(assetPath));
-					AddModifiedFolders(status.Status, status.Path);
-					continue;
+				if (statusData.Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase)) {
+					statusData.Path = statusData.Path.Substring(0, statusData.Path.LastIndexOf(".meta"));
 				}
 
-				// TODO: Test tree conflicts.
+				// Conflicted is with priority.
+				if (statusData.IsConflicted) {
+					statusData.Status = VCFileStatus.Conflicted;
+				}
 
-				m_Database.AddGUID(status.Status, AssetDatabase.AssetPathToGUID(status.Path));
-				AddModifiedFolders(status.Status, status.Path);
+				// File was added to the repository but is missing in the working copy.
+				// The proper way to check this is to parse the working revision from the svn output (when used with -u)
+				if (statusData.RemoteStatus == VCRemoteFileStatus.Modified 
+					&& statusData.Status == VCFileStatus.Normal 
+					&& !File.Exists(statusData.Path)
+					)
+					continue;
+
+				// TODO: Test tree conflicts.
+				m_Database.SetStatusData(AssetDatabase.AssetPathToGUID(statusData.Path), statusData, false);
+
+				AddModifiedFolders(statusData);
 			}
 
 			// Mark update as finished.
@@ -314,23 +362,30 @@ namespace DevLocker.VersionControl.SVN
 			InvalidateDatabase();
 		}
 
-		private static void AddModifiedFolders(VCFileStatus status, string path)
+		private static void AddModifiedFolders(SVNStatusData statusData)
 		{
-			if (status == VCFileStatus.Unversioned || status == VCFileStatus.Ignored)
+			if (statusData.Status == VCFileStatus.Unversioned || statusData.Status == VCFileStatus.Ignored)
 				return;
 
-			if (status != VCFileStatus.Modified && status != VCFileStatus.Conflicted) {
-				status = VCFileStatus.Modified;
+			if (statusData.IsConflicted) {
+				statusData.Status = VCFileStatus.Conflicted;
+			} else if (statusData.Status != VCFileStatus.Modified) {
+				statusData.Status = VCFileStatus.Modified;
 			}
 
-			path = Path.GetDirectoryName(path);
+			// Folders don't have locks.
+			statusData.LockStatus = VCLockStatus.NoLock;
+
+			var path = Path.GetDirectoryName(statusData.Path);
 
 			while (!string.IsNullOrEmpty(path)) {
 				var guid = AssetDatabase.AssetPathToGUID(path);
 
-				bool moveToNext = m_Database.HasGUID(VCFileStatus.Added, guid)
-					? false		// Added folders should not be shown as modified.
-					: m_Database.AddGUID(status, guid);
+				// Added folders should not be shown as modified.
+				if (m_Database.GetKnownStatusData(guid).Status == VCFileStatus.Added)
+					return;
+
+				bool moveToNext = m_Database.SetStatusData(guid, statusData, false);
 
 				// If already exists, upper folders should be added as well.
 				if (!moveToNext)
@@ -343,15 +398,32 @@ namespace DevLocker.VersionControl.SVN
 
 	internal class SVNOverlayIconsDatabase : ScriptableObject
 	{
-		// GUIDs
-		[SerializeField] private List<string> Added = new List<string>();
-		[SerializeField] private List<string> Modified = new List<string>();
-		[SerializeField] private List<string> Deleted = new List<string>();
-		[SerializeField] private List<string> Conflicted = new List<string>();
-		[SerializeField] private List<string> Unversioned = new List<string>();
+		[Serializable]
+		private class GuidStatusDataBind
+		{
+			public string Guid;
+			public SVNStatusData Data;
+		}
+
+		// Note: not all of these are rendered. Check the Database icons.
+		private readonly static Dictionary<VCFileStatus, int> m_StatusPriority = new Dictionary<VCFileStatus, int> {
+			{ VCFileStatus.Conflicted, 10 },
+			{ VCFileStatus.Obstructed, 10 },
+			{ VCFileStatus.Modified, 8},
+			{ VCFileStatus.Added, 6},
+			{ VCFileStatus.Deleted, 6},
+			{ VCFileStatus.Missing, 6},
+			{ VCFileStatus.Replaced, 5},
+			{ VCFileStatus.Ignored, 3},
+			{ VCFileStatus.Unversioned, 1},
+			{ VCFileStatus.Normal, 0},
+		};
+
+		[SerializeField] private List<GuidStatusDataBind> StatusDatas = new List<GuidStatusDataBind>();
 
 		// Icons are stored in the database so we don't reload them every time.
-		[SerializeField] private GUIContent[] Icons = new GUIContent[0];
+		[SerializeField] private GUIContent[] FileStatusIcons = new GUIContent[0];
+		[SerializeField] private GUIContent[] LockStatusIcons = new GUIContent[0];
 
 		// Is update pending?
 		// If last update didn't make it, this flag will still be true.
@@ -361,123 +433,106 @@ namespace DevLocker.VersionControl.SVN
 		private void OnEnable()
 		{
 			// Load only if needed.
-			if (Icons.Length == 0) {
-				Icons = new GUIContent[Enum.GetValues(typeof(VCFileStatus)).Length];
-				Icons[(int)VCFileStatus.Added] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNAddedIcon"));
-				Icons[(int)VCFileStatus.Modified] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNModifiedIcon"));
-				Icons[(int)VCFileStatus.Deleted] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNDeletedIcon"));
-				Icons[(int)VCFileStatus.Conflicted] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNConflictIcon"));
-				Icons[(int)VCFileStatus.Unversioned] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNUnversionedIcon"));
+			if (FileStatusIcons.Length == 0) {
+				FileStatusIcons = new GUIContent[Enum.GetValues(typeof(VCFileStatus)).Length];
+				FileStatusIcons[(int)VCFileStatus.Added] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNAddedIcon"));
+				FileStatusIcons[(int)VCFileStatus.Modified] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNModifiedIcon"));
+				FileStatusIcons[(int)VCFileStatus.Deleted] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNDeletedIcon"));
+				FileStatusIcons[(int)VCFileStatus.Conflicted] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNConflictIcon"));
+				FileStatusIcons[(int)VCFileStatus.Unversioned] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNUnversionedIcon"));
+			}
+			
+			if (LockStatusIcons.Length == 0) {
+				LockStatusIcons = new GUIContent[Enum.GetValues(typeof(VCLockStatus)).Length];
+				LockStatusIcons[(int)VCLockStatus.LockedHere] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNLockedIcon"));
+				LockStatusIcons[(int)VCLockStatus.LockedOther] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNLockedIcon"));
+				LockStatusIcons[(int)VCLockStatus.LockedButStolen] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNLockedIcon"));
+				// TODO: Change icons.
 			}
 		}
 
-		public GUIContent GetIconContent(VCFileStatus status)
+		public GUIContent GetFileStatusIconContent(VCFileStatus status)
 		{
-			return Icons[(int)status];
+			return FileStatusIcons[(int)status];
 		}
 
-		public VCFileStatus GetKnownStatus(string guid)
+
+		public GUIContent GetLockStatusIconContent(VCLockStatus status)
 		{
-			if (Added.Contains(guid))
-				return VCFileStatus.Added;
-
-			if (Modified.Contains(guid))
-				return VCFileStatus.Modified;
-
-			if (Deleted.Contains(guid))
-				return VCFileStatus.Deleted;
-
-			if (Conflicted.Contains(guid))
-				return VCFileStatus.Conflicted;
-
-			if (Unversioned.Contains(guid))
-				return VCFileStatus.Unversioned;
-
-			return VCFileStatus.None;
+			return LockStatusIcons[(int)status];
 		}
 
-		public bool HasGUID(VCFileStatus status, string guid)
-		{
-			switch (status) {
-				case VCFileStatus.Added:
-					return Added.Contains(guid, StringComparer.Ordinal);
-				case VCFileStatus.Modified:
-				case VCFileStatus.Replaced:
-					return Modified.Contains(guid, StringComparer.Ordinal);
-				case VCFileStatus.Deleted:
-					return Deleted.Contains(guid, StringComparer.Ordinal);
-				case VCFileStatus.Conflicted:
-					return Conflicted.Contains(guid, StringComparer.Ordinal);
-				case VCFileStatus.Unversioned:
-					return Unversioned.Contains(guid, StringComparer.Ordinal);
-				default:
-					return false;
-			}
-		}
 
-		public bool AddGUID(VCFileStatus status, string guid)
+		//
+		// Status Data
+		//
+		public SVNStatusData GetKnownStatusData(string guid)
 		{
 			if (string.IsNullOrEmpty(guid)) {
-				Debug.LogError($"Trying to add empty guid for status {status}");
+				Debug.LogError($"Asking for status with empty guid");
 			}
 
-			switch (status) {
-				case VCFileStatus.Added:
-					return AddUnique(Added, guid);
-				case VCFileStatus.Modified:
-				case VCFileStatus.Replaced:
-					return AddUnique(Modified, guid);
-				case VCFileStatus.Deleted:
-					return AddUnique(Deleted, guid);
-				case VCFileStatus.Conflicted:
-					return AddUnique(Conflicted, guid);
-				case VCFileStatus.Unversioned:
-					return AddUnique(Unversioned, guid);
-				default:
-					return false;
+			foreach (var bind in StatusDatas) {
+				if (bind.Guid.Equals(guid, StringComparison.Ordinal))
+					return bind.Data;
 			}
+
+			return new SVNStatusData() { Status = VCFileStatus.None };
+		}
+
+		public bool SetStatusData(string guid, SVNStatusData statusData, bool skipPriorityCheck)
+		{
+			if (string.IsNullOrEmpty(guid)) {
+				Debug.LogError($"Trying to add empty guid for status {statusData.Status}");
+			}
+
+			foreach (var bind in StatusDatas) {
+				if (bind.Guid.Equals(guid, StringComparison.Ordinal)) {
+
+					if (bind.Data.Equals(statusData))
+						return false;
+
+					// This is needed because the status of the meta might differ. In that case take the stronger status.
+					if (!skipPriorityCheck) {
+						if (m_StatusPriority[bind.Data.Status] > m_StatusPriority[statusData.Status]) {
+							// Merge any other data.
+							if (bind.Data.LockStatus == VCLockStatus.NoLock) {
+								bind.Data.LockStatus = statusData.LockStatus;
+							}
+
+							return false;
+						}
+					}
+
+					bind.Data = statusData;
+					return true;
+				}
+			}
+
+			StatusDatas.Add(new GuidStatusDataBind() { Guid = guid, Data = statusData });
+			return true;
 		}
 
 
-		public bool RemoveGUID(VCFileStatus status, string guid)
+		public bool RemoveStatusData(string guid)
 		{
 			if (string.IsNullOrEmpty(guid)) {
-				Debug.LogError($"Trying to remove empty guid for status {status}");
+				Debug.LogError($"Trying to remove empty guid");
 			}
 
-			switch (status) {
-				case VCFileStatus.Added:
-					return Added.Remove(guid);
-				case VCFileStatus.Modified:
-				case VCFileStatus.Replaced:
-					return Modified.Remove(guid);
-				case VCFileStatus.Deleted:
-					return Deleted.Remove(guid);
-				case VCFileStatus.Conflicted:
-					return Conflicted.Remove(guid);
-				case VCFileStatus.Unversioned:
-					return Unversioned.Remove(guid);
-				default:
-					return false;
+			for(int i = 0; i < StatusDatas.Count; ++i) {
+				if (StatusDatas[i].Guid.Equals(guid, StringComparison.Ordinal)) {
+					StatusDatas.RemoveAt(i);
+					return true;
+				}
 			}
+
+			return false;
 		}
 
 		public void ClearAll()
 		{
-			Added.Clear();
-			Modified.Clear();
-			Deleted.Clear();
-			Conflicted.Clear();
-			Unversioned.Clear();
-		}
-
-		private bool AddUnique(List<string> list, string value)
-		{
-			if (list.Contains(value, StringComparer.Ordinal))
-				return false;
-
-			list.Add(value);
-			return true;
+			StatusDatas.Clear();
 		}
 	}
 

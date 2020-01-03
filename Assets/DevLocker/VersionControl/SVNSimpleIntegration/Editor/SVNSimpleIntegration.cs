@@ -8,50 +8,6 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.SVN
 {
-	// Stolen from UVC plugin.
-	public enum VCFileStatus
-	{
-		Normal,
-		Added,
-		Conflicted,
-		Deleted,
-		Ignored,
-		Modified,
-		Replaced,
-		Unversioned,
-		Missing,
-		//External,
-		//Incomplete,
-		//Merged,
-		Obstructed,
-		None,	// File not found or something worse....
-	}
-
-	// Stolen from UVC plugin.
-	public enum VCProperty
-	{
-		None,
-		Normal,
-		Conflicted,
-		Modified,
-	}
-
-	// Stolen from UVC plugin.
-	public enum VCTreeConflictStatus
-	{
-		Normal,
-		TreeConflict
-	}
-
-	[Flags]
-	public enum SVNTraceLogs
-	{
-		None = 0,
-		SVNOperations = 1 << 0,
-		OverlayIcons = 1 << 4,
-		All = ~0,
-	}
-
 	// SVN console commands: https://tortoisesvn.net/docs/nightly/TortoiseSVN_en/tsvn-cli-main.html
 	[InitializeOnLoad]
 	public class SVNSimpleIntegration : UnityEditor.AssetModificationProcessor
@@ -70,6 +26,15 @@ namespace DevLocker.VersionControl.SVN
 			{'~', VCFileStatus.Obstructed},
 		};
 
+		private static readonly Dictionary<char, VCLockStatus> m_LockStatusMap = new Dictionary<char, VCLockStatus>
+		{
+			{' ', VCLockStatus.NoLock},
+			{'K', VCLockStatus.LockedHere},
+			{'O', VCLockStatus.LockedOther},
+			{'T', VCLockStatus.LockedButStolen},
+			{'B', VCLockStatus.BrokenLock},
+		};
+
 		private static readonly Dictionary<char, VCProperty> m_PropertyStatusMap = new Dictionary<char, VCProperty>
 		{
 			{' ', VCProperty.Normal},
@@ -83,21 +48,11 @@ namespace DevLocker.VersionControl.SVN
 			{'C', VCTreeConflictStatus.TreeConflict},
 		};
 
-
-
-		public struct StatusData
+		private static readonly Dictionary<char, VCRemoteFileStatus> m_RemoteStatusMap = new Dictionary<char, VCRemoteFileStatus>
 		{
-			public VCFileStatus Status;
-			public VCProperty PropertyStatus;
-			public VCTreeConflictStatus TreeConflictStatus;
-
-			public string Path;
-
-			public bool IsConflicted => 
-				Status == VCFileStatus.Conflicted || 
-				PropertyStatus == VCProperty.Conflicted ||
-				TreeConflictStatus == VCTreeConflictStatus.TreeConflict;
-		}
+			{' ', VCRemoteFileStatus.None},
+			{'*', VCRemoteFileStatus.Modified},
+		};
 
 		public static readonly string ProjectRoot;
 		public static readonly string ProjectDataPath;
@@ -463,8 +418,7 @@ namespace DevLocker.VersionControl.SVN
 			return true;
 		}
 
-		static StatusData fff;
-		private static IEnumerable<StatusData> ExtractStatuses(string output)
+		private static IEnumerable<SVNStatusData> ExtractStatuses(string output, SVNStatusDataOptions options)
 		{
 			using (var sr = new StringReader(output)) {
 				string line;
@@ -480,14 +434,36 @@ namespace DevLocker.VersionControl.SVN
 					if (line.StartsWith("Summary", StringComparison.Ordinal))
 						break;
 
+					// If -u is used, additional line is added at the end:
+					// Status against revision:     14
+					if (line.StartsWith("Status", StringComparison.Ordinal))
+						break;
+
+					// If user has files in the "ignore-on-commit" list, this is added at the end plus empty line:
+					// ---Changelist 'ignore-on-commit': ...
+					if (string.IsNullOrEmpty(line))
+						continue;
+					if (line.StartsWith("---", StringComparison.Ordinal))
+						break;
+
 					// Rules are described in "svn help status".
-					var statusData = new StatusData();
+					var statusData = new SVNStatusData();
 					statusData.Status = m_FileStatusMap[line[0]];
 					statusData.PropertyStatus = m_PropertyStatusMap[line[1]];
+					statusData.LockStatus = m_LockStatusMap[line[5]];
 					statusData.TreeConflictStatus = m_ConflictStatusMap[line[6]];
 
-					// 7 columns plus space; Length+1 to skip '/'
-					statusData.Path = line.Substring(8).Remove(0, ProjectRoot.Length + 1);
+					// 7 columns statuses + space;
+					int pathStart = 7 + 1;
+
+					if (!options.Offline) {
+						// + remote status + revision
+						pathStart += 13;
+						statusData.RemoteStatus = m_RemoteStatusMap[line[8]];
+					}
+
+					// Length+1 to skip '/'
+					statusData.Path = line.Substring(pathStart).Remove(0, ProjectRoot.Length + 1);
 
 					yield return statusData;
 				}
@@ -495,7 +471,7 @@ namespace DevLocker.VersionControl.SVN
 
 		}
 
-		public static IEnumerable<StatusData> GetStatuses(string path, string depth = "infinity", bool raiseError = true, int timeout = COMMAND_TIMEOUT)
+		public static IEnumerable<SVNStatusData> GetStatuses(string path, SVNStatusDataOptions options)
 		{
 			// File can be missing, if it was deleted by svn.
 			//if (!File.Exists(path) && !Directory.Exists(path)) {
@@ -504,13 +480,15 @@ namespace DevLocker.VersionControl.SVN
 			//	}
 			//	throw new IOException($"Trying to get status for file {path} that does not exist!");
 			//}
+			var depth = options.Depth == SVNStatusDataOptions.SearchDepth.Empty ? "empty" : "infinity";
+			var offline = options.Offline ? string.Empty : "-u";
 
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth={depth} \"{SVNFormatPath(path)}\"", timeout);
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth={depth} {offline} \"{SVNFormatPath(path)}\"", options.Timeout);
 
 			if (!string.IsNullOrEmpty(result.error)) {
 
-				if (!raiseError)
-					return Enumerable.Empty<StatusData>();
+				if (!options.RaiseError)
+					return Enumerable.Empty<SVNStatusData>();
 
 				string displayMessage;
 				bool isCritical = IsCriticalError(result.error, out displayMessage);
@@ -522,23 +500,33 @@ namespace DevLocker.VersionControl.SVN
 				if (isCritical) {
 					throw new IOException($"Trying to get status for file {path} caused error:\n{result.error}!");
 				} else {
-					return Enumerable.Empty<StatusData>();
+					return Enumerable.Empty<SVNStatusData>();
 				}
 			}
 
-			// If no info is returned for path, the status is normal.
-			if (string.IsNullOrWhiteSpace(result.output) && depth == "empty") {
-				return Enumerable.Repeat(new StatusData() { Status = VCFileStatus.Normal, Path = path }, 1);
+			// If no info is returned for path, the status is normal. Reflect this when searching for Empty depth.
+			if (options.Depth == SVNStatusDataOptions.SearchDepth.Empty) {
+
+				if (options.Offline && string.IsNullOrWhiteSpace(result.output)) {
+					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path }, 1);
+				}
+
+				// If -u is used, additional line is added at the end:
+				// Status against revision:     14
+				if (!options.Offline && result.output.StartsWith("Status", StringComparison.Ordinal)) {
+					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path }, 1);
+				}
 			}
 
-			return ExtractStatuses(result.output);
+			return ExtractStatuses(result.output, options);
 		}
 
-		public static StatusData GetStatus(string path)
+		public static SVNStatusData GetStatus(string path)
 		{
 			// Optimization: empty depth will return nothing if status is normal.
 			// If path is modified, added, deleted, unversioned, it will return proper value.
-			var statusData = GetStatuses(path, "empty").FirstOrDefault();
+			var statusOptions = new SVNStatusDataOptions(SVNStatusDataOptions.SearchDepth.Empty);
+			var statusData = GetStatuses(path, statusOptions).FirstOrDefault();
 
 			// If no path was found, error happened.
 			if (string.IsNullOrEmpty(statusData.Path)) {

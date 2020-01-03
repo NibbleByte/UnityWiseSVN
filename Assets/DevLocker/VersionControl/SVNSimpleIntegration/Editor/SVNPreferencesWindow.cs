@@ -13,6 +13,7 @@ namespace DevLocker.VersionControl.SVN
 			window.m_ProjectPreferences = SVNSimpleIntegration.m_ProjectPreferences;
 			window.m_EnableIntegration = SVNSimpleIntegration.Enabled;
 			window.m_TraceLogs = SVNSimpleIntegration.TraceLogs;
+			window.m_EnableCheckLocks = SVNOverlayIcons.CheckLockStatus;
 			window.m_EnableOverlayIcons = SVNOverlayIcons.Enabled;
 			window.m_AutoRefreshInterval = (int) SVNOverlayIcons.AutoRefreshInterval;
 			window.ShowUtility();
@@ -21,6 +22,7 @@ namespace DevLocker.VersionControl.SVN
 
 		private bool m_EnableIntegration;
 		private bool m_EnableOverlayIcons;
+		private bool m_EnableCheckLocks;
 		private int m_AutoRefreshInterval;
 		private SVNTraceLogs m_TraceLogs;
 
@@ -40,6 +42,7 @@ namespace DevLocker.VersionControl.SVN
 				m_EnableOverlayIcons = EditorGUILayout.Toggle(new GUIContent("Enable Overlay Icons", "Enables overlay icons in the project windows."), m_EnableOverlayIcons);
 				EditorGUI.BeginDisabledGroup(!m_EnableOverlayIcons);
 				m_AutoRefreshInterval = EditorGUILayout.IntField(new GUIContent("Overlay icons refresh interval", "How much seconds to wait for the next overlay icons refresh.\nNOTE: -1 will deactivate it."), m_AutoRefreshInterval);
+				m_EnableCheckLocks = EditorGUILayout.Toggle(new GUIContent("Check Locks", "If turned on, status checks will request the file locks status from the repository and show up to date icon.\nThis might be slower due to the network communication."), m_EnableCheckLocks);
 				EditorGUI.EndDisabledGroup();
 
 				m_TraceLogs = (SVNTraceLogs) EditorGUILayout.EnumFlagsField("Trace Logs", m_TraceLogs);
@@ -72,7 +75,7 @@ namespace DevLocker.VersionControl.SVN
 
 				// NOTE: Order is important.
 				SVNSimpleIntegration.SavePreferences(m_EnableIntegration, m_TraceLogs, m_ProjectPreferences);
-				SVNOverlayIcons.SavePreferences(m_EnableOverlayIcons, m_AutoRefreshInterval);
+				SVNOverlayIcons.SavePreferences(m_EnableOverlayIcons, m_EnableCheckLocks, m_AutoRefreshInterval);
 
 				Close();
 			}
