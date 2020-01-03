@@ -387,12 +387,13 @@ namespace DevLocker.VersionControl.SVN
 
 		private static void AddModifiedFolders(SVNStatusData statusData)
 		{
-			if (statusData.Status == VCFileStatus.Unversioned || statusData.Status == VCFileStatus.Ignored)
+			var status = statusData.Status;
+			if (status == VCFileStatus.Unversioned || status == VCFileStatus.Ignored || status == VCFileStatus.Normal)
 				return;
 
 			if (statusData.IsConflicted) {
 				statusData.Status = VCFileStatus.Conflicted;
-			} else if (statusData.Status != VCFileStatus.Modified) {
+			} else if (status != VCFileStatus.Modified) {
 				statusData.Status = VCFileStatus.Modified;
 			}
 
