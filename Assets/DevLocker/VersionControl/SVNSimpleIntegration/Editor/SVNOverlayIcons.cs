@@ -137,11 +137,36 @@ namespace DevLocker.VersionControl.SVN
 				//|| guid.Equals(ASSETS_FOLDER_GUID, StringComparison.Ordinal)
 				return;
 
+			var statusData = m_Database.GetKnownStatusData(guid);
+
+			//
+			// Remote Status
+			//
+			if (CheckLockStatus && statusData.RemoteStatus != VCRemoteFileStatus.None) {
+				var remoteStatusIcon = m_Database.GetRemoteStatusIconContent(statusData.RemoteStatus);
+
+				if (remoteStatusIcon != null) {
+					var iconRect = new Rect(selectionRect);
+					if (iconRect.width > iconRect.height) {
+						iconRect.x += iconRect.width - iconRect.height;
+						iconRect.x -= iconRect.height * 2;
+						iconRect.width = iconRect.height;
+					} else {
+						iconRect.width /= 2.4f;
+						iconRect.height = iconRect.width;
+						var offset = selectionRect.width - iconRect.width;
+						iconRect.x += offset;
+
+						iconRect.y -= 4;
+					}
+
+					GUI.Label(iconRect, remoteStatusIcon);
+				}
+			}
+
 			//
 			// Lock Status
 			//
-			var statusData = m_Database.GetKnownStatusData(guid);
-
 			if (CheckLockStatus && statusData.LockStatus != VCLockStatus.NoLock) {
 				var lockStatusIcon = m_Database.GetLockStatusIconContent(statusData.LockStatus);
 
@@ -361,8 +386,6 @@ namespace DevLocker.VersionControl.SVN
 					)
 					continue;
 
-				// TODO: Draw server changes.
-
 				// TODO: Test tree conflicts.
 				m_Database.SetStatusData(AssetDatabase.AssetPathToGUID(statusData.Path), statusData, false);
 
@@ -398,10 +421,10 @@ namespace DevLocker.VersionControl.SVN
 			// Folders don't have locks.
 			statusData.LockStatus = VCLockStatus.NoLock;
 
-			var path = Path.GetDirectoryName(statusData.Path);
+			statusData.Path = Path.GetDirectoryName(statusData.Path);
 
-			while (!string.IsNullOrEmpty(path)) {
-				var guid = AssetDatabase.AssetPathToGUID(path);
+			while (!string.IsNullOrEmpty(statusData.Path)) {
+				var guid = AssetDatabase.AssetPathToGUID(statusData.Path);
 
 				// Added folders should not be shown as modified.
 				if (m_Database.GetKnownStatusData(guid).Status == VCFileStatus.Added)
@@ -413,7 +436,7 @@ namespace DevLocker.VersionControl.SVN
 				if (!moveToNext)
 					return;
 
-				path = Path.GetDirectoryName(path);
+				statusData.Path = Path.GetDirectoryName(statusData.Path);
 			}
 		}
 	}
@@ -446,6 +469,7 @@ namespace DevLocker.VersionControl.SVN
 		// Icons are stored in the database so we don't reload them every time.
 		[SerializeField] private GUIContent[] FileStatusIcons = new GUIContent[0];
 		[SerializeField] private GUIContent[] LockStatusIcons = new GUIContent[0];
+		[SerializeField] private GUIContent RemoteStatusIcons = null;
 
 		// Is update pending?
 		// If last update didn't make it, this flag will still be true.
@@ -469,7 +493,10 @@ namespace DevLocker.VersionControl.SVN
 				LockStatusIcons[(int)VCLockStatus.LockedHere] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon"), "You have locked this file.");
 				LockStatusIcons[(int)VCLockStatus.LockedOther] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Someone else locked this file.");
 				LockStatusIcons[(int)VCLockStatus.LockedButStolen] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Your lock was stolen by someone else.");
-				// TODO: Change icons.
+			}
+
+			if (RemoteStatusIcons == null) {
+				RemoteStatusIcons = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Others/SVNRemoteChangesIcon"));
 			}
 		}
 
@@ -484,6 +511,10 @@ namespace DevLocker.VersionControl.SVN
 			return LockStatusIcons[(int)status];
 		}
 
+		public GUIContent GetRemoteStatusIconContent(VCRemoteFileStatus status)
+		{
+			return status == VCRemoteFileStatus.Modified ? RemoteStatusIcons : null;
+		}
 
 		//
 		// Status Data
@@ -520,6 +551,9 @@ namespace DevLocker.VersionControl.SVN
 							// Merge any other data.
 							if (bind.Data.LockStatus == VCLockStatus.NoLock) {
 								bind.Data.LockStatus = statusData.LockStatus;
+							}
+							if (bind.Data.RemoteStatus == VCRemoteFileStatus.None) {
+								bind.Data.RemoteStatus= statusData.RemoteStatus;
 							}
 
 							return false;
