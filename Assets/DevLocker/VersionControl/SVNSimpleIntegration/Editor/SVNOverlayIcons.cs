@@ -280,7 +280,7 @@ namespace DevLocker.VersionControl.SVN
 				var statusOptions = new SVNStatusDataOptions() {
 					Depth = SVNStatusDataOptions.SearchDepth.Infinity,
 					RaiseError = false,
-					Timeout = SVNSimpleIntegration.COMMAND_TIMEOUT * 8,
+					Timeout = SVNSimpleIntegration.COMMAND_TIMEOUT * 2,
 					Offline = !CheckLockStatus,
 				};
 
@@ -311,6 +311,8 @@ namespace DevLocker.VersionControl.SVN
 			// Most probably the assembly got reloaded and the thread was aborted.
 			catch (System.Threading.ThreadAbortException) {
 				System.Threading.Thread.ResetAbort();
+
+				m_PendingStatuses = new SVNStatusData[0];
 			} catch (Exception ex) {
 				Debug.LogException(ex);
 
