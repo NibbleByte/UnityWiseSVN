@@ -149,7 +149,7 @@ namespace DevLocker.VersionControl.SVN
 					var iconRect = new Rect(selectionRect);
 					if (iconRect.width > iconRect.height) {
 						iconRect.x += iconRect.width - iconRect.height;
-						iconRect.x -= iconRect.height * 2;
+						iconRect.x -= iconRect.height;
 						iconRect.width = iconRect.height;
 					} else {
 						iconRect.width /= 2.4f;
@@ -174,7 +174,7 @@ namespace DevLocker.VersionControl.SVN
 					var iconRect = new Rect(selectionRect);
 					if (iconRect.width > iconRect.height) {
 						iconRect.x += iconRect.width - iconRect.height;
-						iconRect.x -= iconRect.height;
+						iconRect.x -= iconRect.height * 2;
 						iconRect.width = iconRect.height;
 					} else {
 						iconRect.width /= 2.4f;
@@ -382,7 +382,7 @@ namespace DevLocker.VersionControl.SVN
 				// The proper way to check this is to parse the working revision from the svn output (when used with -u)
 				if (statusData.RemoteStatus == VCRemoteFileStatus.Modified 
 					&& statusData.Status == VCFileStatus.Normal 
-					&& !File.Exists(statusData.Path)
+					&& string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(statusData.Path))
 					)
 					continue;
 
