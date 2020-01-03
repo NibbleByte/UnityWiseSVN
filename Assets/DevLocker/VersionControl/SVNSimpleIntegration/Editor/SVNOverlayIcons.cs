@@ -149,19 +149,16 @@ namespace DevLocker.VersionControl.SVN
 					var iconRect = new Rect(selectionRect);
 					if (iconRect.width > iconRect.height) {
 						iconRect.x += iconRect.width - iconRect.height;
+						iconRect.x -= iconRect.height;
 						iconRect.width = iconRect.height;
 					} else {
-						// Project view has zoomed in items. Scale up the icons, but keep a limit so it doesn't hide the item preview image.
-						float yAdjustment = Mathf.Clamp(iconRect.width - 48, 0, float.PositiveInfinity);
-						var width = iconRect.width - yAdjustment;
-						iconRect.x += iconRect.width - width;
-						iconRect.width = width;
-						iconRect.height = width;
+						iconRect.width /= 2.4f;
+						iconRect.height = iconRect.width;
+						var offset = selectionRect.width - iconRect.width;
+						iconRect.x += offset;
+						iconRect.y += offset;
 
-						// Compensate for the height change.
-						iconRect.y += yAdjustment;
-
-						iconRect.x += 8;
+						iconRect.y += 4;
 					}
 
 					GUI.Label(iconRect, lockStatusIcon);
@@ -177,18 +174,17 @@ namespace DevLocker.VersionControl.SVN
 			if (fileStatusIcon != null) {
 				var iconRect = new Rect(selectionRect);
 				if (iconRect.width > iconRect.height) {
+					iconRect.height += 4f;
 					iconRect.width = iconRect.height;
 				} else {
-					// Project view has zoomed in items. Scale up the icons, but keep a limit so it doesn't hide the item preview image.
-					float yAdjustment = Mathf.Clamp(iconRect.width - 48, 0, float.PositiveInfinity);
-					iconRect.width = iconRect.width - yAdjustment;
+					iconRect.width /= 1.8f;
 					iconRect.height = iconRect.width;
-					
-					// Compensate for the height change.
-					iconRect.y += yAdjustment;
+					var offset = selectionRect.width - iconRect.width;
+					iconRect.y += offset;
 				}
 
-				iconRect.y += 4;
+				iconRect.x -= 3;
+				iconRect.y += 1;
 				GUI.Label(iconRect, fileStatusIcon);
 			}
 		}
@@ -365,6 +361,8 @@ namespace DevLocker.VersionControl.SVN
 					)
 					continue;
 
+				// TODO: Draw server changes.
+
 				// TODO: Test tree conflicts.
 				m_Database.SetStatusData(AssetDatabase.AssetPathToGUID(statusData.Path), statusData, false);
 
@@ -468,9 +466,9 @@ namespace DevLocker.VersionControl.SVN
 			
 			if (LockStatusIcons.Length == 0) {
 				LockStatusIcons = new GUIContent[Enum.GetValues(typeof(VCLockStatus)).Length];
-				LockStatusIcons[(int)VCLockStatus.LockedHere] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNLockedIcon"), "You have locked this file.");
-				LockStatusIcons[(int)VCLockStatus.LockedOther] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNLockedIcon"), "Someone else locked this file.");
-				LockStatusIcons[(int)VCLockStatus.LockedButStolen] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNLockedIcon"), "Your lock was stolen by someone else.");
+				LockStatusIcons[(int)VCLockStatus.LockedHere] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon"), "You have locked this file.");
+				LockStatusIcons[(int)VCLockStatus.LockedOther] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Someone else locked this file.");
+				LockStatusIcons[(int)VCLockStatus.LockedButStolen] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Your lock was stolen by someone else.");
 				// TODO: Change icons.
 			}
 		}
