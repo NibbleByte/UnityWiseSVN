@@ -124,6 +124,25 @@ namespace DevLocker.VersionControl.SVN
 			}
 		}
 
+
+		[MenuItem("Assets/SVN/Get Locks", false, -700)]
+		private static void GetLocks()
+		{
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:lock /path:\"{GetContextPaths(Selection.assetGUIDs, true)}\"", false);
+			if (!string.IsNullOrEmpty(result.error)) {
+				Debug.LogError($"SVN Error: {result.error}");
+			}
+		}
+
+		[MenuItem("Assets/SVN/Release Locks", false, -700)]
+		private static void ReleaseLocks()
+		{
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:unlock /path:\"{GetContextPaths(Selection.assetGUIDs, true)}\"", false);
+			if (!string.IsNullOrEmpty(result.error)) {
+				Debug.LogError($"SVN Error: {result.error}");
+			}
+		}
+
 		[MenuItem("Assets/SVN/Show Log All", false, -500)]
 		private static void ShowLogAll()
 		{
