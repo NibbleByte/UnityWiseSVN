@@ -10,24 +10,15 @@ namespace DevLocker.VersionControl.SVN
 		private static void ShowProjectPreferences()
 		{
 			var window = GetWindow<SVNSimpleIntegrationProjectPreferencesWindow>(true, "SVN Project Preferences");
-			window.m_ProjectPreferences = SVNSimpleIntegration.m_ProjectPreferences;
-			window.m_EnableIntegration = SVNSimpleIntegration.Enabled;
-			window.m_TraceLogs = SVNSimpleIntegration.TraceLogs;
-			window.m_EnableCheckLocks = SVNOverlayIcons.CheckLockStatus;
-			window.m_EnableOverlayIcons = SVNOverlayIcons.Enabled;
-			window.m_AutoRefreshInterval = (int) SVNOverlayIcons.AutoRefreshInterval;
+			window.m_PersonalPrefs = SVNPreferencesManager.Instance.PersonalPrefs.Clone();
+			window.m_ProjectPrefs = SVNPreferencesManager.Instance.ProjectPrefs.Clone();
 			window.ShowUtility();
 			window.position = new Rect(600f, 400f, 400f, 350f);
 		}
 
-		private bool m_EnableIntegration;
-		private bool m_EnableOverlayIcons;
-		private bool m_EnableCheckLocks;
-		private int m_AutoRefreshInterval;
-		private SVNTraceLogs m_TraceLogs;
-
 		// So SerializedObject() can work with it.
-		[SerializeField] private SVNSimpleIntegration.ProjectPreferences m_ProjectPreferences;
+		[SerializeField] private SVNPreferencesManager.PersonalPreferences m_PersonalPrefs;
+		[SerializeField] private SVNPreferencesManager.ProjectPreferences m_ProjectPrefs;
 
 		private Vector2 m_ProjectPreferencesScroll;
 
@@ -35,17 +26,19 @@ namespace DevLocker.VersionControl.SVN
 		{
 			EditorGUILayout.LabelField("Personal Preferences:", EditorStyles.boldLabel);
 			{
-				m_EnableIntegration = EditorGUILayout.Toggle("Enable SVN Integration", m_EnableIntegration);
+				m_PersonalPrefs.EnabledCoreIntegration = EditorGUILayout.Toggle("Enable SVN Integration", m_PersonalPrefs.EnabledCoreIntegration);
 
-				EditorGUI.BeginDisabledGroup(!m_EnableIntegration);
+				EditorGUI.BeginDisabledGroup(!m_PersonalPrefs.EnabledCoreIntegration);
 
-				m_EnableOverlayIcons = EditorGUILayout.Toggle(new GUIContent("Enable Overlay Icons", "Enables overlay icons in the project windows."), m_EnableOverlayIcons);
-				EditorGUI.BeginDisabledGroup(!m_EnableOverlayIcons);
-				m_AutoRefreshInterval = EditorGUILayout.IntField(new GUIContent("Overlay icons refresh interval", "How much seconds to wait for the next overlay icons refresh.\nNOTE: -1 will deactivate it."), m_AutoRefreshInterval);
-				m_EnableCheckLocks = EditorGUILayout.Toggle(new GUIContent("Check Locks", "If turned on, status checks will request the file locks status from the repository and show up to date icon.\nThis might be slower due to the network communication."), m_EnableCheckLocks);
+				m_PersonalPrefs.EnabledOverlayIcons = EditorGUILayout.Toggle(new GUIContent("Enable Overlay Icons", "Enables overlay icons in the project windows."), m_PersonalPrefs.EnabledOverlayIcons);
+				EditorGUI.BeginDisabledGroup(!m_PersonalPrefs.EnabledOverlayIcons);
+
+				m_PersonalPrefs.AutoRefreshInterval = EditorGUILayout.IntField(new GUIContent("Overlay icons refresh interval", "How much seconds to wait for the next overlay icons refresh.\nNOTE: -1 will deactivate it."), m_PersonalPrefs.AutoRefreshInterval);
+				m_PersonalPrefs.EnabledCheckLocks = EditorGUILayout.Toggle(new GUIContent("Check Locks", "If turned on, status checks will request the file locks status from the repository and show up to date icon.\nThis might be slower due to the network communication."), m_PersonalPrefs.EnabledCheckLocks);
+
 				EditorGUI.EndDisabledGroup();
 
-				m_TraceLogs = (SVNTraceLogs) EditorGUILayout.EnumFlagsField("Trace Logs", m_TraceLogs);
+				m_PersonalPrefs.TraceLogs = (SVNTraceLogs) EditorGUILayout.EnumFlagsField("Trace Logs", m_PersonalPrefs.TraceLogs);
 
 				EditorGUI.EndDisabledGroup();
 			}
@@ -57,13 +50,13 @@ namespace DevLocker.VersionControl.SVN
 				EditorGUILayout.HelpBox("These settings will be saved in the ProjectSettings folder. Feel free to add them to your version control system.\nAs always, check the tooltips.", MessageType.Info);
 
 				m_ProjectPreferencesScroll = EditorGUILayout.BeginScrollView(m_ProjectPreferencesScroll);
-
+				
 				var so = new SerializedObject(this);
-				var sp = so.FindProperty("m_ProjectPreferences");
+				var sp = so.FindProperty("m_ProjectPrefs");
 
-				// HACK: Tooltips were not showing, that is why I manually add them.
-				EditorGUILayout.PropertyField(sp.FindPropertyRelative("SvnCLIPath"), new GUIContent("SVN CLI Path", SVNSimpleIntegration.ProjectPreferences.SVN_CLI_PATH_TOOLTIP), false);
-				EditorGUILayout.PropertyField(sp.FindPropertyRelative("Exclude"), new GUIContent("Exclude Paths", SVNSimpleIntegration.ProjectPreferences.EXCLUDE_TOOLTIP), true);
+				m_ProjectPrefs.SvnCLIPath = EditorGUILayout.TextField(new GUIContent("SVN CLI Path", "If you desire to use specific SVN CLI (svn.exe) located in the project, write down its path relative to the root folder."), m_ProjectPrefs.SvnCLIPath);
+
+				EditorGUILayout.PropertyField(sp.FindPropertyRelative("Exclude"), new GUIContent("Exclude Paths", "Asset paths that will be ignored by the SVN integrations. Use with caution."), true);
 
 				so.ApplyModifiedProperties();
 
@@ -71,11 +64,12 @@ namespace DevLocker.VersionControl.SVN
 			}
 
 			if (GUILayout.Button("Save & Close")) {
-				m_ProjectPreferences.SvnCLIPath = m_ProjectPreferences.SvnCLIPath.Trim();
+				m_ProjectPrefs.SvnCLIPath = m_ProjectPrefs.SvnCLIPath.Trim();
+				m_ProjectPrefs.Exclude.RemoveAll(p => string.IsNullOrWhiteSpace(p));
 
-				// NOTE: Order is important.
-				SVNSimpleIntegration.SavePreferences(m_EnableIntegration, m_TraceLogs, m_ProjectPreferences);
-				SVNOverlayIcons.SavePreferences(m_EnableOverlayIcons, m_EnableCheckLocks, m_AutoRefreshInterval);
+				SVNPreferencesManager.Instance.SavePreferences(m_PersonalPrefs, m_ProjectPrefs);
+
+				GUI.FocusControl("");
 
 				Close();
 			}

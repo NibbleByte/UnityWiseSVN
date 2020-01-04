@@ -18,15 +18,17 @@ namespace DevLocker.VersionControl.SVN
 		private const string ASSETS_FOLDER_GUID = "00000000000000001000000000000000";
 		private static SVNOverlayIconsDatabase m_Database;
 
-		public static bool Enabled { get; private set; }
-		public static bool CheckLockStatus { get; private set; }
-		public static double AutoRefreshInterval { get; private set; } // seconds; Less than 0 will disable it.
+		public static bool Enabled => m_PersonalPrefs.EnabledOverlayIcons;
+		public static bool CheckLockStatus => m_PersonalPrefs.EnabledCheckLocks;
+		public static int AutoRefreshInterval => m_PersonalPrefs.AutoRefreshInterval; // seconds; Less than 0 will disable it.
 		private static double m_LastRefreshTime;
 
-		// The Overlay icons can be enabled, but the SVN integration to be disabled as a whole.
-		private static bool IsActive => Enabled && SVNSimpleIntegration.Enabled;
+		private static SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
 
-		private static bool DoTraceLogs => (SVNSimpleIntegration.TraceLogs & SVNTraceLogs.OverlayIcons) != 0;
+		// The Overlay icons can be enabled, but the SVN integration to be disabled as a whole.
+		private static bool IsActive => Enabled && m_PersonalPrefs.EnabledCoreIntegration;
+
+		private static bool DoTraceLogs => (m_PersonalPrefs.TraceLogs & SVNTraceLogs.OverlayIcons) != 0;
 
 		// Filled in by a worker thread.
 		private static SVNStatusData[] m_PendingStatuses;
@@ -35,14 +37,9 @@ namespace DevLocker.VersionControl.SVN
 
 		static SVNOverlayIcons()
 		{
-			Enabled = EditorPrefs.GetBool("SVNOverlayIcons", true);
-			CheckLockStatus = EditorPrefs.GetBool("SVNCheckLockStatus", false);
-			AutoRefreshInterval = EditorPrefs.GetInt("SVNOverlayIconsRefreshInverval", 60);
-
 			AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
 
-			// NOTE: This checks SVNSimpleIntegration.Enabled which is set by its static constructor.
-			// This might cause a race condition, but C# says it will call them in the right order. Hope this is true.
+			SVNPreferencesManager.Instance.PreferencesChanged += PreferencesChanged;
 			PreferencesChanged();
 
 			// Assembly reload might have killed the working thread leaving pending update.
@@ -58,19 +55,6 @@ namespace DevLocker.VersionControl.SVN
 			if (m_WorkerThread != null && m_WorkerThread.IsAlive) {
 				m_WorkerThread.Abort();
 			}
-		}
-
-		public static void SavePreferences(bool enabled, bool checkLockStatus, double autoRefreshInverval)
-		{
-			Enabled = enabled;
-			CheckLockStatus = checkLockStatus;
-			AutoRefreshInterval = autoRefreshInverval;
-
-			EditorPrefs.SetBool("SVNOverlayIcons", Enabled);
-			EditorPrefs.SetBool("SVNCheckLockStatus", CheckLockStatus);
-			EditorPrefs.SetInt("SVNOverlayIconsRefreshInverval", (int) AutoRefreshInterval);
-
-			PreferencesChanged();
 		}
 
 		private static void PreferencesChanged()
@@ -398,7 +382,7 @@ namespace DevLocker.VersionControl.SVN
 
 		private static void AutoRefresh()
 		{
-			if (AutoRefreshInterval <= 0.0f || EditorApplication.timeSinceStartup - m_LastRefreshTime < AutoRefreshInterval)
+			if (AutoRefreshInterval <= 0 || EditorApplication.timeSinceStartup - m_LastRefreshTime < AutoRefreshInterval)
 				return;
 
 			m_LastRefreshTime = EditorApplication.timeSinceStartup;

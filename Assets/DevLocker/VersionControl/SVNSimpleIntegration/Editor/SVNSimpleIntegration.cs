@@ -58,33 +58,21 @@ namespace DevLocker.VersionControl.SVN
 
 		public static event Action ShowChangesUI;
 
-		public static bool Enabled { get; private set; }
+		public static bool Enabled => m_PersonalPrefs.EnabledCoreIntegration;
 		public static bool TemporaryDisabled => m_TemporaryDisabledCount > 0;	// Temporarily disable the integration (by code).
 		public static bool Silent => m_SilenceCount > 0;	// Do not show dialogs
 
-		public static SVNTraceLogs TraceLogs { get; private set; } = SVNTraceLogs.SVNOperations;
+		public static SVNTraceLogs TraceLogs => m_PersonalPrefs.TraceLogs;
 
 		private static int m_SilenceCount = 0;
 		private static int m_TemporaryDisabledCount = 0;
 
-		[Serializable]
-		internal struct ProjectPreferences
-		{
-			public const string SVN_CLI_PATH_TOOLTIP = "If you desire to use specific SVN CLI (svn.exe) located in the project, write down its path relative to the root folder.";
-			[Tooltip(SVN_CLI_PATH_TOOLTIP)]
-			public string SvnCLIPath;
+		private static SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
+		private static SVNPreferencesManager.ProjectPreferences m_ProjectPrefs => SVNPreferencesManager.Instance.ProjectPrefs;
 
-			public const string EXCLUDE_TOOLTIP = "Asset paths that will be ignored by the SVN integrations. Use with caution.";
-			[Tooltip(EXCLUDE_TOOLTIP)]
-			public List<string> Exclude;
-		}
-
-		private const string PROJECT_PREFERENCES_PATH = "ProjectSettings/SVNSimpleIntegration.prefs";
-		internal static ProjectPreferences m_ProjectPreferences = new ProjectPreferences() { SvnCLIPath = string.Empty, Exclude = new List<string>() };
-
-		private static string SVN_Command => string.IsNullOrEmpty(m_ProjectPreferences.SvnCLIPath) 
+		private static string SVN_Command => string.IsNullOrEmpty(m_ProjectPrefs.SvnCLIPath) 
 			? "svn" 
-			: Path.Combine(Path.GetDirectoryName(Application.dataPath), m_ProjectPreferences.SvnCLIPath);
+			: Path.Combine(Path.GetDirectoryName(ProjectRoot), m_ProjectPrefs.SvnCLIPath);
 
 		internal const int COMMAND_TIMEOUT = 35000;	// Milliseconds
 
@@ -155,27 +143,6 @@ namespace DevLocker.VersionControl.SVN
 		static SVNSimpleIntegration()
 		{
 			ProjectRoot = Path.GetDirectoryName(Application.dataPath);
-
-			Enabled = EditorPrefs.GetBool("SVNIntegration", true);
-			TraceLogs = (SVNTraceLogs) EditorPrefs.GetInt("SVNTraceLogs", (int)SVNTraceLogs.SVNOperations);
-
-			if (File.Exists(PROJECT_PREFERENCES_PATH)) {
-				m_ProjectPreferences = JsonUtility.FromJson<ProjectPreferences>(File.ReadAllText(PROJECT_PREFERENCES_PATH));
-			}
-		}
-
-		internal static void SavePreferences(bool enabled, SVNTraceLogs traceLogs, ProjectPreferences preferences)
-		{
-			Enabled = enabled;
-			TraceLogs = traceLogs;
-
-			EditorPrefs.SetBool("SVNIntegration", Enabled);
-			EditorPrefs.SetInt("SVNTraceLogs", (int)TraceLogs);
-
-			m_ProjectPreferences = preferences;
-			m_ProjectPreferences.Exclude.RemoveAll(p => string.IsNullOrWhiteSpace(p));
-
-			File.WriteAllText(PROJECT_PREFERENCES_PATH, JsonUtility.ToJson(m_ProjectPreferences, true));
 		}
 
 		// NOTE: This is called separately for the file and its meta.
@@ -206,7 +173,7 @@ namespace DevLocker.VersionControl.SVN
 
 		public static AssetDeleteResult OnWillDeleteAsset(string path, RemoveAssetOptions option)
 		{
-			if (!Enabled || TemporaryDisabled || m_ProjectPreferences.Exclude.Any(path.StartsWith))
+			if (!Enabled || TemporaryDisabled || m_ProjectPrefs.Exclude.Any(path.StartsWith))
 				return AssetDeleteResult.DidNotDelete;
 
 			var oldStatus = GetStatus(path).Status;
@@ -230,7 +197,7 @@ namespace DevLocker.VersionControl.SVN
 
 		public static AssetMoveResult OnWillMoveAsset(string oldPath, string newPath)
 		{
-			if (!Enabled || TemporaryDisabled || m_ProjectPreferences.Exclude.Any(oldPath.StartsWith))
+			if (!Enabled || TemporaryDisabled || m_ProjectPrefs.Exclude.Any(oldPath.StartsWith))
 				return AssetMoveResult.DidNotMove;
 
 			var oldStatusData = GetStatus(oldPath);
@@ -395,7 +362,7 @@ namespace DevLocker.VersionControl.SVN
 			// System.ComponentModel.Win32Exception (0x80004005): ApplicationName='...', CommandLine='...', Native error= The system cannot find the file specified.
 			// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
 			// This is allowed only if there isn't ProjectPreference specified CLI path.
-			if (error.Contains("0x80004005") && string.IsNullOrEmpty(m_ProjectPreferences.SvnCLIPath)) {
+			if (error.Contains("0x80004005") && string.IsNullOrEmpty(m_ProjectPrefs.SvnCLIPath)) {
 				displayMessage = $"SVN CLI (Command Line Interface) not found. " +
 					$"Please install it or specify path to a valid svn.exe in the svn preferences at:\n{SVNSimpleIntegrationProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
 					$"You can also disable the SVN integration.";
@@ -404,8 +371,8 @@ namespace DevLocker.VersionControl.SVN
 			}
 
 			// Same as above but the specified svn.exe in the project preferences is missing.
-			if (error.Contains("0x80004005") && !string.IsNullOrEmpty(m_ProjectPreferences.SvnCLIPath)) {
-				displayMessage = $"Cannot find the specified in the svn project preferences svn.exe:\n{m_ProjectPreferences.SvnCLIPath}\n\n" +
+			if (error.Contains("0x80004005") && !string.IsNullOrEmpty(m_ProjectPrefs.SvnCLIPath)) {
+				displayMessage = $"Cannot find the specified in the svn project preferences svn.exe:\n{m_ProjectPrefs.SvnCLIPath}\n\n" +
 					$"You can reconfigure the svn preferences at:\n{SVNSimpleIntegrationProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
 					$"You can also disable the SVN integration.";
 
@@ -497,6 +464,7 @@ namespace DevLocker.VersionControl.SVN
 				bool isCritical = IsCriticalError(result.error, out displayMessage);
 
 				if (!string.IsNullOrEmpty(displayMessage) && !Silent) {
+					Debug.LogError(displayMessage);
 					EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
 				}
 
