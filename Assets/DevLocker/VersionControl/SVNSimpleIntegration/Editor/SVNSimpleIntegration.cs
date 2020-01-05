@@ -58,7 +58,7 @@ namespace DevLocker.VersionControl.SVN
 
 		public static event Action ShowChangesUI;
 
-		public static bool Enabled => m_PersonalPrefs.EnabledCoreIntegration;
+		public static bool Enabled => m_PersonalPrefs.EnableCoreIntegration;
 		public static bool TemporaryDisabled => m_TemporaryDisabledCount > 0;	// Temporarily disable the integration (by code).
 		public static bool Silent => m_SilenceCount > 0;	// Do not show dialogs
 

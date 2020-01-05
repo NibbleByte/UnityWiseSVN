@@ -16,7 +16,7 @@ namespace DevLocker.VersionControl.SVN
 	{
 		private static SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
 
-		private static bool IsActive => m_PersonalPrefs.EnabledCoreIntegration && m_PersonalPrefs.EnabledOverlayIcons;
+		private static bool IsActive => m_PersonalPrefs.EnableCoreIntegration && m_PersonalPrefs.PopulateStatusesDatabase;
 
 		static SVNOverlayIcons()
 		{
@@ -34,6 +34,12 @@ namespace DevLocker.VersionControl.SVN
 			}
 		}
 
+		[MenuItem("Assets/SVN/Refresh Overlay Icons", false, 195)]
+		private static void InvalidateDatabaseMenu()
+		{
+			SVNStatusesDatabase.Instance.InvalidateDatabase();
+		}
+
 		private static void ItemOnGUI(string guid, Rect selectionRect)
 		{
 			if (string.IsNullOrEmpty(guid) || guid.StartsWith("00000000", StringComparison.Ordinal))
@@ -47,7 +53,7 @@ namespace DevLocker.VersionControl.SVN
 			//
 			// Remote Status
 			//
-			if (m_PersonalPrefs.EnabledCheckLocks && statusData.RemoteStatus != VCRemoteFileStatus.None) {
+			if (m_PersonalPrefs.DownloadRepositoryChanges && statusData.RemoteStatus != VCRemoteFileStatus.None) {
 				var remoteStatusIcon = SVNPreferencesManager.Instance.GetRemoteStatusIconContent(statusData.RemoteStatus);
 
 				if (remoteStatusIcon != null) {
@@ -72,7 +78,7 @@ namespace DevLocker.VersionControl.SVN
 			//
 			// Lock Status
 			//
-			if (m_PersonalPrefs.EnabledCheckLocks && statusData.LockStatus != VCLockStatus.NoLock) {
+			if (m_PersonalPrefs.DownloadRepositoryChanges && statusData.LockStatus != VCLockStatus.NoLock) {
 				var lockStatusIcon = SVNPreferencesManager.Instance.GetLockStatusIconContent(statusData.LockStatus);
 
 				if (lockStatusIcon != null) {

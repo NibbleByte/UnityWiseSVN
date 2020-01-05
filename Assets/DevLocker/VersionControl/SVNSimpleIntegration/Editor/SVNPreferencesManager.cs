@@ -21,10 +21,10 @@ namespace DevLocker.VersionControl.SVN
 		[Serializable]
 		internal class PersonalPreferences
 		{
-			public bool EnabledCoreIntegration = true;
-			public bool EnabledOverlayIcons = true;
-			public bool EnabledCheckLocks = false;
-			public int AutoRefreshInterval = 60; // // seconds; Less than 0 will disable it.
+			public bool EnableCoreIntegration = true;		// Sync file operations with SVN
+			public bool PopulateStatusesDatabase = true;	// For overlay icons etc.
+			public bool DownloadRepositoryChanges = false;	// When populating the database, should it check for server changes as well (locks & modified files).	
+			public int AutoRefreshDatabaseInterval = 60;	// seconds; Less than 0 will disable it.
 			public SVNTraceLogs TraceLogs = SVNTraceLogs.SVNOperations;
 
 			public PersonalPreferences Clone()
@@ -73,7 +73,7 @@ namespace DevLocker.VersionControl.SVN
 
 						m_Instance.LoadPreferences();
 
-						Debug.Log($"Loaded SVN Simple Integration Preferences. The integration is turned {(m_Instance.PersonalPrefs.EnabledCoreIntegration ? "on" : "off")}.");
+						Debug.Log($"Loaded SVN Simple Integration Preferences. The integration is turned {(m_Instance.PersonalPrefs.EnableCoreIntegration ? "on" : "off")}.");
 
 					} else {
 						// Data is already deserialized by Unity onto the scriptable object.

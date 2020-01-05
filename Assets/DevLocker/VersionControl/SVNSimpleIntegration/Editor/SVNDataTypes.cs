@@ -55,7 +55,7 @@ namespace DevLocker.VersionControl.SVN
 	{
 		None = 0,
 		SVNOperations = 1 << 0,
-		OverlayIcons = 1 << 4,
+		DatabaseUpdates = 1 << 4,
 		All = ~0,
 	}
 

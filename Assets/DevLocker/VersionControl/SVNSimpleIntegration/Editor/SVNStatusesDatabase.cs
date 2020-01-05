@@ -36,8 +36,8 @@ namespace DevLocker.VersionControl.SVN
 		private SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
 
 		// The database update can be enabled, but the SVN integration to be disabled as a whole.
-		public bool IsActive => m_PersonalPrefs.EnabledOverlayIcons && m_PersonalPrefs.EnabledCoreIntegration;
-		private bool DoTraceLogs => (m_PersonalPrefs.TraceLogs & SVNTraceLogs.OverlayIcons) != 0;
+		public bool IsActive => m_PersonalPrefs.PopulateStatusesDatabase && m_PersonalPrefs.EnableCoreIntegration;
+		private bool DoTraceLogs => (m_PersonalPrefs.TraceLogs & SVNTraceLogs.DatabaseUpdates) != 0;
 
 
 		[SerializeField] private List<GuidStatusDataBind> StatusDatas = new List<GuidStatusDataBind>();
@@ -157,6 +157,10 @@ namespace DevLocker.VersionControl.SVN
 				Debug.Log($"Started Update Database at {EditorApplication.timeSinceStartup:0.00}");
 			}
 
+			if (m_WorkerThread != null) {
+				throw new Exception("SVN starting database update, while another one is pending?");
+			}
+
 			PendingUpdate = true;
 
 			// Listen for the thread result in the main thread.
@@ -176,7 +180,7 @@ namespace DevLocker.VersionControl.SVN
 					Depth = SVNStatusDataOptions.SearchDepth.Infinity,
 					RaiseError = false,
 					Timeout = SVNSimpleIntegration.COMMAND_TIMEOUT * 2,
-					Offline = !SVNPreferencesManager.Instance.PersonalPrefs.EnabledCheckLocks,
+					Offline = !SVNPreferencesManager.Instance.PersonalPrefs.DownloadRepositoryChanges,
 				};
 
 				// Will get statuses of all added / modified / deleted / conflicted / unversioned files. Only normal files won't be listed.
@@ -323,12 +327,6 @@ namespace DevLocker.VersionControl.SVN
 		//
 		#region Invalidate Database
 
-		[MenuItem("Assets/SVN/Refresh Overlay Icons", false, 195)]
-		private static void InvalidateDatabaseMenu()
-		{
-			Instance.InvalidateDatabase();
-		}
-
 		public void InvalidateDatabase()
 		{
 			if (!IsActive || PendingUpdate || SVNSimpleIntegration.TemporaryDisabled)
@@ -343,7 +341,7 @@ namespace DevLocker.VersionControl.SVN
 
 		private void AutoRefresh()
 		{
-			double refreshInterval = m_PersonalPrefs.AutoRefreshInterval;
+			double refreshInterval = m_PersonalPrefs.AutoRefreshDatabaseInterval;
 
 			if (refreshInterval <= 0 || EditorApplication.timeSinceStartup - m_LastRefreshTime < refreshInterval)
 				return;
