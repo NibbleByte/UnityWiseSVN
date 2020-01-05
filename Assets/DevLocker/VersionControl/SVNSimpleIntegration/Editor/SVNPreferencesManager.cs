@@ -13,6 +13,11 @@ namespace DevLocker.VersionControl.SVN
 		private const string PERSONAL_PREFERENCES_KEY = "SVNSimpleIntegration";
 		private const string PROJECT_PREFERENCES_PATH = "ProjectSettings/SVNSimpleIntegration.prefs";
 
+		// Icons are stored in the database so we don't reload them every time.
+		[SerializeField] private GUIContent[] FileStatusIcons = new GUIContent[0];
+		[SerializeField] private GUIContent[] LockStatusIcons = new GUIContent[0];
+		[SerializeField] private GUIContent RemoteStatusIcons = null;
+
 		[Serializable]
 		internal class PersonalPreferences
 		{
@@ -71,7 +76,7 @@ namespace DevLocker.VersionControl.SVN
 						Debug.Log($"Loaded SVN Simple Integration Preferences. The integration is turned {(m_Instance.PersonalPrefs.EnabledCoreIntegration ? "on" : "off")}.");
 
 					} else {
-						// Preferences are already deserialized by Unity onto the scriptable object.
+						// Data is already deserialized by Unity onto the scriptable object.
 						// Even though OnEnable is not yet called, data is there after assembly reload.
 						// It is deserialized even before static constructors [InitializeOnLoad] are called. I tested it! :D
 
@@ -81,6 +86,22 @@ namespace DevLocker.VersionControl.SVN
 
 				return m_Instance;
 			}
+		}
+
+		public GUIContent GetFileStatusIconContent(VCFileStatus status)
+		{
+			return FileStatusIcons[(int)status];
+		}
+
+
+		public GUIContent GetLockStatusIconContent(VCLockStatus status)
+		{
+			return LockStatusIcons[(int)status];
+		}
+
+		public GUIContent GetRemoteStatusIconContent(VCRemoteFileStatus status)
+		{
+			return status == VCRemoteFileStatus.Modified ? RemoteStatusIcons : null;
 		}
 
 		private void LoadPreferences()
@@ -97,6 +118,21 @@ namespace DevLocker.VersionControl.SVN
 			} else {
 				ProjectPrefs = new ProjectPreferences();
 			}
+
+
+			FileStatusIcons = new GUIContent[Enum.GetValues(typeof(VCFileStatus)).Length];
+			FileStatusIcons[(int)VCFileStatus.Added] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNAddedIcon"));
+			FileStatusIcons[(int)VCFileStatus.Modified] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNModifiedIcon"));
+			FileStatusIcons[(int)VCFileStatus.Deleted] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNDeletedIcon"));
+			FileStatusIcons[(int)VCFileStatus.Conflicted] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNConflictIcon"));
+			FileStatusIcons[(int)VCFileStatus.Unversioned] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNUnversionedIcon"));
+
+			LockStatusIcons = new GUIContent[Enum.GetValues(typeof(VCLockStatus)).Length];
+			LockStatusIcons[(int)VCLockStatus.LockedHere] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon"), "You have locked this file.");
+			LockStatusIcons[(int)VCLockStatus.LockedOther] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Someone else locked this file.");
+			LockStatusIcons[(int)VCLockStatus.LockedButStolen] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Your lock was stolen by someone else.");
+			
+			RemoteStatusIcons = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Others/SVNRemoteChangesIcon"));
 		}
 
 
