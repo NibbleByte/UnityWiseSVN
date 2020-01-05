@@ -48,7 +48,7 @@ namespace DevLocker.VersionControl.SVN
 
 		#region Thread Work Related Data
 		// Filled in by a worker thread.
-		private SVNStatusData[] m_PendingStatuses;
+		[NonSerialized] private SVNStatusData[] m_PendingStatuses;
 
 		private System.Threading.Thread m_WorkerThread;
 
