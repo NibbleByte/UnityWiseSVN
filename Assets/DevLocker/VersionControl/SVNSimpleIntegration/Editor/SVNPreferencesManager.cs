@@ -156,8 +156,8 @@ namespace DevLocker.VersionControl.SVN
 
 		public void SavePreferences(PersonalPreferences personalPrefs, ProjectPreferences projectPrefs)
 		{
-			PersonalPrefs = personalPrefs;
-			ProjectPrefs = projectPrefs;
+			PersonalPrefs = personalPrefs.Clone();
+			ProjectPrefs = projectPrefs.Clone();
 
 			EditorPrefs.SetString(PERSONAL_PREFERENCES_KEY, JsonUtility.ToJson(PersonalPrefs));
 

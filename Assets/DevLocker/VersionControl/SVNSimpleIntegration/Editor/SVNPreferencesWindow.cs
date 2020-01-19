@@ -13,7 +13,7 @@ namespace DevLocker.VersionControl.SVN
 			window.m_PersonalPrefs = SVNPreferencesManager.Instance.PersonalPrefs.Clone();
 			window.m_ProjectPrefs = SVNPreferencesManager.Instance.ProjectPrefs.Clone();
 			window.ShowUtility();
-			window.position = new Rect(600f, 400f, 400f, 450f);
+			window.position = new Rect(500f, 250f, 450f, 520f);
 		}
 
 		// So SerializedObject() can work with it.
@@ -28,10 +28,38 @@ namespace DevLocker.VersionControl.SVN
 			const float labelWidthAdd = 40;
 			EditorGUIUtility.labelWidth += labelWidthAdd;
 
-			EditorGUILayout.HelpBox("Hint: check the the tooltips.", MessageType.Info);
+			EditorGUILayout.Space();
+
+			EditorGUILayout.BeginHorizontal();
+			{
+				EditorGUILayout.LabelField("Save changes:", EditorStyles.boldLabel);
+
+				GUILayout.FlexibleSpace();
+
+				if (GUILayout.Button("Close", GUILayout.MaxWidth(60f))) {
+					GUI.FocusControl("");
+					Close();
+					EditorGUIUtility.ExitGUI();
+				}
+
+				var prevColor = GUI.backgroundColor;
+				GUI.backgroundColor = Color.green / 1.2f;
+				if (GUILayout.Button("Save All", GUILayout.MaxWidth(150f))) {
+					m_ProjectPrefs.SvnCLIPath = m_ProjectPrefs.SvnCLIPath.Trim();
+					m_ProjectPrefs.Exclude.RemoveAll(p => string.IsNullOrWhiteSpace(p));
+
+					SVNPreferencesManager.Instance.SavePreferences(m_PersonalPrefs, m_ProjectPrefs);
+				}
+				GUI.backgroundColor = prevColor;
+			}
+			EditorGUILayout.EndHorizontal();
+
+			EditorGUILayout.Space();
 
 			EditorGUILayout.LabelField("Personal Preferences:", EditorStyles.boldLabel);
 			{
+				EditorGUILayout.HelpBox("Hint: check the the tooltips.", MessageType.Info);
+
 				m_PersonalPrefs.EnableCoreIntegration = EditorGUILayout.Toggle("Enable SVN integration", m_PersonalPrefs.EnableCoreIntegration);
 
 				EditorGUI.BeginDisabledGroup(!m_PersonalPrefs.EnableCoreIntegration);
@@ -76,16 +104,31 @@ namespace DevLocker.VersionControl.SVN
 				EditorGUILayout.EndScrollView();
 			}
 
-			if (GUILayout.Button("Save & Close")) {
-				m_ProjectPrefs.SvnCLIPath = m_ProjectPrefs.SvnCLIPath.Trim();
-				m_ProjectPrefs.Exclude.RemoveAll(p => string.IsNullOrWhiteSpace(p));
+			EditorGUILayout.Space();
+			EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
-				SVNPreferencesManager.Instance.SavePreferences(m_PersonalPrefs, m_ProjectPrefs);
+			EditorGUILayout.LabelField("About:", EditorStyles.boldLabel);
+			{
+				EditorGUILayout.LabelField("Created by Filip Slavov (NibbleByte)");
+				EditorGUILayout.LabelField("In collaboration with Snapshot Games");
 
-				GUI.FocusControl("");
+				if (GUILayout.Button("Source at GitHub", GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
+					var githubURL = "https://github.com/NibbleByte/SVNSimpleIntegration";
+					Application.OpenURL(githubURL);
+				}
 
-				Close();
+				if (GUILayout.Button("Plugin at Asset Store",GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
+					EditorUtility.DisplayDialog("Not yet!", "Still working on that.", "Fine!");
+				}
 			}
+
+			//EditorGUILayout.Space();
+			//EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+
+
+
+			EditorGUILayout.Space();
+
 
 			EditorGUIUtility.labelWidth -= labelWidthAdd;
 		}
