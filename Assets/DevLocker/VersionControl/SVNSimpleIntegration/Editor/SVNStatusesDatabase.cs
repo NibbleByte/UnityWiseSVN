@@ -180,7 +180,7 @@ namespace DevLocker.VersionControl.SVN
 					Depth = SVNStatusDataOptions.SearchDepth.Infinity,
 					RaiseError = false,
 					Timeout = SVNSimpleIntegration.COMMAND_TIMEOUT * 2,
-					Offline = !SVNPreferencesManager.Instance.PersonalPrefs.DownloadRepositoryChanges,
+					Offline = !SVNPreferencesManager.Instance.DownloadRepositoryChanges,
 				};
 
 				// Will get statuses of all added / modified / deleted / conflicted / unversioned files. Only normal files won't be listed.
@@ -439,7 +439,7 @@ namespace DevLocker.VersionControl.SVN
 		private bool SetStatusData(string guid, SVNStatusData statusData, bool skipPriorityCheck)
 		{
 			if (string.IsNullOrEmpty(guid)) {
-				Debug.LogError($"Trying to add empty guid for status {statusData.Status}");
+				Debug.LogError($"SVN: Trying to add empty guid for \"{statusData.Path}\" with status {statusData.Status}");
 			}
 
 			foreach (var bind in StatusDatas) {

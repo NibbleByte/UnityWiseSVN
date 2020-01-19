@@ -10,6 +10,13 @@ namespace DevLocker.VersionControl.SVN
 	[InitializeOnLoad]
 	internal class SVNPreferencesManager : ScriptableObject
 	{
+		internal enum BoolPreference
+		{
+			SameAsProjectPreference = 0,
+			Enabled = 4,
+			Disabled = 8,
+		}
+
 		private const string PERSONAL_PREFERENCES_KEY = "SVNSimpleIntegration";
 		private const string PROJECT_PREFERENCES_PATH = "ProjectSettings/SVNSimpleIntegration.prefs";
 
@@ -22,8 +29,11 @@ namespace DevLocker.VersionControl.SVN
 		internal class PersonalPreferences
 		{
 			public bool EnableCoreIntegration = true;		// Sync file operations with SVN
-			public bool PopulateStatusesDatabase = true;	// For overlay icons etc.
-			public bool DownloadRepositoryChanges = false;	// When populating the database, should it check for server changes as well (locks & modified files).	
+			public bool PopulateStatusesDatabase = true;    // For overlay icons etc.
+
+			// When populating the database, should it check for server changes as well (locks & modified files).
+			public BoolPreference DownloadRepositoryChanges = BoolPreference.SameAsProjectPreference;
+
 			public int AutoRefreshDatabaseInterval = 60;	// seconds; Less than 0 will disable it.
 			public SVNTraceLogs TraceLogs = SVNTraceLogs.SVNOperations;
 
@@ -36,16 +46,19 @@ namespace DevLocker.VersionControl.SVN
 		[Serializable]
 		internal class ProjectPreferences
 		{
+			public bool DownloadRepositoryChanges = false;
+
 			public string SvnCLIPath = string.Empty;
 
 			public List<string> Exclude = new List<string>();
 
 			public ProjectPreferences Clone()
 			{
-				return new ProjectPreferences() {
-					SvnCLIPath = this.SvnCLIPath,
-					Exclude = new List<string>(this.Exclude),
-				};
+				var clone = (ProjectPreferences) MemberwiseClone();
+
+				clone.Exclude = new List<string>(this.Exclude);
+
+				return clone;
 			}
 		}
 
@@ -53,6 +66,11 @@ namespace DevLocker.VersionControl.SVN
 		public ProjectPreferences ProjectPrefs;
 
 		public event Action PreferencesChanged;
+
+		public bool DownloadRepositoryChanges =>
+			PersonalPrefs.DownloadRepositoryChanges == BoolPreference.SameAsProjectPreference
+			? ProjectPrefs.DownloadRepositoryChanges
+			: PersonalPrefs.DownloadRepositoryChanges == BoolPreference.Enabled;
 
 
 		private static SVNPreferencesManager m_Instance;
@@ -131,7 +149,7 @@ namespace DevLocker.VersionControl.SVN
 			LockStatusIcons[(int)VCLockStatus.LockedHere] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon"), "You have locked this file.");
 			LockStatusIcons[(int)VCLockStatus.LockedOther] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Someone else locked this file.");
 			LockStatusIcons[(int)VCLockStatus.LockedButStolen] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Your lock was stolen by someone else.");
-			
+
 			RemoteStatusIcons = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Others/SVNRemoteChangesIcon"));
 		}
 

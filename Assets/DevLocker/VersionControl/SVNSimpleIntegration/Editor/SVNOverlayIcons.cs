@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -53,7 +50,7 @@ namespace DevLocker.VersionControl.SVN
 			//
 			// Remote Status
 			//
-			if (m_PersonalPrefs.DownloadRepositoryChanges && statusData.RemoteStatus != VCRemoteFileStatus.None) {
+			if (SVNPreferencesManager.Instance.DownloadRepositoryChanges && statusData.RemoteStatus != VCRemoteFileStatus.None) {
 				var remoteStatusIcon = SVNPreferencesManager.Instance.GetRemoteStatusIconContent(statusData.RemoteStatus);
 
 				if (remoteStatusIcon != null) {
@@ -78,7 +75,7 @@ namespace DevLocker.VersionControl.SVN
 			//
 			// Lock Status
 			//
-			if (m_PersonalPrefs.DownloadRepositoryChanges && statusData.LockStatus != VCLockStatus.NoLock) {
+			if (SVNPreferencesManager.Instance.DownloadRepositoryChanges && statusData.LockStatus != VCLockStatus.NoLock) {
 				var lockStatusIcon = SVNPreferencesManager.Instance.GetLockStatusIconContent(statusData.LockStatus);
 
 				if (lockStatusIcon != null) {
