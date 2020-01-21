@@ -70,9 +70,9 @@ namespace DevLocker.VersionControl.SVN
 		private static SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
 		private static SVNPreferencesManager.ProjectPreferences m_ProjectPrefs => SVNPreferencesManager.Instance.ProjectPrefs;
 
-		private static string SVN_Command => string.IsNullOrEmpty(m_ProjectPrefs.SvnCLIPath) 
-			? "svn" 
-			: Path.Combine(Path.GetDirectoryName(ProjectRoot), m_ProjectPrefs.SvnCLIPath);
+		private static string SVN_Command => string.IsNullOrEmpty(m_ProjectPrefs.SvnCLIPath)
+			? "svn"
+			: Path.Combine(ProjectRoot, m_ProjectPrefs.SvnCLIPath);
 
 		internal const int COMMAND_TIMEOUT = 35000;	// Milliseconds
 
