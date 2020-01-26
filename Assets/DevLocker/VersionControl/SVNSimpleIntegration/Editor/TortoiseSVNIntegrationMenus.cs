@@ -7,8 +7,14 @@ namespace DevLocker.VersionControl.SVN
 {
 #if UNITY_EDITOR_WIN
 	// TortoiseSVN Commands: https://tortoisesvn.net/docs/release/TortoiseSVN_en/tsvn-automation.html
+	[InitializeOnLoad]
 	public static class TortoiseSVNIntegrationMenus
 	{
+		static TortoiseSVNIntegrationMenus()
+		{
+			SVNSimpleIntegration.ShowChangesUI += CheckChangesAll;
+		}
+
 		[MenuItem("Assets/SVN/Check Changes All", false, -1000)]
 		internal static void CheckChangesAll()
 		{
@@ -89,9 +95,6 @@ namespace DevLocker.VersionControl.SVN
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
-
-			// Files are added directly without user interface. Folders will pop out user interface.
-			SVNOverlayIcons.InvalidateDatabase();
 		}
 
 		[MenuItem("Assets/SVN/Revert All", false, -800)]
@@ -116,6 +119,25 @@ namespace DevLocker.VersionControl.SVN
 		private static void ResolveAll()
 		{
 			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:resolve /path:\"{SVNSimpleIntegration.ProjectRoot}\"", false);
+			if (!string.IsNullOrEmpty(result.error)) {
+				Debug.LogError($"SVN Error: {result.error}");
+			}
+		}
+
+
+		[MenuItem("Assets/SVN/Get Locks", false, -700)]
+		private static void GetLocks()
+		{
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:lock /path:\"{GetContextPaths(Selection.assetGUIDs, true)}\"", false);
+			if (!string.IsNullOrEmpty(result.error)) {
+				Debug.LogError($"SVN Error: {result.error}");
+			}
+		}
+
+		[MenuItem("Assets/SVN/Release Locks", false, -700)]
+		private static void ReleaseLocks()
+		{
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:unlock /path:\"{GetContextPaths(Selection.assetGUIDs, true)}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}

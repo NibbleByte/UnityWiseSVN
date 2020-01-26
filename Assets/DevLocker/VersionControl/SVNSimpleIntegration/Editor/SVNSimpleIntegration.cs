@@ -8,41 +8,6 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.SVN
 {
-	// Stolen from UVC plugin.
-	public enum VCFileStatus
-	{
-		Normal,
-		Added,
-		Conflicted,
-		Deleted,
-		Ignored,
-		Modified,
-		Replaced,
-		Unversioned,
-		Missing,
-		//External,
-		//Incomplete,
-		//Merged,
-		Obstructed,
-		None,	// File not found or something worse....
-	}
-
-	// Stolen from UVC plugin.
-	public enum VCProperty
-	{
-		None,
-		Normal,
-		Conflicted,
-		Modified,
-	}
-
-	// Stolen from UVC plugin.
-	public enum VCTreeConflictStatus
-	{
-		Normal,
-		TreeConflict
-	}
-
 	// SVN console commands: https://tortoisesvn.net/docs/nightly/TortoiseSVN_en/tsvn-cli-main.html
 	[InitializeOnLoad]
 	public class SVNSimpleIntegration : UnityEditor.AssetModificationProcessor
@@ -61,6 +26,15 @@ namespace DevLocker.VersionControl.SVN
 			{'~', VCFileStatus.Obstructed},
 		};
 
+		private static readonly Dictionary<char, VCLockStatus> m_LockStatusMap = new Dictionary<char, VCLockStatus>
+		{
+			{' ', VCLockStatus.NoLock},
+			{'K', VCLockStatus.LockedHere},
+			{'O', VCLockStatus.LockedOther},
+			{'T', VCLockStatus.LockedButStolen},
+			{'B', VCLockStatus.BrokenLock},
+		};
+
 		private static readonly Dictionary<char, VCProperty> m_PropertyStatusMap = new Dictionary<char, VCProperty>
 		{
 			{' ', VCProperty.Normal},
@@ -74,50 +48,33 @@ namespace DevLocker.VersionControl.SVN
 			{'C', VCTreeConflictStatus.TreeConflict},
 		};
 
-
-
-		public struct StatusData
+		private static readonly Dictionary<char, VCRemoteFileStatus> m_RemoteStatusMap = new Dictionary<char, VCRemoteFileStatus>
 		{
-			public VCFileStatus Status;
-			public VCProperty PropertyStatus;
-			public VCTreeConflictStatus TreeConflictStatus;
-
-			public string Path;
-
-			public bool IsConflicted => 
-				Status == VCFileStatus.Conflicted || 
-				PropertyStatus == VCProperty.Conflicted ||
-				TreeConflictStatus == VCTreeConflictStatus.TreeConflict;
-		}
+			{' ', VCRemoteFileStatus.None},
+			{'*', VCRemoteFileStatus.Modified},
+		};
 
 		public static readonly string ProjectRoot;
-		public static readonly string ProjectDataPath;
 
-		public static bool Enabled { get; private set; }
+		public static event Action ShowChangesUI;
+
+		public static bool Enabled => m_PersonalPrefs.EnableCoreIntegration;
 		public static bool TemporaryDisabled => m_TemporaryDisabledCount > 0;	// Temporarily disable the integration (by code).
 		public static bool Silent => m_SilenceCount > 0;	// Do not show dialogs
+
+		public static SVNTraceLogs TraceLogs => m_PersonalPrefs.TraceLogs;
 
 		private static int m_SilenceCount = 0;
 		private static int m_TemporaryDisabledCount = 0;
 
-		[Serializable]
-		internal struct ProjectPreferences
-		{
-			[Tooltip("If you desire to use specific SVN CLI (svn.exe) located in the project, write down its path relative to the root folder.")]
-			public string SvnCLIPath;
+		private static SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
+		private static SVNPreferencesManager.ProjectPreferences m_ProjectPrefs => SVNPreferencesManager.Instance.ProjectPrefs;
 
-			[Tooltip("Asset paths that will be ignored by the SVN integrations. Use with caution.")]
-			public List<string> Exclude;
-		}
+		private static string SVN_Command => string.IsNullOrEmpty(m_ProjectPrefs.SvnCLIPath)
+			? "svn"
+			: Path.Combine(ProjectRoot, m_ProjectPrefs.SvnCLIPath);
 
-		private const string PROJECT_PREFERENCES_PATH = "ProjectSettings/SVNSimpleIntegration.prefs";
-		private static ProjectPreferences m_ProjectPreferences = new ProjectPreferences() { SvnCLIPath = string.Empty, Exclude = new List<string>() };
-
-		private static string SVN_Command => string.IsNullOrEmpty(m_ProjectPreferences.SvnCLIPath) 
-			? "svn" 
-			: Path.Combine(Path.GetDirectoryName(Application.dataPath), m_ProjectPreferences.SvnCLIPath);
-
-		private const int COMMAND_TIMEOUT = 35000;	// Milliseconds
+		internal const int COMMAND_TIMEOUT = 35000;	// Milliseconds
 
 		#region Logging
 
@@ -126,6 +83,15 @@ namespace DevLocker.VersionControl.SVN
 			public StringBuilder Builder = new StringBuilder();
 
 			public ShellUtils.ShellResult Result;
+
+			private bool m_LogOutput;
+			private bool m_Silent;
+
+			public ResultReporter(bool logOutput, bool silent)
+			{
+				m_LogOutput = logOutput;
+				m_Silent = silent;
+			}
 
 			public void Append(string str)
 			{
@@ -147,11 +113,11 @@ namespace DevLocker.VersionControl.SVN
 				if (Builder.Length > 0) {
 					if (Result.HasErrors) {
 						Debug.LogError(Builder);
-						if (!Silent) {
+						if (!m_Silent) {
 							EditorUtility.DisplayDialog("SVN Error",
 								"SVN error happened while processing the assets. Check the logs.", "I will!");
 						}
-					} else {
+					} else if (m_LogOutput) {
 						Debug.Log(Builder);
 					}
 				}
@@ -166,7 +132,7 @@ namespace DevLocker.VersionControl.SVN
 
 		private static ResultReporter CreateLogger()
 		{
-			var logger = new ResultReporter();
+			var logger = new ResultReporter((TraceLogs & SVNTraceLogs.SVNOperations) != 0, Silent);
 			logger.AppendLine("SVN Operations:");
 
 			return logger;
@@ -176,22 +142,7 @@ namespace DevLocker.VersionControl.SVN
 
 		static SVNSimpleIntegration()
 		{
-			ProjectDataPath = Application.dataPath;
 			ProjectRoot = Path.GetDirectoryName(Application.dataPath);
-
-			Enabled = EditorPrefs.GetBool("SVNIntegration", true);
-
-			if (File.Exists(PROJECT_PREFERENCES_PATH)) {
-				m_ProjectPreferences = JsonUtility.FromJson<ProjectPreferences>(File.ReadAllText(PROJECT_PREFERENCES_PATH));
-			}
-		}
-
-		internal static void SaveProjectPreferences(ProjectPreferences preferences)
-		{
-			m_ProjectPreferences = preferences;
-			m_ProjectPreferences.Exclude.RemoveAll(p => string.IsNullOrWhiteSpace(p));
-
-			File.WriteAllText(PROJECT_PREFERENCES_PATH, JsonUtility.ToJson(m_ProjectPreferences, true));
 		}
 
 		// NOTE: This is called separately for the file and its meta.
@@ -208,7 +159,7 @@ namespace DevLocker.VersionControl.SVN
 				if (!isMeta && !Silent) {
 					EditorUtility.DisplayDialog(
 						"Deleted file",
-						$"The desired location\n\"{path}\"\nis marked as deleted in SVN. The file will be replaced in SVN with the new one.\n\nIf this is an automated change, consider adding this file to the exclusion list in the project preferences:\n\"{PROJECT_PREFERENCES_MENU}\"\n...or change your tool to silence the integration.",
+						$"The desired location\n\"{path}\"\nis marked as deleted in SVN. The file will be replaced in SVN with the new one.\n\nIf this is an automated change, consider adding this file to the exclusion list in the project preferences:\n\"{SVNSimpleIntegrationProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n...or change your tool to silence the integration.",
 						"Replace");
 				}
 
@@ -222,7 +173,7 @@ namespace DevLocker.VersionControl.SVN
 
 		public static AssetDeleteResult OnWillDeleteAsset(string path, RemoveAssetOptions option)
 		{
-			if (!Enabled || TemporaryDisabled || m_ProjectPreferences.Exclude.Any(path.StartsWith))
+			if (!Enabled || TemporaryDisabled || m_ProjectPrefs.Exclude.Any(path.StartsWith))
 				return AssetDeleteResult.DidNotDelete;
 
 			var oldStatus = GetStatus(path).Status;
@@ -246,7 +197,7 @@ namespace DevLocker.VersionControl.SVN
 
 		public static AssetMoveResult OnWillMoveAsset(string oldPath, string newPath)
 		{
-			if (!Enabled || TemporaryDisabled || m_ProjectPreferences.Exclude.Any(oldPath.StartsWith))
+			if (!Enabled || TemporaryDisabled || m_ProjectPrefs.Exclude.Any(oldPath.StartsWith))
 				return AssetMoveResult.DidNotMove;
 
 			var oldStatusData = GetStatus(oldPath);
@@ -281,7 +232,7 @@ namespace DevLocker.VersionControl.SVN
 					$"Failed to move the files\n\"{oldPath}\"\nbecause it has conflicts. Resolve them first!",
 					"Check changes",
 					"Cancel")) {
-					TortoiseSVNIntegrationMenus.CheckChangesAll();
+					ShowChangesUI?.Invoke();
 				}
 
 				return AssetMoveResult.FailedMove;
@@ -327,7 +278,7 @@ namespace DevLocker.VersionControl.SVN
 					$"Failed to move the files to \n\"{directory}\"\nbecause it has conflicts. Resolve them first!",
 					"Check changes",
 					"Cancel")) {
-					TortoiseSVNIntegrationMenus.CheckChangesAll();
+					ShowChangesUI?.Invoke();
 				}
 
 				return false;
@@ -411,19 +362,19 @@ namespace DevLocker.VersionControl.SVN
 			// System.ComponentModel.Win32Exception (0x80004005): ApplicationName='...', CommandLine='...', Native error= The system cannot find the file specified.
 			// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
 			// This is allowed only if there isn't ProjectPreference specified CLI path.
-			if (error.Contains("0x80004005") && string.IsNullOrEmpty(m_ProjectPreferences.SvnCLIPath)) {
+			if (error.Contains("0x80004005") && string.IsNullOrEmpty(m_ProjectPrefs.SvnCLIPath)) {
 				displayMessage = $"SVN CLI (Command Line Interface) not found. " +
-					$"Please install it or specify path to a valid svn.exe in the svn project preferences at:\n{PROJECT_PREFERENCES_MENU}\n\n" +
-					$"You can disable the SVN integration from:\n{TURN_OFF_MENU}";
+					$"Please install it or specify path to a valid svn.exe in the svn preferences at:\n{SVNSimpleIntegrationProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
+					$"You can also disable the SVN integration.";
 
 				return false;
 			}
 
 			// Same as above but the specified svn.exe in the project preferences is missing.
-			if (error.Contains("0x80004005") && !string.IsNullOrEmpty(m_ProjectPreferences.SvnCLIPath)) {
-				displayMessage = $"Cannot find the specified in the svn project preferences svn.exe:\n{m_ProjectPreferences.SvnCLIPath}\n\n" +
-					$"You can reconfigure the svn project preferences at:\n{PROJECT_PREFERENCES_MENU}\n\n" +
-					$"You can disable the SVN integration from:\n{TURN_OFF_MENU}";
+			if (error.Contains("0x80004005") && !string.IsNullOrEmpty(m_ProjectPrefs.SvnCLIPath)) {
+				displayMessage = $"Cannot find the specified in the svn project preferences svn.exe:\n{m_ProjectPrefs.SvnCLIPath}\n\n" +
+					$"You can reconfigure the svn preferences at:\n{SVNSimpleIntegrationProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
+					$"You can also disable the SVN integration.";
 
 				return false;
 			}
@@ -432,8 +383,7 @@ namespace DevLocker.VersionControl.SVN
 			return true;
 		}
 
-		static StatusData fff;
-		private static IEnumerable<StatusData> ExtractStatuses(string output)
+		private static IEnumerable<SVNStatusData> ExtractStatuses(string output, SVNStatusDataOptions options)
 		{
 			using (var sr = new StringReader(output)) {
 				string line;
@@ -449,22 +399,49 @@ namespace DevLocker.VersionControl.SVN
 					if (line.StartsWith("Summary", StringComparison.Ordinal))
 						break;
 
+					// If -u is used, additional line is added at the end:
+					// Status against revision:     14
+					if (line.StartsWith("Status", StringComparison.Ordinal))
+						break;
+
+					// If user has files in the "ignore-on-commit" list, this is added at the end plus empty line:
+					// ---Changelist 'ignore-on-commit': ...
+					if (string.IsNullOrEmpty(line))
+						continue;
+					if (line.StartsWith("---", StringComparison.Ordinal))
+						break;
+
 					// Rules are described in "svn help status".
-					var statusData = new StatusData();
+					var statusData = new SVNStatusData();
 					statusData.Status = m_FileStatusMap[line[0]];
 					statusData.PropertyStatus = m_PropertyStatusMap[line[1]];
+					statusData.LockStatus = m_LockStatusMap[line[5]];
 					statusData.TreeConflictStatus = m_ConflictStatusMap[line[6]];
 
-					// 7 columns plus space; Length+1 to skip '/'
-					statusData.Path = line.Substring(8).Remove(0, ProjectRoot.Length + 1);
+					// 7 columns statuses + space;
+					int pathStart = 7 + 1;
+
+					if (!options.Offline) {
+						// + remote status + revision
+						pathStart += 13;
+						statusData.RemoteStatus = m_RemoteStatusMap[line[8]];
+					}
+
+					statusData.Path = line.Substring(pathStart);
+
+					// NOTE: If you pass absolute path to svn, the output will be with absolute path -> always pass relative path and we'll be good.
+					// If path is not relative, make it.
+					//if (!statusData.Path.StartsWith("Assets", StringComparison.Ordinal)) {
+					//	// Length+1 to skip '/'
+					//	statusData.Path = statusData.Path.Remove(0, ProjectRoot.Length + 1);
+					//}
 
 					yield return statusData;
 				}
 			}
-
 		}
 
-		public static IEnumerable<StatusData> GetStatuses(string path, string depth = "infinity")
+		public static IEnumerable<SVNStatusData> GetStatuses(string path, SVNStatusDataOptions options)
 		{
 			// File can be missing, if it was deleted by svn.
 			//if (!File.Exists(path) && !Directory.Exists(path)) {
@@ -473,37 +450,54 @@ namespace DevLocker.VersionControl.SVN
 			//	}
 			//	throw new IOException($"Trying to get status for file {path} that does not exist!");
 			//}
+			var depth = options.Depth == SVNStatusDataOptions.SearchDepth.Empty ? "empty" : "infinity";
+			var offline = options.Offline ? string.Empty : "-u";
 
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth={depth} \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT * 4);
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth={depth} {offline} \"{SVNFormatPath(path)}\"", options.Timeout);
 
 			if (!string.IsNullOrEmpty(result.error)) {
+
+				if (!options.RaiseError)
+					return Enumerable.Empty<SVNStatusData>();
+
 				string displayMessage;
 				bool isCritical = IsCriticalError(result.error, out displayMessage);
 
 				if (!string.IsNullOrEmpty(displayMessage) && !Silent) {
+					Debug.LogError(displayMessage);
 					EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
 				}
 
 				if (isCritical) {
 					throw new IOException($"Trying to get status for file {path} caused error:\n{result.error}!");
 				} else {
-					return Enumerable.Empty<StatusData>();
+					return Enumerable.Empty<SVNStatusData>();
 				}
 			}
 
-			// If no info is returned for path, the status is normal.
-			if (string.IsNullOrWhiteSpace(result.output) && depth == "empty") {
-				return Enumerable.Repeat(new StatusData() { Status = VCFileStatus.Normal, Path = path }, 1);
+			// If no info is returned for path, the status is normal. Reflect this when searching for Empty depth.
+			if (options.Depth == SVNStatusDataOptions.SearchDepth.Empty) {
+
+				if (options.Offline && string.IsNullOrWhiteSpace(result.output)) {
+					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path }, 1);
+				}
+
+				// If -u is used, additional line is added at the end:
+				// Status against revision:     14
+				if (!options.Offline && result.output.StartsWith("Status", StringComparison.Ordinal)) {
+					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path }, 1);
+				}
 			}
 
-			return ExtractStatuses(result.output);
+			return ExtractStatuses(result.output, options);
 		}
 
-		public static StatusData GetStatus(string path)
+		public static SVNStatusData GetStatus(string path)
 		{
 			// Optimization: empty depth will return nothing if status is normal.
 			// If path is modified, added, deleted, unversioned, it will return proper value.
-			var statusData = GetStatuses(path, "empty").FirstOrDefault();
+			var statusOptions = new SVNStatusDataOptions(SVNStatusDataOptions.SearchDepth.Empty);
+			var statusData = GetStatuses(path, statusOptions).FirstOrDefault();
 
 			// If no path was found, error happened.
 			if (string.IsNullOrEmpty(statusData.Path)) {
@@ -575,8 +569,8 @@ namespace DevLocker.VersionControl.SVN
 			m_TemporaryDisabledCount--;
 		}
 
-
-		[MenuItem("Assets/SVN/Selected Status", false, 200)]
+		// Use for debug.
+		//[MenuItem("Assets/SVN/Selected Status", false, 200)]
 		private static void StatusSelected()
 		{
 			if (Selection.assetGUIDs.Length == 0)
@@ -591,70 +585,6 @@ namespace DevLocker.VersionControl.SVN
 			}
 
 			Debug.Log($"Status for {path}\n{(string.IsNullOrEmpty(result.output) ? "No Changes" : result.output)}", Selection.activeObject);
-		}
-
-		private const string PROJECT_PREFERENCES_MENU = "Assets/SVN/Project Preferences";
-		[MenuItem(PROJECT_PREFERENCES_MENU, false, 200)]
-		private static void ShowProjectPreferences()
-		{
-			var window = EditorWindow.GetWindow<SVNSimpleIntegrationProjectPreferencesWindow>(true, "SVN Project Preferences");
-			window.ProjectPreferences = m_ProjectPreferences;
-			window.ShowUtility();
-			window.position = new Rect(600f, 400f, 400f, 250f);
-		}
-
-		[MenuItem("Assets/SVN/Turn On", true, 200)]
-		private static bool SVNEnableValidate() => !Enabled;
-
-		[MenuItem("Assets/SVN/Turn On", false, 200)]
-		private static void SVNEnable()
-		{
-			Enabled = true;
-			EditorPrefs.SetBool("SVNIntegration", Enabled);
-		}
-
-		private const string TURN_OFF_MENU = "Assets/SVN/Turn Off";
-		[MenuItem(TURN_OFF_MENU, true, 200)]
-		private static bool SVNDisableValidate() =>	Enabled;
-
-		[MenuItem(TURN_OFF_MENU, false, 200)]
-		private static void SVNDisable()
-		{
-			Enabled = false;
-			EditorPrefs.SetBool("SVNIntegration", Enabled);
-
-			EditorUtility.DisplayDialog("SVN Integration", $"You have turned off the SVN integration.", "Ok");
-		}
-	}
-
-	internal class SVNSimpleIntegrationProjectPreferencesWindow : EditorWindow
-	{
-		public SVNSimpleIntegration.ProjectPreferences ProjectPreferences;
-
-		private Vector2 m_Scroll;
-
-		private void OnGUI()
-		{
-			EditorGUILayout.LabelField("Project Preferences:", EditorStyles.boldLabel);
-
-			EditorGUILayout.HelpBox("These settings will be saved in the ProjectSettings folder. Feel free to add them to your version control system.", MessageType.Info);
-
-			m_Scroll = EditorGUILayout.BeginScrollView(m_Scroll);
-
-			var so = new SerializedObject(this);
-			var sp = so.FindProperty("ProjectPreferences");
-
-			EditorGUILayout.PropertyField(sp, true);
-
-			so.ApplyModifiedProperties();
-
-			EditorGUILayout.EndScrollView();
-
-			if (GUILayout.Button("Save")) {
-				ProjectPreferences.SvnCLIPath = ProjectPreferences.SvnCLIPath.Trim();
-				SVNSimpleIntegration.SaveProjectPreferences(ProjectPreferences);
-				Close();
-			}
 		}
 	}
 }
