@@ -333,8 +333,10 @@ namespace DevLocker.VersionControl.SVN
 				return;
 
 			// Will be done on assembly reload.
-			if (EditorApplication.isCompiling)
+			if (EditorApplication.isCompiling) {
+				PendingUpdate = true;
 				return;
+			}
 
 			StartDatabaseUpdate();
 		}
