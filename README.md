@@ -1,13 +1,13 @@
-# SVNSimpleIntegration
+# WiseSVN For Unity
 
 Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https://tortoisesvn.net/) UI. A must have plugin if you use SVN as your version control system in your project.
 
 ## Installation:
-* Github upm package - merge this to your `Packages/manifest.json`
+* Github upm package (pointless if you use git?) - merge this to your `Packages/manifest.json`
 ```
 {
   "dependencies": {
-    "devlocker.versioncontrol.svnsimpleintegration": "https://github.com/NibbleByte/SVNSimpleIntegration.git#upm"
+    "devlocker.versioncontrol.wisesvn": "https://github.com/NibbleByte/UnityWiseSVN.git#upm"
 }
 ```
 * Asset Store plugin: *Working on it*
@@ -45,18 +45,18 @@ Preferred workflow is to always work inside Unity - use the \"Assets/SVN/...\" m
 This is an issue with how Unity works, not the plugin iteself. Unity says its by "design".**
 
 ## Overlay Icons
-* Unversioned <img src="./Assets/DevLocker/VersionControl/SVNSimpleIntegration/Resources/Editor/SVNOverlayIcons/SVNUnversionedIcon.png" width="24">
-* Modified <img src="./Assets/DevLocker/VersionControl/SVNSimpleIntegration/Resources/Editor/SVNOverlayIcons/SVNModifiedIcon.png" width="24">
-* Added <img src="./Assets/DevLocker/VersionControl/SVNSimpleIntegration/Resources/Editor/SVNOverlayIcons/SVNAddedIcon.png" width="24">
-* Deleted <img src="./Assets/DevLocker/VersionControl/SVNSimpleIntegration/Resources/Editor/SVNOverlayIcons/SVNDeletedIcon.png" width="24">
-* Conflict <img src="./Assets/DevLocker/VersionControl/SVNSimpleIntegration/Resources/Editor/SVNOverlayIcons/SVNConflictIcon.png" width="24">
-* Locked by me <img src="./Assets/DevLocker/VersionControl/SVNSimpleIntegration/Resources/Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon.png" width="16">
-* Locked by others <img src="./Assets/DevLocker/VersionControl/SVNSimpleIntegration/Resources/Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon.png" width="16">
-* Server has changes, update <img src="./Assets/DevLocker/VersionControl/SVNSimpleIntegration/Resources/Editor/SVNOverlayIcons/Others/SVNRemoteChangesIcon.png" width="16">
+* Unversioned <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNUnversionedIcon.png" width="24">
+* Modified <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNModifiedIcon.png" width="24">
+* Added <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNAddedIcon.png" width="24">
+* Deleted <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNDeletedIcon.png" width="24">
+* Conflict <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNConflictIcon.png" width="24">
+* Locked by me <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon.png" width="16">
+* Locked by others <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon.png" width="16">
+* Server has changes, update <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/Others/SVNRemoteChangesIcon.png" width="16">
 
 ## Screenshots
-![OverlayIcons1](Docs/Screenshots/SVNSimpleIntegration-OverlayIcons-Shot.png)
-![OverlayIcons2](Docs/Screenshots/SVNSimpleIntegration-OverlayIcons2-Shot.png)
+![OverlayIcons1](Docs/Screenshots/WiseSVN-OverlayIcons-Shot.png)
+![OverlayIcons2](Docs/Screenshots/WiseSVN-OverlayIcons2-Shot.png)
 
-![ContextMenu](Docs/Screenshots/SVNSimpleIntegration-ContextMenu-Shot.png)
-![Preferences](Docs/Screenshots/SVNSimpleIntegration-Preferences.png)
+![ContextMenu](Docs/Screenshots/WiseSVN-ContextMenu-Shot.png)
+![Preferences](Docs/Screenshots/WiseSVN-Preferences.png)

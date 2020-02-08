@@ -3,7 +3,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace DevLocker.VersionControl.SVN
+namespace DevLocker.VersionControl.WiseSVN
 {
 #if UNITY_EDITOR_WIN
 	// TortoiseSVN Commands: https://tortoisesvn.net/docs/release/TortoiseSVN_en/tsvn-automation.html
@@ -12,13 +12,13 @@ namespace DevLocker.VersionControl.SVN
 	{
 		static TortoiseSVNIntegrationMenus()
 		{
-			SVNSimpleIntegration.ShowChangesUI += CheckChangesAll;
+			WiseSVNIntegration.ShowChangesUI += CheckChangesAll;
 		}
 
 		[MenuItem("Assets/SVN/Check Changes All", false, -1000)]
 		internal static void CheckChangesAll()
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:repostatus /path:\"{SVNSimpleIntegration.ProjectRoot}\"", false);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:repostatus /path:\"{WiseSVNIntegration.ProjectRoot}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -32,10 +32,10 @@ namespace DevLocker.VersionControl.SVN
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
-		
+
 		public static void Update(string filePath)
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:update /path:\"{SVNSimpleIntegration.ProjectRoot + filePath}\"", true);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:update /path:\"{WiseSVNIntegration.ProjectRoot + filePath}\"", true);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -44,7 +44,7 @@ namespace DevLocker.VersionControl.SVN
 		[MenuItem("Assets/SVN/Update All", false, -950)]
 		private static void UpdateAll()
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:update /path:\"{SVNSimpleIntegration.ProjectRoot}\"", true);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:update /path:\"{WiseSVNIntegration.ProjectRoot}\"", true);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -53,7 +53,7 @@ namespace DevLocker.VersionControl.SVN
 		[MenuItem("Assets/SVN/Commit All", false, -900)]
 		private static void CommitAll()
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:commit /path:\"{SVNSimpleIntegration.ProjectRoot}\"", false);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:commit /path:\"{WiseSVNIntegration.ProjectRoot}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -78,14 +78,14 @@ namespace DevLocker.VersionControl.SVN
 				;
 
 			foreach (var path in paths) {
-				if (!SVNSimpleIntegration.CheckAndAddParentFolderIfNeeded(path))
+				if (!WiseSVNIntegration.CheckAndAddParentFolderIfNeeded(path))
 					return;
 			}
 
 			// Don't give versioned metas, as tortoiseSVN doesn't like it.
 			var metas = paths
 				.Select(path => path + ".meta")
-				.Where(path => SVNSimpleIntegration.GetStatus(path).Status == VCFileStatus.Unversioned)
+				.Where(path => WiseSVNIntegration.GetStatus(path).Status == VCFileStatus.Unversioned)
 				;
 
 			var pathsArg = paths.Concat(metas).Aggregate((p, n) => $"{p}*{n}");
@@ -100,7 +100,7 @@ namespace DevLocker.VersionControl.SVN
 		[MenuItem("Assets/SVN/Revert All", false, -800)]
 		private static void RevertAll()
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:revert /path:\"{SVNSimpleIntegration.ProjectRoot}\"", false);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:revert /path:\"{WiseSVNIntegration.ProjectRoot}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -118,7 +118,7 @@ namespace DevLocker.VersionControl.SVN
 		[MenuItem("Assets/SVN/Resolve All", false, -800)]
 		private static void ResolveAll()
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:resolve /path:\"{SVNSimpleIntegration.ProjectRoot}\"", false);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:resolve /path:\"{WiseSVNIntegration.ProjectRoot}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -146,7 +146,7 @@ namespace DevLocker.VersionControl.SVN
 		[MenuItem("Assets/SVN/Show Log All", false, -500)]
 		private static void ShowLogAll()
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:log /path:\"{SVNSimpleIntegration.ProjectRoot}\"", false);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:log /path:\"{WiseSVNIntegration.ProjectRoot}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -173,7 +173,7 @@ namespace DevLocker.VersionControl.SVN
 		[MenuItem("Assets/SVN/Cleanup", false, -500)]
 		private static void Cleanup()
 		{
-			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:cleanup /path:\"{SVNSimpleIntegration.ProjectRoot}\"", true);
+			var result = ShellUtils.ExecuteCommand("TortoiseProc.exe", $"/command:cleanup /path:\"{WiseSVNIntegration.ProjectRoot}\"", true);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}

@@ -1,6 +1,6 @@
 using System;
 
-namespace DevLocker.VersionControl.SVN
+namespace DevLocker.VersionControl.WiseSVN
 {
 	// Stolen from UVC plugin.
 	public enum VCFileStatus
@@ -78,7 +78,7 @@ namespace DevLocker.VersionControl.SVN
 
 		public bool Equals(SVNStatusData other)
 		{
-			return Status == other.Status 
+			return Status == other.Status
 				&& PropertyStatus == other.PropertyStatus
 				&& TreeConflictStatus == other.TreeConflictStatus
 				&& LockStatus == other.LockStatus
@@ -104,7 +104,7 @@ namespace DevLocker.VersionControl.SVN
 		{
 			Depth = depth;
 			RaiseError = true;
-			Timeout = SVNSimpleIntegration.COMMAND_TIMEOUT;
+			Timeout = WiseSVNIntegration.COMMAND_TIMEOUT;
 			Offline = true;
 		}
 	}

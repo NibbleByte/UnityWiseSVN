@@ -1,2 +1,2 @@
-git subtree push --prefix Assets/DevLocker/VersionControl/SVNSimpleIntegration origin upm
+git subtree push --prefix Assets/DevLocker/VersionControl/WiseSVN origin upm
 pause

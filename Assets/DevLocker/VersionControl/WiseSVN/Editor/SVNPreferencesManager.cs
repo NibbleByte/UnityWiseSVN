@@ -5,7 +5,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace DevLocker.VersionControl.SVN
+namespace DevLocker.VersionControl.WiseSVN
 {
 	[InitializeOnLoad]
 	internal class SVNPreferencesManager : ScriptableObject
@@ -17,8 +17,8 @@ namespace DevLocker.VersionControl.SVN
 			Disabled = 8,
 		}
 
-		private const string PERSONAL_PREFERENCES_KEY = "SVNSimpleIntegration";
-		private const string PROJECT_PREFERENCES_PATH = "ProjectSettings/SVNSimpleIntegration.prefs";
+		private const string PERSONAL_PREFERENCES_KEY = "WiseSVN";
+		private const string PROJECT_PREFERENCES_PATH = "ProjectSettings/WiseSVN.prefs";
 
 		// Icons are stored in the database so we don't reload them every time.
 		[SerializeField] private GUIContent[] FileStatusIcons = new GUIContent[0];
@@ -91,7 +91,7 @@ namespace DevLocker.VersionControl.SVN
 
 						m_Instance.LoadPreferences();
 
-						Debug.Log($"Loaded SVN Simple Integration Preferences. The integration is turned {(m_Instance.PersonalPrefs.EnableCoreIntegration ? "on" : "off")}.");
+						Debug.Log($"Loaded WiseSVN Preferences. The integration is turned {(m_Instance.PersonalPrefs.EnableCoreIntegration ? "on" : "off")}.");
 
 					} else {
 						// Data is already deserialized by Unity onto the scriptable object.

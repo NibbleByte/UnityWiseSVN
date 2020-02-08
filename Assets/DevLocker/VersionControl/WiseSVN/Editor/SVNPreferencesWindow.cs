@@ -1,15 +1,15 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace DevLocker.VersionControl.SVN
+namespace DevLocker.VersionControl.WiseSVN
 {
-	internal class SVNSimpleIntegrationProjectPreferencesWindow : EditorWindow
+	internal class WiseSVNProjectPreferencesWindow : EditorWindow
 	{
 		public const string PROJECT_PREFERENCES_MENU = "Assets/SVN/SVN Preferences";
 		[MenuItem(PROJECT_PREFERENCES_MENU, false, 200)]
 		private static void ShowProjectPreferences()
 		{
-			var window = GetWindow<SVNSimpleIntegrationProjectPreferencesWindow>(true, "SVN Project Preferences");
+			var window = GetWindow<WiseSVNProjectPreferencesWindow>(true, "Wise SVN Preferences");
 			window.m_PersonalPrefs = SVNPreferencesManager.Instance.PersonalPrefs.Clone();
 			window.m_ProjectPrefs = SVNPreferencesManager.Instance.ProjectPrefs.Clone();
 			window.ShowUtility();
@@ -113,7 +113,7 @@ namespace DevLocker.VersionControl.SVN
 				EditorGUILayout.LabelField("In collaboration with Snapshot Games");
 
 				if (GUILayout.Button("Source at GitHub", GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
-					var githubURL = "https://github.com/NibbleByte/SVNSimpleIntegration";
+					var githubURL = "https://github.com/NibbleByte/UnityWiseSVN";
 					Application.OpenURL(githubURL);
 				}
 

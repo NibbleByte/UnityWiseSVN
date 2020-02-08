@@ -1,5 +1,5 @@
 {
-    "name": "DevLocker.VersionControl.SVNSimpleIntegration",
+    "name": "DevLocker.VersionControl.WiseSVN",
     "references": [],
     "optionalUnityReferences": [],
     "includePlatforms": [

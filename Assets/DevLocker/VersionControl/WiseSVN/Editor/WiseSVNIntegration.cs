@@ -6,11 +6,11 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 
-namespace DevLocker.VersionControl.SVN
+namespace DevLocker.VersionControl.WiseSVN
 {
 	// SVN console commands: https://tortoisesvn.net/docs/nightly/TortoiseSVN_en/tsvn-cli-main.html
 	[InitializeOnLoad]
-	public class SVNSimpleIntegration : UnityEditor.AssetModificationProcessor
+	public class WiseSVNIntegration : UnityEditor.AssetModificationProcessor
 	{
 		private static readonly Dictionary<char, VCFileStatus> m_FileStatusMap = new Dictionary<char, VCFileStatus>
 		{
@@ -140,7 +140,7 @@ namespace DevLocker.VersionControl.SVN
 
 		#endregion
 
-		static SVNSimpleIntegration()
+		static WiseSVNIntegration()
 		{
 			ProjectRoot = Path.GetDirectoryName(Application.dataPath);
 		}
@@ -159,7 +159,7 @@ namespace DevLocker.VersionControl.SVN
 				if (!isMeta && !Silent) {
 					EditorUtility.DisplayDialog(
 						"Deleted file",
-						$"The desired location\n\"{path}\"\nis marked as deleted in SVN. The file will be replaced in SVN with the new one.\n\nIf this is an automated change, consider adding this file to the exclusion list in the project preferences:\n\"{SVNSimpleIntegrationProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n...or change your tool to silence the integration.",
+						$"The desired location\n\"{path}\"\nis marked as deleted in SVN. The file will be replaced in SVN with the new one.\n\nIf this is an automated change, consider adding this file to the exclusion list in the project preferences:\n\"{WiseSVNProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n...or change your tool to silence the integration.",
 						"Replace");
 				}
 
@@ -364,7 +364,7 @@ namespace DevLocker.VersionControl.SVN
 			// This is allowed only if there isn't ProjectPreference specified CLI path.
 			if (error.Contains("0x80004005") && string.IsNullOrEmpty(m_ProjectPrefs.SvnCLIPath)) {
 				displayMessage = $"SVN CLI (Command Line Interface) not found. " +
-					$"Please install it or specify path to a valid svn.exe in the svn preferences at:\n{SVNSimpleIntegrationProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
+					$"Please install it or specify path to a valid svn.exe in the svn preferences at:\n{WiseSVNProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
 					$"You can also disable the SVN integration.";
 
 				return false;
@@ -373,7 +373,7 @@ namespace DevLocker.VersionControl.SVN
 			// Same as above but the specified svn.exe in the project preferences is missing.
 			if (error.Contains("0x80004005") && !string.IsNullOrEmpty(m_ProjectPrefs.SvnCLIPath)) {
 				displayMessage = $"Cannot find the specified in the svn project preferences svn.exe:\n{m_ProjectPrefs.SvnCLIPath}\n\n" +
-					$"You can reconfigure the svn preferences at:\n{SVNSimpleIntegrationProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
+					$"You can reconfigure the svn preferences at:\n{WiseSVNProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
 					$"You can also disable the SVN integration.";
 
 				return false;
@@ -546,7 +546,7 @@ namespace DevLocker.VersionControl.SVN
 		public static void ClearSilence()
 		{
 			if (m_SilenceCount == 0) {
-				Debug.LogError("SVNSimpleIntegration: trying to clear silence more times than it was requested.");
+				Debug.LogError("WiseSVN: trying to clear silence more times than it was requested.");
 				return;
 			}
 
@@ -562,7 +562,7 @@ namespace DevLocker.VersionControl.SVN
 		public static void ClearTemporaryDisable()
 		{
 			if (m_TemporaryDisabledCount == 0) {
-				Debug.LogError("SVNSimpleIntegration: trying to clear temporary disable more times than it was requested.");
+				Debug.LogError("WiseSVN: trying to clear temporary disable more times than it was requested.");
 				return;
 			}
 

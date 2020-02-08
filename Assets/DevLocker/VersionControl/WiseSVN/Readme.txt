@@ -1,14 +1,14 @@
-﻿========= SVNSimpleIntegration =========
+﻿========= WiseSVN =========
 
 Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https://tortoisesvn.net/) UI. A must have plugin if you use SVN as your version control system in your project.
-For up to date documentation, check: https://github.com/NibbleByte/SVNSimpleIntegration
+For up to date documentation, check: https://github.com/NibbleByte/UnityWiseSVN
 
 ========= Installation =========
 * This Asset Store package
 * Github upm package - merge this to your "Packages/manifest.json"
 	{
 	  "dependencies": {
-		"devlocker.versioncontrol.svnsimpleintegration": "https://github.com/NibbleByte/SVNSimpleIntegration.git#upm"
+		"devlocker.versioncontrol.wisesvn": "https://github.com/NibbleByte/UnityWiseSVN.git#upm"
 	}
 
 ========= Prerequisites =========

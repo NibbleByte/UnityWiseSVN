@@ -5,7 +5,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace DevLocker.VersionControl.SVN
+namespace DevLocker.VersionControl.WiseSVN
 {
 	internal class SVNStatusesDatabase : ScriptableObject
 	{
@@ -105,8 +105,8 @@ namespace DevLocker.VersionControl.SVN
 		{
 			AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
 
-			// HACK: Force SVNSimpleIntegration initialize first, so it doesn't happen in the thread.
-			SVNSimpleIntegration.ProjectRoot.StartsWith(string.Empty);
+			// HACK: Force WiseSVN initialize first, so it doesn't happen in the thread.
+			WiseSVNIntegration.ProjectRoot.StartsWith(string.Empty);
 
 			SVNPreferencesManager.Instance.PreferencesChanged += PreferencesChanged;
 			PreferencesChanged();
@@ -179,12 +179,12 @@ namespace DevLocker.VersionControl.SVN
 				var statusOptions = new SVNStatusDataOptions() {
 					Depth = SVNStatusDataOptions.SearchDepth.Infinity,
 					RaiseError = false,
-					Timeout = SVNSimpleIntegration.COMMAND_TIMEOUT * 2,
+					Timeout = WiseSVNIntegration.COMMAND_TIMEOUT * 2,
 					Offline = !SVNPreferencesManager.Instance.DownloadRepositoryChanges,
 				};
 
 				// Will get statuses of all added / modified / deleted / conflicted / unversioned files. Only normal files won't be listed.
-				var statuses = SVNSimpleIntegration.GetStatuses("Assets", statusOptions)
+				var statuses = WiseSVNIntegration.GetStatuses("Assets", statusOptions)
 					// Deleted svn file can still exist for some reason. Need to show it as deleted.
 					// If file doesn't exists, skip it as we can't show it anyway.
 					.Where(s => s.Status != VCFileStatus.Deleted || File.Exists(s.Path))
@@ -198,7 +198,7 @@ namespace DevLocker.VersionControl.SVN
 					if (statusData.Status == VCFileStatus.Unversioned && Directory.Exists(statusData.Path)) {
 						var paths = Directory.EnumerateFileSystemEntries(statusData.Path, "*", SearchOption.AllDirectories);
 						statuses.AddRange(paths
-							.Select(path => path.Replace(SVNSimpleIntegration.ProjectRoot, ""))
+							.Select(path => path.Replace(WiseSVNIntegration.ProjectRoot, ""))
 							.Select(path => new SVNStatusData() { Status = VCFileStatus.Unversioned, Path = path })
 							);
 					}
@@ -329,7 +329,7 @@ namespace DevLocker.VersionControl.SVN
 
 		public void InvalidateDatabase()
 		{
-			if (!IsActive || PendingUpdate || SVNSimpleIntegration.TemporaryDisabled)
+			if (!IsActive || PendingUpdate || WiseSVNIntegration.TemporaryDisabled)
 				return;
 
 			// Will be done on assembly reload.
@@ -375,11 +375,11 @@ namespace DevLocker.VersionControl.SVN
 				if (!path.StartsWith("Assets", StringComparison.Ordinal))
 					continue;
 
-				var statusData = SVNSimpleIntegration.GetStatus(path);
+				var statusData = WiseSVNIntegration.GetStatus(path);
 
 				// If status is normal but asset was imported, maybe the meta changed. Use that status instead.
 				if (statusData.Status == VCFileStatus.Normal && !statusData.IsConflicted) {
-					statusData = SVNSimpleIntegration.GetStatus(path + ".meta");
+					statusData = WiseSVNIntegration.GetStatus(path + ".meta");
 					statusData.Path = path;
 				}
 
