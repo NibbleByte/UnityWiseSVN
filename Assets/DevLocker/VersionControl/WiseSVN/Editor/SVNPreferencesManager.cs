@@ -91,7 +91,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 						m_Instance.LoadPreferences();
 
-						Debug.Log($"Loaded WiseSVN Preferences. The integration is turned {(m_Instance.PersonalPrefs.EnableCoreIntegration ? "on" : "off")}.");
+						Debug.Log($"Loaded WiseSVN Preferences. WiseSVN is turned {(m_Instance.PersonalPrefs.EnableCoreIntegration ? "on" : "off")}.");
 
 					} else {
 						// Data is already deserialized by Unity onto the scriptable object.
@@ -138,6 +138,23 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 
+			LoadTextures();
+
+			// If WiseSVN was just added to the project, Unity won't manage to load the textures the first time. Try again next frame.
+			if (FileStatusIcons[(int)VCFileStatus.Added].image == null) {
+
+				EditorApplication.CallbackFunction reloadTextures = null;
+				reloadTextures = () => {
+					EditorApplication.update -= reloadTextures;
+					LoadTextures();
+				};
+
+				EditorApplication.update += reloadTextures;
+			}
+		}
+
+		private void LoadTextures()
+		{
 			FileStatusIcons = new GUIContent[Enum.GetValues(typeof(VCFileStatus)).Length];
 			FileStatusIcons[(int)VCFileStatus.Added] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNAddedIcon"));
 			FileStatusIcons[(int)VCFileStatus.Modified] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNModifiedIcon"));
