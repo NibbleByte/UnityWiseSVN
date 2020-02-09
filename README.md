@@ -59,4 +59,5 @@ This is an issue with how Unity works, not the plugin iteself. Unity says its by
 ![OverlayIcons2](Docs/Screenshots/WiseSVN-OverlayIcons2-Shot.png)
 
 ![ContextMenu](Docs/Screenshots/WiseSVN-ContextMenu-Shot.png)
+![File Operations](Docs/Screenshots/WiseSVN-Rename.png)
 ![Preferences](Docs/Screenshots/WiseSVN-Preferences.png)
