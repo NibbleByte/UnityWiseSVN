@@ -46,6 +46,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				GUI.backgroundColor = Color.green / 1.2f;
 				if (GUILayout.Button("Save All", GUILayout.MaxWidth(150f))) {
 					m_ProjectPrefs.SvnCLIPath = m_ProjectPrefs.SvnCLIPath.Trim();
+					m_ProjectPrefs.SvnCLIPathMacOS = m_ProjectPrefs.SvnCLIPathMacOS.Trim();
 					m_ProjectPrefs.Exclude.RemoveAll(p => string.IsNullOrWhiteSpace(p));
 
 					SVNPreferencesManager.Instance.SavePreferences(m_PersonalPrefs, m_ProjectPrefs);
@@ -96,6 +97,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				m_ProjectPrefs.DownloadRepositoryChanges = EditorGUILayout.Toggle(new GUIContent("Check for repository changes", downloadRepositoryChangesHint), m_ProjectPrefs.DownloadRepositoryChanges);
 
 				m_ProjectPrefs.SvnCLIPath = EditorGUILayout.TextField(new GUIContent("SVN CLI Path", "If you desire to use specific SVN CLI (svn.exe) located in the project, write down its path relative to the root folder."), m_ProjectPrefs.SvnCLIPath);
+				m_ProjectPrefs.SvnCLIPathMacOS = EditorGUILayout.TextField(new GUIContent("SVN CLI Path MacOS", "Same as above, but for MacOS."), m_ProjectPrefs.SvnCLIPathMacOS);
 
 				EditorGUILayout.PropertyField(sp.FindPropertyRelative("Exclude"), new GUIContent("Exclude Paths", "Asset paths that will be ignored by the SVN integrations. Use with caution."), true);
 
