@@ -70,9 +70,11 @@ namespace DevLocker.VersionControl.WiseSVN
 		private static SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
 		private static SVNPreferencesManager.ProjectPreferences m_ProjectPrefs => SVNPreferencesManager.Instance.ProjectPrefs;
 
-		private static string SVN_Command => string.IsNullOrEmpty(m_ProjectPrefs.SvnCLIPath)
+
+
+		private static string SVN_Command => string.IsNullOrEmpty(m_ProjectPrefs.PlatformSvnCLIPath)
 			? "svn"
-			: Path.Combine(ProjectRoot, m_ProjectPrefs.SvnCLIPath);
+			: Path.Combine(ProjectRoot, m_ProjectPrefs.PlatformSvnCLIPath);
 
 		internal const int COMMAND_TIMEOUT = 35000;	// Milliseconds
 
@@ -362,7 +364,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			// System.ComponentModel.Win32Exception (0x80004005): ApplicationName='...', CommandLine='...', Native error= The system cannot find the file specified.
 			// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
 			// This is allowed only if there isn't ProjectPreference specified CLI path.
-			if (error.Contains("0x80004005") && string.IsNullOrEmpty(m_ProjectPrefs.SvnCLIPath)) {
+			if (error.Contains("0x80004005") && string.IsNullOrEmpty(m_ProjectPrefs.PlatformSvnCLIPath)) {
 				displayMessage = $"SVN CLI (Command Line Interface) not found. " +
 					$"Please install it or specify path to a valid svn.exe in the svn preferences at:\n{WiseSVNProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
 					$"You can also disable the SVN integration.";
@@ -371,8 +373,8 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			// Same as above but the specified svn.exe in the project preferences is missing.
-			if (error.Contains("0x80004005") && !string.IsNullOrEmpty(m_ProjectPrefs.SvnCLIPath)) {
-				displayMessage = $"Cannot find the specified in the svn project preferences svn.exe:\n{m_ProjectPrefs.SvnCLIPath}\n\n" +
+			if (error.Contains("0x80004005") && !string.IsNullOrEmpty(m_ProjectPrefs.PlatformSvnCLIPath)) {
+				displayMessage = $"Cannot find the specified in the svn project preferences svn.exe:\n{m_ProjectPrefs.PlatformSvnCLIPath}\n\n" +
 					$"You can reconfigure the svn preferences at:\n{WiseSVNProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
 					$"You can also disable the SVN integration.";
 
@@ -441,6 +443,10 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 		}
 
+		// Used to avoid spam (specially when importing the whole project and errors start popping up, interrupting the process).
+		[NonSerialized]
+		private static string m_LastDisplayedError = string.Empty;
+
 		public static IEnumerable<SVNStatusData> GetStatuses(string path, SVNStatusDataOptions options)
 		{
 			// File can be missing, if it was deleted by svn.
@@ -463,8 +469,9 @@ namespace DevLocker.VersionControl.WiseSVN
 				string displayMessage;
 				bool isCritical = IsCriticalError(result.error, out displayMessage);
 
-				if (!string.IsNullOrEmpty(displayMessage) && !Silent) {
-					Debug.LogError(displayMessage);
+				if (!string.IsNullOrEmpty(displayMessage) && !Silent && m_LastDisplayedError != displayMessage) {
+					Debug.LogError($"{displayMessage}\n\n{result.error}");
+					m_LastDisplayedError = displayMessage;
 					EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
 				}
 

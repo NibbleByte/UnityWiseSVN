@@ -48,7 +48,15 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			public bool DownloadRepositoryChanges = false;
 
+			// Use PlatformSvnCLIPath instead as it is platform independent.
 			public string SvnCLIPath = string.Empty;
+			public string SvnCLIPathMacOS = string.Empty;
+
+#if UNITY_EDITOR_WIN
+			public string PlatformSvnCLIPath => SvnCLIPath;
+#else
+			public string PlatformSvnCLIPath => SvnCLIPathMacOS;
+#endif
 
 			public List<string> Exclude = new List<string>();
 
