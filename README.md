@@ -25,7 +25,7 @@ Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https:/
   * Moving assets to unversioned folder will ask the user to add that folder to SVN as well.
   * Moving folders / files that have conflicts will be rejected.
   * Will work with other custom tools as long as they move / rename assets using Unity API.
-Provides assets context menu for manual SVN operations like commit, update, revert etc.
+* Provides assets context menu for manual SVN operations like commit, update, revert etc.
 * **Show overlay svn status icons**
   * Show server changes that you need to update.
   * Show locked files by you and your colleges. 
