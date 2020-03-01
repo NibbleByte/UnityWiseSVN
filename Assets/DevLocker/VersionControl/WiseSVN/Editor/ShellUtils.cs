@@ -7,6 +7,16 @@ namespace DevLocker.VersionControl.WiseSVN
 {
 	public class ShellUtils
 	{
+		public struct ShellArgs
+		{
+			public string Command;
+			public string Args;
+			public string WorkingDirectory;
+			public bool WaitForOutput;
+			public int WaitTimeout;		// WaitTimeout is in milliseconds. -1 means forever. Only if WaitForOutput is true.
+			public StringBuilder Logger;
+		}
+
 		public struct ShellResult
 		{
 			public string command;
@@ -30,31 +40,48 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		public static ShellResult ExecuteCommand(string command, string args, bool waitForOutput, StringBuilder logger = null)
 		{
-			return ExecuteCommand(command, args, waitForOutput, -1, logger);
+			return ExecuteCommand(new ShellArgs() {
+				Command = command,
+				Args = args,
+				WaitForOutput = waitForOutput,
+				WaitTimeout = -1,
+				Logger = logger
+			});
 		}
 
 		public static ShellResult ExecuteCommand(string command, string args, int waitTimeout, StringBuilder logger = null)
 		{
-			return ExecuteCommand(command, args, true, waitTimeout, logger);
+			return ExecuteCommand(new ShellArgs() {
+				Command = command,
+				Args = args,
+				WaitForOutput = true,
+				WaitTimeout = waitTimeout,
+				Logger = logger
+			});
 		}
 
-		// waitTimeout is in milliseconds. -1 means forever.
-		public static ShellResult ExecuteCommand(string command, string args, bool waitForOutput, int waitTimeout, StringBuilder logger = null)
+		// WaitTimeout is in milliseconds. -1 means forever.
+		public static ShellResult ExecuteCommand(ShellArgs shellArgs)
 		{
+			shellArgs.Command = shellArgs.Command ?? string.Empty;
+			shellArgs.Args = shellArgs.Args ?? string.Empty;
+			shellArgs.WorkingDirectory = shellArgs.WorkingDirectory ?? string.Empty;
+
 			ShellResult result = new ShellResult();
 
-			result.command = command;
-			result.args = args;
-			if (logger != null) {
-				logger.AppendLine(command + " " + args);
+			result.command = shellArgs.Command;
+			result.args = shellArgs.Args;
+			if (shellArgs.Logger != null) {
+				shellArgs.Logger.AppendLine(shellArgs.Command + " " + shellArgs);
 			}
 
-			ProcessStartInfo processStartInfo = new ProcessStartInfo(command, args);
+			ProcessStartInfo processStartInfo = new ProcessStartInfo(shellArgs.Command, shellArgs.Args);
 			processStartInfo.RedirectStandardOutput = true;
 			processStartInfo.RedirectStandardError = true;
 			processStartInfo.CreateNoWindow = true;
 			processStartInfo.WindowStyle = ProcessWindowStyle.Hidden;
 			processStartInfo.UseShellExecute = false;
+			processStartInfo.WorkingDirectory = shellArgs.WorkingDirectory;
 
 			Process process;
 			try {
@@ -64,16 +91,16 @@ namespace DevLocker.VersionControl.WiseSVN
 				// Most probably file not found.
 				result.error = ex.ToString();
 
-				if (logger != null) {
-					logger.AppendLine("> " + result.error);
+				if (shellArgs.Logger != null) {
+					shellArgs.Logger.AppendLine("> " + result.error);
 				}
 
 				return result;
 			}
 
-			if (waitForOutput) {
+			if (shellArgs.WaitForOutput) {
 
-				if (waitTimeout < 0) {
+				if (shellArgs.WaitTimeout < 0) {
 
 					using (StreamReader streamReader = process.StandardOutput) {
 						result.output = streamReader.ReadToEnd();
@@ -88,12 +115,12 @@ namespace DevLocker.VersionControl.WiseSVN
 					var outTask = Task.Run(() => process.StandardOutput.ReadToEndAsync());
 					var errTask = Task.Run(() => process.StandardError.ReadToEndAsync());
 
-					if (process.WaitForExit(waitTimeout)) {
+					if (process.WaitForExit(shellArgs.WaitTimeout)) {
 						result.output = outTask.Result.TrimEnd('\r', '\n');
 						result.error = errTask.Result.TrimEnd('\r', '\n');
 					} else {
 						result.output = string.Empty;
-						result.error = $"Command [{command} {args}] timed out.";
+						result.error = $"Command [{shellArgs.Command} {shellArgs}] timed out.";
 					}
 				}
 
@@ -107,8 +134,8 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 
-			if (result.HasErrors && logger != null) {
-				logger.AppendLine("> " + result.error);
+			if (result.HasErrors && shellArgs.Logger != null) {
+				shellArgs.Logger.AppendLine("> " + result.error);
 			}
 
 			return result;

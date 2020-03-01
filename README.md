@@ -1,6 +1,6 @@
 # WiseSVN For Unity
 
-Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https://tortoisesvn.net/) UI. A must have plugin if you use SVN as your version control system in your project.
+Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) user interface. A must have plugin if you use SVN as your version control system in your project.
 
 ## Installation:
 * Github upm package (pointless if you use git?) - merge this to your `Packages/manifest.json`
@@ -15,7 +15,7 @@ Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https:/
 ## Prerequisites:
 * Have installed SVN installed
   * Have installed SVN command line interface (CLI)
-* (Optional) Have TortoiseSVN installed.
+* (Optional) Have [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) installed.
 
 ![SVN CLI](https://i.stack.imgur.com/ZquvH.png)
 
@@ -31,7 +31,7 @@ Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https:/
   * Show locked files by you and your colleges. 
 * Minimal performance impact
 * You don't have to leave Unity to do SVN chores.
-* File operations *should* be cross-platform. TortoiseSVN menus are not.
+* Works on Windows and MacOS (maybe Linux?).
 
 *Check the screenshots below*
 

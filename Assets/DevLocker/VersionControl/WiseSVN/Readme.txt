@@ -1,6 +1,6 @@
 ﻿========= WiseSVN =========
 
-Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https://tortoisesvn.net/) UI. A must have plugin if you use SVN as your version control system in your project.
+Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) user interface. A must have plugin if you use SVN as your version control system in your project.
 For up to date documentation, check: https://github.com/NibbleByte/UnityWiseSVN
 
 ========= Installation =========
@@ -14,7 +14,7 @@ For up to date documentation, check: https://github.com/NibbleByte/UnityWiseSVN
 ========= Prerequisites =========
 * Have installed SVN installed
   * Have installed SVN command line interface (CLI) (TortoiseSVN includes one if selected during install)
-* (Optional) Have TortoiseSVN installed.
+* (Optional) Have [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) installed.
 
 ========= Features =========
 * Hooks up to Unity move and delete file operations and executes respective svn commands to stay in sync.
@@ -28,7 +28,7 @@ For up to date documentation, check: https://github.com/NibbleByte/UnityWiseSVN
   * Show locked files by you and your colleges. 
 * Minimal performance impact
 * You don't have to leave Unity to do SVN chores.
-* File operations *should* be cross-platform. TortoiseSVN menus are not.
+* Works on Windows and MacOS (maybe Linux?).
 
 ========= Usage =========
 Do your file operations in Unity and the plugin will handle the rest.
