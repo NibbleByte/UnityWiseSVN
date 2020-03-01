@@ -1,3 +1,4 @@
+using DevLocker.VersionControl.WiseSVN.ContextMenus;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,7 +8,6 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN
 {
-	[InitializeOnLoad]
 	internal class SVNPreferencesManager : ScriptableObject
 	{
 		internal enum BoolPreference
@@ -34,7 +34,8 @@ namespace DevLocker.VersionControl.WiseSVN
 			// When populating the database, should it check for server changes as well (locks & modified files).
 			public BoolPreference DownloadRepositoryChanges = BoolPreference.SameAsProjectPreference;
 
-			public int AutoRefreshDatabaseInterval = 60;	// seconds; Less than 0 will disable it.
+			public int AutoRefreshDatabaseInterval = 60;    // seconds; Less than 0 will disable it.
+			public ContextMenusClient ContextMenusClient = ContextMenusClient.TortoiseSVN;
 			public SVNTraceLogs TraceLogs = SVNTraceLogs.SVNOperations;
 
 			public PersonalPreferences Clone()
@@ -108,6 +109,11 @@ namespace DevLocker.VersionControl.WiseSVN
 
 						// The idea here is to save some time on assembly reload from deserializing json as the reload is already slow enough for big projects.
 					}
+
+					//
+					// More stuff to refresh on reload.
+					//
+					SVNContextMenusManager.SetupContextType(m_Instance.PersonalPrefs.ContextMenusClient);
 				}
 
 				return m_Instance;
@@ -137,6 +143,11 @@ namespace DevLocker.VersionControl.WiseSVN
 				PersonalPrefs = JsonUtility.FromJson<PersonalPreferences>(personalPrefsData);
 			} else {
 				PersonalPrefs = new PersonalPreferences();
+#if UNITY_EDITOR_WIN
+				PersonalPrefs.ContextMenusClient = ContextMenusClient.TortoiseSVN;
+#else
+				PersonalPrefs.ContextMenusClient = ContextMenusClient.SnailSVN;
+#endif
 			}
 
 			if (File.Exists(PROJECT_PREFERENCES_PATH)) {
@@ -144,7 +155,6 @@ namespace DevLocker.VersionControl.WiseSVN
 			} else {
 				ProjectPrefs = new ProjectPreferences();
 			}
-
 
 			LoadTextures();
 
@@ -187,6 +197,8 @@ namespace DevLocker.VersionControl.WiseSVN
 			EditorPrefs.SetString(PERSONAL_PREFERENCES_KEY, JsonUtility.ToJson(PersonalPrefs));
 
 			File.WriteAllText(PROJECT_PREFERENCES_PATH, JsonUtility.ToJson(ProjectPrefs, true));
+
+			SVNContextMenusManager.SetupContextType(PersonalPrefs.ContextMenusClient);
 
 			PreferencesChanged?.Invoke();
 		}

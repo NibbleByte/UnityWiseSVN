@@ -1,3 +1,4 @@
+using DevLocker.VersionControl.WiseSVN.ContextMenus;
 using UnityEditor;
 using UnityEngine;
 
@@ -77,7 +78,15 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				EditorGUI.EndDisabledGroup();
 
-				m_PersonalPrefs.TraceLogs = (SVNTraceLogs) EditorGUILayout.EnumFlagsField(new GUIContent("Trace Logs", "Logs for nerds and debugging."), m_PersonalPrefs.TraceLogs);
+				m_PersonalPrefs.ContextMenusClient = (ContextMenusClient) EditorGUILayout.EnumPopup(new GUIContent("Context menus client", "Select what client should be used with the context menus."), m_PersonalPrefs.ContextMenusClient);
+				if (GUI.changed) {
+					var errorMsg = SVNContextMenusManager.IsCurrentlySupported(m_PersonalPrefs.ContextMenusClient);
+					if (!string.IsNullOrEmpty(errorMsg)) {
+						EditorUtility.DisplayDialog("Context Menus Client Issue", errorMsg, "Ok");
+					}
+				}
+
+				m_PersonalPrefs.TraceLogs = (SVNTraceLogs) EditorGUILayout.EnumFlagsField(new GUIContent("Trace logs", "Logs for nerds and debugging."), m_PersonalPrefs.TraceLogs);
 
 				EditorGUI.EndDisabledGroup();
 			}
