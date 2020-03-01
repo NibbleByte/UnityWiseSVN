@@ -14,7 +14,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			window.m_PersonalPrefs = SVNPreferencesManager.Instance.PersonalPrefs.Clone();
 			window.m_ProjectPrefs = SVNPreferencesManager.Instance.ProjectPrefs.Clone();
 			window.ShowUtility();
-			window.position = new Rect(500f, 250f, 450f, 520f);
+			window.position = new Rect(500f, 250f, 450f, 560f);
 		}
 
 		// So SerializedObject() can work with it.
