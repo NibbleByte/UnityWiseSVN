@@ -196,7 +196,10 @@ namespace DevLocker.VersionControl.WiseSVN
 
 					// Statuses for entries under unversioned directories are not returned. Add them manually.
 					if (statusData.Status == VCFileStatus.Unversioned && Directory.Exists(statusData.Path)) {
-						var paths = Directory.EnumerateFileSystemEntries(statusData.Path, "*", SearchOption.AllDirectories);
+						var paths = Directory.EnumerateFileSystemEntries(statusData.Path, "*", SearchOption.AllDirectories)
+							.Where(path => !WiseSVNIntegration.IsHiddenPath(path))
+							;
+
 						statuses.AddRange(paths
 							.Select(path => path.Replace(WiseSVNIntegration.ProjectRoot, ""))
 							.Select(path => new SVNStatusData() { Status = VCFileStatus.Unversioned, Path = path })

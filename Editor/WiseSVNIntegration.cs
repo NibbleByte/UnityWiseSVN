@@ -438,9 +438,24 @@ namespace DevLocker.VersionControl.WiseSVN
 					//	statusData.Path = statusData.Path.Remove(0, ProjectRoot.Length + 1);
 					//}
 
+					if (IsHiddenPath(statusData.Path))
+						continue;
+
 					yield return statusData;
 				}
 			}
+		}
+
+		// Search for hidden files and folders starting with .
+		// Basically search for any "/." or "\."
+		public static bool IsHiddenPath(string path)
+		{
+			for(int i = 0, len = path.Length; i < len - 1; ++i) {
+				if (path[i + 1] == '.' && (path[i] == '/' || path[i] == '\\'))
+					return true;
+			}
+
+			return false;
 		}
 
 		// Used to avoid spam (specially when importing the whole project and errors start popping up, interrupting the process).
