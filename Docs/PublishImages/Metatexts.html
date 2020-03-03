@@ -1,0 +1,36 @@
+Title: Wise SVN
+
+Keywords: svn tortoisesvn snailsvn versioncontrol sourcecontrol files
+
+Description:
+Simple but powerful SVN Integration for Unity 3D utilizing <a href="https://tortoisesvn.net">TortoiseSVN</a> (for Windows) or <a href="https://langui.net/snailsvn">SnailSVN</a> (for MacOS) user interface. A must have plugin if you use SVN as your version control system in your project.<br />
+<br />
+<strong>======== Prerequisites ========</strong> <br />
+&#8226; Have installed SVN installed <br />
+&nbsp;&nbsp;&#8594; Have installed SVN command line interface (CLI) <br />
+&#8226; (Optional) Have <a href="https://tortoisesvn.net">TortoiseSVN</a> (for Windows) or <a href="https://langui.net/snailsvn">SnailSVN</a> (for MacOS) installed. <br />
+<br />
+<strong>======== Features ========</strong><br />
+&#8226; <em>Hooks up to Unity move and delete file operations and executes respective svn commands to stay in sync.</em><br />
+&nbsp;&nbsp;&#8594; <em>Handles meta files as well.</em><br />
+&nbsp;&nbsp;&#8594; Moving assets to unversioned folder will ask the user to add that folder to SVN as well.<br />
+&nbsp;&nbsp;&#8594; Moving folders / files that have conflicts will be rejected.<br />
+&nbsp;&nbsp;&#8594; Will work with other custom tools as long as they move / rename assets using Unity API.<br />
+&#8226; Provides assets context menu for manual SVN operations like commit, update, revert etc.<br />
+&#8226; <em>Show overlay svn status icons</em><br />
+&nbsp;&nbsp;&#8594; Show server changes that you need to update.<br />
+&nbsp;&nbsp;&#8594; Show locked files by you and your colleges.<br />
+&#8226; Minimal performance impact<br />
+&#8226; You don't have to leave Unity to do SVN chores.<br />
+&#8226; Works on Windows and MacOS (maybe Linux?)<br />
+<br />
+<strong>======== Usage ========</strong><br />
+Do your file operations in Unity and the plugin will handle the rest.<br />
+<br />
+User SVN operations are available in the menu (or right-click on any asset): "Assets/SVN/..."<br />
+<br />
+<strong>WARNING: Never focus Unity while the project is updating in the background. Newly added asset guids may get corrupted in which case the Library folder needs to be deleted.
+Preferred workflow is to always work inside Unity - use the "Assets/SVN/..." menus. "Assets/SVN/Update All" will block Unity while updating, to avoid Unity processing assets at the same time.
+This is an issue with how Unity works, not the plugin iteself. Unity says its by "design".</strong><br />
+<br/>
+Source at <a href="https://github.com/NibbleByte/UnityWiseSVN">GitHub</a>
