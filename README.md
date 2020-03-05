@@ -1,3 +1,5 @@
+<img src="./Docs/Logo-Round-500x500.png" width="200" align="right">
+
 # WiseSVN For Unity
 
 Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) user interface. A must have plugin if you use SVN as your version control system in your project.
@@ -10,10 +12,10 @@ Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https:/
     "devlocker.versioncontrol.wisesvn": "https://github.com/NibbleByte/UnityWiseSVN.git#upm"
 }
 ```
-* Asset Store plugin: *Working on it*
+* Asset Store plugin: https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636
 
 ## Prerequisites:
-* Have installed SVN installed
+* Have SVN installed
   * Have installed SVN command line interface (CLI)
 * (Optional) Have [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) installed.
 
