@@ -4,15 +4,16 @@ Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https:/
 For up to date documentation, check: https://github.com/NibbleByte/UnityWiseSVN
 
 ========= Installation =========
-* This Asset Store package
 * Github upm package - merge this to your "Packages/manifest.json"
 	{
 	  "dependencies": {
 		"devlocker.versioncontrol.wisesvn": "https://github.com/NibbleByte/UnityWiseSVN.git#upm"
 	}
+	
+* Asset Store plugin: https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636
 
 ========= Prerequisites =========
-* Have installed SVN installed
+* Have SVN installed
   * Have installed SVN command line interface (CLI) (TortoiseSVN includes one if selected during install)
 * (Optional) Have [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) installed.
 

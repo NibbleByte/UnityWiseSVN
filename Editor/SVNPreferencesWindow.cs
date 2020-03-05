@@ -129,7 +129,8 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 
 				if (GUILayout.Button("Plugin at Asset Store",GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
-					EditorUtility.DisplayDialog("Not yet!", "Still working on that.", "Fine!");
+					var assetStoreURL = "https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636";
+					Application.OpenURL(assetStoreURL);
 				}
 			}
 
