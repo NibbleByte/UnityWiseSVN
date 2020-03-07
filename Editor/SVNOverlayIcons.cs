@@ -91,7 +91,7 @@ namespace DevLocker.VersionControl.WiseSVN
 						iconRect.x += offset;
 						iconRect.y += offset;
 
-						iconRect.y += 4;
+						iconRect.y += 2;
 					}
 
 					GUI.Label(iconRect, lockStatusIcon);
@@ -107,17 +107,17 @@ namespace DevLocker.VersionControl.WiseSVN
 			if (fileStatusIcon != null) {
 				var iconRect = new Rect(selectionRect);
 				if (iconRect.width > iconRect.height) {
-					iconRect.height += 4f;
-					iconRect.width = iconRect.height;
+					// Line size: 16px
+					iconRect.x -= 3;
+					iconRect.y += 7f;
+					iconRect.width = iconRect.height = 14f;
 				} else {
-					iconRect.width /= 1.8f;
+					// Maximum zoom size: 96 x 110
+					iconRect.width = iconRect.width / 3f + 2f;
 					iconRect.height = iconRect.width;
 					var offset = selectionRect.width - iconRect.width;
-					iconRect.y += offset;
+					iconRect.y += offset + 1;
 				}
-
-				iconRect.x -= 3;
-				iconRect.y += 1;
 				GUI.Label(iconRect, fileStatusIcon);
 			}
 		}
