@@ -51,6 +51,12 @@ namespace DevLocker.VersionControl.WiseSVN
 					m_ProjectPrefs.Exclude.RemoveAll(p => string.IsNullOrWhiteSpace(p));
 
 					SVNPreferencesManager.Instance.SavePreferences(m_PersonalPrefs, m_ProjectPrefs);
+
+					// When turning on the integration do instant refresh.
+					// Works when editor started with disabled integration. Doing it here to avoid circle dependency.
+					if (m_PersonalPrefs.EnableCoreIntegration) {
+						SVNStatusesDatabase.Instance.InvalidateDatabase();
+					}
 				}
 				GUI.backgroundColor = prevColor;
 			}
