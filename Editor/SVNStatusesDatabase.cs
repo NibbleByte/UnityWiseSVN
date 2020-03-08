@@ -367,7 +367,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			// It will probably be faster.
-			if (importedAssets.Length > 20) {
+			if (importedAssets.Length > 10) {
 				InvalidateDatabase();
 				return;
 			}
@@ -445,6 +445,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			if (string.IsNullOrEmpty(guid)) {
 				Debug.LogError($"SVN: Trying to add empty guid for \"{statusData.Path}\" with status {statusData.Status}");
+				return false;
 			}
 
 			foreach (var bind in StatusDatas) {

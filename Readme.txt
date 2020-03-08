@@ -28,6 +28,7 @@ For up to date documentation, check: https://github.com/NibbleByte/UnityWiseSVN
   * Show server changes that you need to update.
   * Show locked files by you and your colleges. 
 * Minimal performance impact
+* Survives assembly reloads
 * You don't have to leave Unity to do SVN chores.
 * Works on Windows and MacOS (maybe Linux?).
 
