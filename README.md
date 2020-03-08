@@ -32,6 +32,7 @@ Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https:/
   * Show server changes that you need to update.
   * Show locked files by you and your colleges. 
 * Minimal performance impact
+* Survives assembly reloads
 * You don't have to leave Unity to do SVN chores.
 * Works on Windows and MacOS (maybe Linux?).
 
@@ -47,11 +48,11 @@ Preferred workflow is to always work inside Unity - use the \"Assets/SVN/...\" m
 This is an issue with how Unity works, not the plugin iteself. Unity says its by "design".**
 
 ## Overlay Icons
-* Unversioned <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNUnversionedIcon.png" width="24">
-* Modified <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNModifiedIcon.png" width="24">
-* Added <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNAddedIcon.png" width="24">
-* Deleted <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNDeletedIcon.png" width="24">
-* Conflict <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNConflictIcon.png" width="24">
+* Unversioned <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNUnversionedIcon.png" width="16">
+* Modified <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNModifiedIcon.png" width="16">
+* Added <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNAddedIcon.png" width="16">
+* Deleted <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNDeletedIcon.png" width="16">
+* Conflict <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNConflictIcon.png" width="16">
 * Locked by me <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon.png" width="16">
 * Locked by others <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon.png" width="16">
 * Server has changes, update <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/Others/SVNRemoteChangesIcon.png" width="16">

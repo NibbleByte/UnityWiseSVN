@@ -123,6 +123,15 @@ namespace DevLocker.VersionControl.WiseSVN
 				EditorGUILayout.LabelField("Created by Filip Slavov (NibbleByte)");
 				EditorGUILayout.LabelField("In collaboration with Snapshot Games");
 
+				var style = new GUIStyle(EditorStyles.label);
+				style.normal.textColor = Color.blue;
+				style.active.textColor = Color.red;
+				if (GUILayout.Button("Icons taken from TortoiseSVN (created by Lübbe Onken)", style, GUILayout.ExpandWidth(true))) {
+					var assetStoreURL = "https://tortoisesvn.net/";
+					Application.OpenURL(assetStoreURL);
+				}
+
+
 				if (GUILayout.Button("Source at GitHub", GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
 					var githubURL = "https://github.com/NibbleByte/UnityWiseSVN";
 					Application.OpenURL(githubURL);
