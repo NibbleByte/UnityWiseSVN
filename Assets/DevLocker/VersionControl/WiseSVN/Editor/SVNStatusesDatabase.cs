@@ -137,6 +137,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				EditorApplication.update += AutoRefresh;
 
 				m_LastRefreshTime = EditorApplication.timeSinceStartup;
+				InvalidateDatabase();
 
 			} else {
 				EditorApplication.update -= AutoRefresh;
@@ -271,16 +272,23 @@ namespace DevLocker.VersionControl.WiseSVN
 					statusData.Status = VCFileStatus.Conflicted;
 				}
 
+				var guid = AssetDatabase.AssetPathToGUID(statusData.Path);
+				if (string.IsNullOrEmpty(guid)) {
+					// Files were added in the background without Unity noticing.
+					// When the user focuses on Unity, it will refresh them as well.
+					continue;
+				}
+
 				// File was added to the repository but is missing in the working copy.
 				// The proper way to check this is to parse the working revision from the svn output (when used with -u)
 				if (statusData.RemoteStatus == VCRemoteFileStatus.Modified
 					&& statusData.Status == VCFileStatus.Normal
-					&& string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(statusData.Path))
+					&& string.IsNullOrEmpty(guid)
 					)
 					continue;
 
 				// TODO: Test tree conflicts.
-				SetStatusData(AssetDatabase.AssetPathToGUID(statusData.Path), statusData, false);
+				SetStatusData(guid, statusData, false);
 
 				AddModifiedFolders(statusData);
 			}

@@ -18,6 +18,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		static SVNOverlayIcons()
 		{
 			SVNPreferencesManager.Instance.PreferencesChanged += PreferencesChanged;
+			SVNStatusesDatabase.Instance.DatabaseChanged += OnDatabaseChanged;
+
 			PreferencesChanged();
 		}
 
@@ -29,12 +31,19 @@ namespace DevLocker.VersionControl.WiseSVN
 			} else {
 				EditorApplication.projectWindowItemOnGUI -= ItemOnGUI;
 			}
+
+			OnDatabaseChanged();
 		}
 
 		[MenuItem("Assets/SVN/Refresh Overlay Icons", false, 195)]
 		private static void InvalidateDatabaseMenu()
 		{
 			SVNStatusesDatabase.Instance.InvalidateDatabase();
+		}
+
+		private static void OnDatabaseChanged()
+		{
+			EditorApplication.RepaintProjectWindow();
 		}
 
 		private static void ItemOnGUI(string guid, Rect selectionRect)
