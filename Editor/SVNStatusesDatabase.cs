@@ -137,7 +137,6 @@ namespace DevLocker.VersionControl.WiseSVN
 				EditorApplication.update += AutoRefresh;
 
 				m_LastRefreshTime = EditorApplication.timeSinceStartup;
-				InvalidateDatabase();
 
 			} else {
 				EditorApplication.update -= AutoRefresh;
