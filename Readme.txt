@@ -41,3 +41,7 @@ Configure the plugin at "Assets/SVN/Preferences".
 **WARNING: Never focus Unity while the project is updating in the background. Newly added asset guids may get corrupted in which case the Library folder needs to be deleted. <br />
 Preferred workflow is to always work inside Unity - use the \"Assets/SVN/...\" menus. \"Assets/SVN/Update All\" will block Unity while updating, to avoid Unity processing assets at the same time. <br />
 This is an issue with how Unity works, not the plugin iteself. Unity says its by "design".**
+
+Community:
+* [Unity Forum](https://forum.unity.com/threads/wise-svn-powerful-tortoisesvn-snailsvn-integration.844168/)
+* [Reddit](https://www.reddit.com/r/Unity3D/comments/fgjovk/finally_a_fully_working_tortoisesvn_snailsvn/)
