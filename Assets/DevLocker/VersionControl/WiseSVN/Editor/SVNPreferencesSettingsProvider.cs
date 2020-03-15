@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN
 {
+#if !UNITY_2017
 	// Provide Unity Preferences / Project Settings entry for the WiseSVN.
 	// It is really a big button that redirects to the original preferences window.
 	// Tried to draw the full window, but failed, because I need a SerializedObject() to use and didn't care too much about it.
@@ -53,4 +54,6 @@ namespace DevLocker.VersionControl.WiseSVN
 			WiseSVNProjectPreferencesWindow.DrawAbout();
 		}
 	}
+#endif
+
 }
