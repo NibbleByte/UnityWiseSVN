@@ -64,3 +64,7 @@ This is an issue with how Unity works, not the plugin iteself. Unity says its by
 ![ContextMenu](Docs/Screenshots/WiseSVN-ContextMenu-Shot.png)
 ![File Operations](Docs/Screenshots/WiseSVN-Rename-Shot.png)
 ![Preferences](Docs/Screenshots/WiseSVN-Preferences-Shot.png)
+
+## Community
+* [Unity Forum](https://forum.unity.com/threads/wise-svn-powerful-tortoisesvn-snailsvn-integration.844168/)
+* [Reddit](https://www.reddit.com/r/Unity3D/comments/fgjovk/finally_a_fully_working_tortoisesvn_snailsvn/)

@@ -8,13 +8,14 @@ namespace DevLocker.VersionControl.WiseSVN
 	{
 		public const string PROJECT_PREFERENCES_MENU = "Assets/SVN/SVN Preferences";
 		[MenuItem(PROJECT_PREFERENCES_MENU, false, 200)]
-		private static void ShowProjectPreferences()
+		public static void ShowProjectPreferences()
 		{
 			var window = GetWindow<WiseSVNProjectPreferencesWindow>(true, "Wise SVN Preferences");
 			window.m_PersonalPrefs = SVNPreferencesManager.Instance.PersonalPrefs.Clone();
 			window.m_ProjectPrefs = SVNPreferencesManager.Instance.ProjectPrefs.Clone();
 			window.ShowUtility();
 			window.position = new Rect(500f, 250f, 450f, 560f);
+			window.minSize = new Vector2(400f, 560f);
 		}
 
 		// So SerializedObject() can work with it.
@@ -124,6 +125,21 @@ namespace DevLocker.VersionControl.WiseSVN
 			EditorGUILayout.Space();
 			EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
+			DrawAbout();
+
+			//EditorGUILayout.Space();
+			//EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+
+
+
+			EditorGUILayout.Space();
+
+
+			EditorGUIUtility.labelWidth -= labelWidthAdd;
+		}
+
+		public static void DrawAbout()
+		{
 			EditorGUILayout.LabelField("About:", EditorStyles.boldLabel);
 			{
 				EditorGUILayout.LabelField("Created by Filip Slavov (NibbleByte)");
@@ -138,26 +154,34 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 
 
+				EditorGUILayout.BeginHorizontal();
+
+				if (GUILayout.Button("Plugin at Asset Store", GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
+					var assetStoreURL = "https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636";
+					Application.OpenURL(assetStoreURL);
+				}
+
 				if (GUILayout.Button("Source at GitHub", GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
 					var githubURL = "https://github.com/NibbleByte/UnityWiseSVN";
 					Application.OpenURL(githubURL);
 				}
 
-				if (GUILayout.Button("Plugin at Asset Store",GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
-					var assetStoreURL = "https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636";
-					Application.OpenURL(assetStoreURL);
+				EditorGUILayout.EndHorizontal();
+
+				EditorGUILayout.BeginHorizontal();
+
+				if (GUILayout.Button("Reddit", GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
+					var redditURL = "https://www.reddit.com/r/Unity3D/comments/fgjovk/finally_a_fully_working_tortoisesvn_snailsvn";
+					Application.OpenURL(redditURL);
 				}
+
+				if (GUILayout.Button("Unity Forum", GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
+					var unityForumURL = "https://forum.unity.com/threads/wise-svn-powerful-tortoisesvn-snailsvn-integration.844168";
+					Application.OpenURL(unityForumURL);
+				}
+
+				EditorGUILayout.EndHorizontal();
 			}
-
-			//EditorGUILayout.Space();
-			//EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-
-
-
-			EditorGUILayout.Space();
-
-
-			EditorGUIUtility.labelWidth -= labelWidthAdd;
 		}
 	}
 }
