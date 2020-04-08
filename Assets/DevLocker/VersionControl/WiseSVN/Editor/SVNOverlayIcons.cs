@@ -113,7 +113,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			//
 			GUIContent fileStatusIcon = SVNPreferencesManager.Instance.GetFileStatusIconContent(statusData.Status);
 
-			if (fileStatusIcon != null) {
+			if (fileStatusIcon != null && fileStatusIcon.image != null) {
 				var iconRect = new Rect(selectionRect);
 				if (iconRect.width > iconRect.height) {
 					// Line size: 16px

@@ -30,6 +30,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			{ VCFileStatus.Replaced, 5},
 			{ VCFileStatus.Ignored, 3},
 			{ VCFileStatus.Unversioned, 1},
+			{ VCFileStatus.External, 0},
 			{ VCFileStatus.Normal, 0},
 		};
 
