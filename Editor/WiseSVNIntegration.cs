@@ -391,8 +391,14 @@ namespace DevLocker.VersionControl.WiseSVN
 				string line;
 				while ((line = sr.ReadLine()) != null) {
 
+					var lineLen = line.Length;
+
 					// Last status was deleted / added+, so this is telling us where it moved to / from. Skip it.
-					if (line.Length > 8 && line[8] == '>')
+					if (lineLen > 8 && line[8] == '>')
+						continue;
+
+					// Tree conflict "local dir edit, incoming dir delete or move upon switch / update" or similar.
+					if (lineLen > 6 && line[6] == '>')
 						continue;
 
 					// If there are any conflicts, the report will have two additional lines like this:
