@@ -23,6 +23,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			{'R', VCFileStatus.Replaced},
 			{'?', VCFileStatus.Unversioned},
 			{'!', VCFileStatus.Missing},
+			{'X', VCFileStatus.External},
 			{'~', VCFileStatus.Obstructed},
 		};
 
@@ -411,6 +412,11 @@ namespace DevLocker.VersionControl.WiseSVN
 					// Status against revision:     14
 					if (line.StartsWith("Status", StringComparison.Ordinal))
 						break;
+
+					// All externals append separate sections with their statuses:
+					// Performing status on external item at '...':
+					if (line.StartsWith("Performing status", StringComparison.Ordinal))
+						continue;
 
 					// If user has files in the "ignore-on-commit" list, this is added at the end plus empty line:
 					// ---Changelist 'ignore-on-commit': ...

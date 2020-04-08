@@ -14,7 +14,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		Replaced,
 		Unversioned,
 		Missing,
-		//External,
+		External,
 		//Incomplete,
 		//Merged,
 		Obstructed,
