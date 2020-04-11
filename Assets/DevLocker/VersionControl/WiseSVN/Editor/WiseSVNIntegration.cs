@@ -431,6 +431,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					statusData.PropertyStatus = m_PropertyStatusMap[line[1]];
 					statusData.LockStatus = m_LockStatusMap[line[5]];
 					statusData.TreeConflictStatus = m_ConflictStatusMap[line[6]];
+					statusData.LockDetails = LockDetails.Empty;
 
 					// 7 columns statuses + space;
 					int pathStart = 7 + 1;
@@ -453,9 +454,91 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (IsHiddenPath(statusData.Path))
 						continue;
 
+
+					if (!options.Offline && options.FetchLockOwner) {
+						if (statusData.LockStatus != VCLockStatus.NoLock && statusData.LockStatus != VCLockStatus.BrokenLock) {
+							statusData.LockDetails = FetchLockOwner(statusData.Path, options.Timeout, options.RaiseError);
+						}
+					}
+
 					yield return statusData;
 				}
 			}
+		}
+
+		// Ask the repository server who is the lock owner of the specified file.
+		public static LockDetails FetchLockOwner(string path, int timeout = COMMAND_TIMEOUT, bool raiseError = false)
+		{
+			string url;
+			LockDetails lockDetails = LockDetails.Empty;
+			
+			//
+			// Find the repository url of the path.
+			// We need to call "svn info [repo-url]" in order to get up to date repository information.
+			// NOTE: Project url can be cached and prepended to path, but externals may have different base url.
+			//
+			{
+				var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(path)}\"", timeout);
+
+				url = ExtractLineValue("URL:", result.output);
+
+				if (!string.IsNullOrEmpty(result.error) || string.IsNullOrEmpty(url)) {
+
+					if (!raiseError || Silent)
+						return LockDetails.Empty;
+
+					var displayMessage = $"Failed to get info for \"{path}\".\n{result.output}\n{result.error}";
+					if (m_LastDisplayedError != displayMessage) {
+						Debug.LogError($"{displayMessage}\n\n{result.error}");
+						m_LastDisplayedError = displayMessage;
+						EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
+					}
+
+					return LockDetails.Empty;
+				}
+			}
+
+			// 
+			// Get the actual owner from the repository (using the url).
+			//
+			{
+				var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(url)}\"", timeout);
+				
+				lockDetails.Owner = ExtractLineValue("Lock Owner:", result.output);
+				
+				if (!string.IsNullOrEmpty(result.error) || string.IsNullOrEmpty(lockDetails.Owner)) {
+
+					// Owner might be missing if there is no lock. If true, just find something familiar to confirm it was not an error.
+					if (!raiseError || Silent || result.output.IndexOf("URL:", StringComparison.OrdinalIgnoreCase) != -1)
+						return LockDetails.Empty;
+					
+					var displayMessage = $"Failed to get lock owner for \"{path}\".\n{result.output}\n{result.error}";
+					if (m_LastDisplayedError != displayMessage) {
+						Debug.LogError($"{displayMessage}\n\n{result.error}");
+						m_LastDisplayedError = displayMessage;
+						EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
+					}
+
+					return LockDetails.Empty;
+				}
+				
+				lockDetails.Date = ExtractLineValue("Lock Created:", result.output);
+				
+				// Locked message looks like this:
+				// Lock Comment (4 lines):
+				// Foo
+				// Bar
+				// ...
+				// The number of lines is arbitrary. If there is no comment, this section is omitted.
+				var lockMessageLineIndex = result.output.IndexOf("Lock Comment", StringComparison.OrdinalIgnoreCase);
+				if (lockMessageLineIndex != -1) {
+					var lockMessageStart = result.output.IndexOf("\n", lockMessageLineIndex, StringComparison.OrdinalIgnoreCase) + 1;
+					lockDetails.Message = result.output.Substring(lockMessageStart).Replace("\r", "");
+					// Fuck '\r'
+				}
+			}
+
+			return lockDetails;
 		}
 
 		// Search for hidden files and folders starting with .
@@ -468,6 +551,26 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			return false;
+		}
+
+		private static string ExtractLineValue(string pattern, string str)
+		{
+			var lineIndex = str.IndexOf(pattern, StringComparison.OrdinalIgnoreCase);
+			if (lineIndex == -1)
+				return string.Empty;
+			
+			var valueStartIndex = lineIndex + pattern.Length + 1;
+			var lineEndIndex = str.IndexOf("\n", valueStartIndex, StringComparison.OrdinalIgnoreCase);
+			if (lineEndIndex == -1) {
+				lineEndIndex = str.Length - 1;
+			}
+
+			// F@!$!#@!#!
+			if (str[lineEndIndex - 1] == '\r') {
+				lineEndIndex--;
+			}
+
+			return str.Substring(valueStartIndex, lineEndIndex - valueStartIndex);
 		}
 
 		// Used to avoid spam (specially when importing the whole project and errors start popping up, interrupting the process).
@@ -513,13 +616,13 @@ namespace DevLocker.VersionControl.WiseSVN
 			if (options.Depth == SVNStatusDataOptions.SearchDepth.Empty) {
 
 				if (options.Offline && string.IsNullOrWhiteSpace(result.output)) {
-					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path }, 1);
+					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path, LockDetails = LockDetails.Empty}, 1);
 				}
 
 				// If -u is used, additional line is added at the end:
 				// Status against revision:     14
 				if (!options.Offline && result.output.StartsWith("Status", StringComparison.Ordinal)) {
-					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path }, 1);
+					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path, LockDetails = LockDetails.Empty }, 1);
 				}
 			}
 

@@ -182,6 +182,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			LockStatusIcons = new GUIContent[Enum.GetValues(typeof(VCLockStatus)).Length];
 			LockStatusIcons[(int)VCLockStatus.LockedHere] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon"), "You have locked this file.");
+			LockStatusIcons[(int)VCLockStatus.BrokenLock] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon"), "You have a lock that is no longer valid (someone else stole it and released it).");
 			LockStatusIcons[(int)VCLockStatus.LockedOther] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Someone else locked this file.");
 			LockStatusIcons[(int)VCLockStatus.LockedButStolen] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Your lock was stolen by someone else.");
 
