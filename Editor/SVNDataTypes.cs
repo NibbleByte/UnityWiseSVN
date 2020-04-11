@@ -71,6 +71,8 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		public string Path;
 
+		public LockDetails LockDetails;
+
 		public bool IsConflicted =>
 			Status == VCFileStatus.Conflicted ||
 			PropertyStatus == VCProperty.Conflicted ||
@@ -87,6 +89,16 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 	}
 
+	[Serializable]
+	public struct LockDetails
+	{
+		public string Owner;
+		public string Message;
+		public string Date;
+
+		public static LockDetails Empty => new LockDetails() {Owner = string.Empty, Message = string.Empty, Date = string.Empty};
+	}
+
 	public struct SVNStatusDataOptions
 	{
 		public enum SearchDepth
@@ -98,7 +110,10 @@ namespace DevLocker.VersionControl.WiseSVN
 		public SearchDepth Depth;
 		public bool RaiseError;
 		public int Timeout;
-		public bool Offline;	// If false it will query the repository for additional data (like locks), hence it is slower.
+		public bool Offline;		// If false it will query the repository for additional data (like locks), hence it is slower.
+		public bool FetchLockOwner;	// If file is locked and this is true, another query (per locked file) will be made
+									// to the repository to find out the owner's user name. I.e. will execute "svn info [url]"
+									// Works only in online mode.
 
 		public SVNStatusDataOptions(SearchDepth depth)
 		{
@@ -106,6 +121,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			RaiseError = true;
 			Timeout = WiseSVNIntegration.COMMAND_TIMEOUT;
 			Offline = true;
+			FetchLockOwner = false;
 		}
 	}
 }

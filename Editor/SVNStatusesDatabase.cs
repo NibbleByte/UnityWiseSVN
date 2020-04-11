@@ -182,6 +182,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					RaiseError = false,
 					Timeout = WiseSVNIntegration.COMMAND_TIMEOUT * 2,
 					Offline = !SVNPreferencesManager.Instance.DownloadRepositoryChanges,
+					FetchLockOwner = true,
 				};
 
 				// Will get statuses of all added / modified / deleted / conflicted / unversioned files. Only normal files won't be listed.
@@ -203,7 +204,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 						statuses.AddRange(paths
 							.Select(path => path.Replace(WiseSVNIntegration.ProjectRoot, ""))
-							.Select(path => new SVNStatusData() { Status = VCFileStatus.Unversioned, Path = path })
+							.Select(path => new SVNStatusData() { Status = VCFileStatus.Unversioned, Path = path, LockDetails = LockDetails.Empty })
 							);
 					}
 				}
