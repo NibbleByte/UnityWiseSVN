@@ -518,7 +518,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (!raiseError || Silent)
 						return lockDetails;
 
-					var displayMessage = $"Failed to get lock owner for \"{path}\".\n{result.output}\n{result.error}";
+					var displayMessage = $"Failed to get lock details for \"{path}\".\n{result.output}\n{result.error}";
 					if (m_LastDisplayedError != displayMessage) {
 						Debug.LogError($"{displayMessage}\n\n{result.error}");
 						m_LastDisplayedError = displayMessage;
@@ -583,6 +583,84 @@ namespace DevLocker.VersionControl.WiseSVN
 			AssemblyReloadEvents.beforeAssemblyReload += assemblyReload;
 		}
 
+		// Lock a file on the repository server.
+		public static LockOperationResult LockFile(string path, bool force, string message = "", string encoding = "", int timeout = COMMAND_TIMEOUT)
+		{
+			var messageArg = string.IsNullOrEmpty(message) ? string.Empty : $"--message \"{message}\"";
+			var encodingArg = string.IsNullOrEmpty(encoding) ? string.Empty : $"--encoding \"{encoding}\"";
+			var forceArg = force ? "--force" : string.Empty;
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"lock {forceArg} {messageArg} {encodingArg} \"{SVNFormatPath(path)}\"", timeout);
+
+			// svn: warning: W160035: Path '...' is already locked by user '...'
+			// File is already locked by another working copy (can be the same user). Use force to re-lock it.
+			// This happens even if this working copy got the lock.
+			if (result.error.Contains("W160035"))
+				return LockOperationResult.LockedByOther;
+
+			if (!string.IsNullOrEmpty(result.error)) {
+
+				if (!Silent) {
+					Debug.LogError($"Failed to lock \"{path}\".\n\n{result.error} ");
+				}
+
+				return LockOperationResult.Failed;
+			}
+
+			// '... some file ...' locked by user '...'.
+			if (result.output.Contains("locked by user"))
+				return LockOperationResult.Success;
+
+			if (!Silent) {
+				Debug.LogError($"Failed to lock \"{path}\".\n\n{result.output} ");
+			}
+
+			return LockOperationResult.Failed;
+		}
+
+		// Unlock a file on the repository server.
+		public static LockOperationResult UnlockFile(string path, bool force, int timeout = COMMAND_TIMEOUT)
+		{
+			var forceArg = force ? "--force" : string.Empty;
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"unlock {forceArg} \"{SVNFormatPath(path)}\"", timeout);
+
+			// svn: E195013: '...' is not locked in this working copy
+			// This working copy doesn't own a lock to this file (when used without force flag, offline check).
+			if (result.error.Contains("E195013"))
+				return LockOperationResult.Success;
+
+			// svn: warning: W170007: '...' is not locked in the repository
+			// File is already unlocked (when used with force flag).
+			if (result.error.Contains("W170007"))
+				return LockOperationResult.Success;
+
+			// svn: warning: W160040: No lock on path '...' (400 Bad Request)
+			// This working copy owned the lock, but it got stolen or broken (when used without force flag).
+			// After this operation, this working copy will destroy its lock, so this message will show up only once.
+			if (result.error.Contains("W160040"))
+				return LockOperationResult.LockedByOther;
+
+			if (!string.IsNullOrEmpty(result.error)) {
+
+				if (!Silent) {
+					Debug.LogError($"Failed to unlock \"{path}\".\n\n{result.error} ");
+				}
+
+				return LockOperationResult.Failed;
+			}
+
+			// '...' unlocked.
+			if (result.output.Contains("unlocked"))
+				return LockOperationResult.Success;
+
+			if (!Silent) {
+				Debug.LogError($"Failed to lock \"{path}\".\n\n{result.output} ");
+			}
+
+			return LockOperationResult.Failed;
+		}
+
 		// Search for hidden files and folders starting with .
 		// Basically search for any "/." or "\."
 		public static bool IsHiddenPath(string path)
@@ -600,7 +678,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			var lineIndex = str.IndexOf(pattern, StringComparison.OrdinalIgnoreCase);
 			if (lineIndex == -1)
 				return string.Empty;
-			
+
 			var valueStartIndex = lineIndex + pattern.Length + 1;
 			var lineEndIndex = str.IndexOf("\n", valueStartIndex, StringComparison.OrdinalIgnoreCase);
 			if (lineEndIndex == -1) {
