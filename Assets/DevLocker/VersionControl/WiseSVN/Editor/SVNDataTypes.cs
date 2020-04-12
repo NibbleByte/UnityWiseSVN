@@ -92,11 +92,14 @@ namespace DevLocker.VersionControl.WiseSVN
 	[Serializable]
 	public struct LockDetails
 	{
+		public string Path;
 		public string Owner;
 		public string Message;
 		public string Date;
 
-		public static LockDetails Empty => new LockDetails() {Owner = string.Empty, Message = string.Empty, Date = string.Empty};
+		public bool IsValid => !string.IsNullOrEmpty(Path);
+
+		public static LockDetails Empty => new LockDetails() {Path = string.Empty, Owner = string.Empty, Message = string.Empty, Date = string.Empty};
 	}
 
 	public struct SVNStatusDataOptions

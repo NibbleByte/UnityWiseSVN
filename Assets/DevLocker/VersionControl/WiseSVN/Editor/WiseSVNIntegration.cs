@@ -457,7 +457,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 					if (!options.Offline && options.FetchLockOwner) {
 						if (statusData.LockStatus != VCLockStatus.NoLock && statusData.LockStatus != VCLockStatus.BrokenLock) {
-							statusData.LockDetails = FetchLockOwner(statusData.Path, options.Timeout, options.RaiseError);
+							statusData.LockDetails = FetchLockDetails(statusData.Path, options.Timeout, options.RaiseError);
 						}
 					}
 
@@ -466,12 +466,12 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 		}
 
-		// Ask the repository server who is the lock owner of the specified file.
-		public static LockDetails FetchLockOwner(string path, int timeout = COMMAND_TIMEOUT, bool raiseError = false)
+		// Ask the repository server for lock details of the specified file.
+		public static LockDetails FetchLockDetails(string path, int timeout = COMMAND_TIMEOUT, bool raiseError = false)
 		{
 			string url;
 			LockDetails lockDetails = LockDetails.Empty;
-			
+
 			//
 			// Find the repository url of the path.
 			// We need to call "svn info [repo-url]" in order to get up to date repository information.
@@ -485,7 +485,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (!string.IsNullOrEmpty(result.error) || string.IsNullOrEmpty(url)) {
 
 					if (!raiseError || Silent)
-						return LockDetails.Empty;
+						return lockDetails;
 
 					var displayMessage = $"Failed to get info for \"{path}\".\n{result.output}\n{result.error}";
 					if (m_LastDisplayedError != displayMessage) {
@@ -494,24 +494,30 @@ namespace DevLocker.VersionControl.WiseSVN
 						EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
 					}
 
-					return LockDetails.Empty;
+
+					return lockDetails;
 				}
 			}
 
-			// 
+			//
 			// Get the actual owner from the repository (using the url).
 			//
 			{
 				var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(url)}\"", timeout);
-				
+
 				lockDetails.Owner = ExtractLineValue("Lock Owner:", result.output);
-				
+
 				if (!string.IsNullOrEmpty(result.error) || string.IsNullOrEmpty(lockDetails.Owner)) {
 
-					// Owner might be missing if there is no lock. If true, just find something familiar to confirm it was not an error.
-					if (!raiseError || Silent || result.output.IndexOf("URL:", StringComparison.OrdinalIgnoreCase) != -1)
-						return LockDetails.Empty;
-					
+					// Owner will be missing if there is no lock. If true, just find something familiar to confirm it was not an error.
+					if (result.output.IndexOf("URL:", StringComparison.OrdinalIgnoreCase) != -1) {
+						lockDetails.Path = path;	// LockDetails is still valid, just no lock.
+						return lockDetails;
+					}
+
+					if (!raiseError || Silent)
+						return lockDetails;
+
 					var displayMessage = $"Failed to get lock owner for \"{path}\".\n{result.output}\n{result.error}";
 					if (m_LastDisplayedError != displayMessage) {
 						Debug.LogError($"{displayMessage}\n\n{result.error}");
@@ -519,11 +525,12 @@ namespace DevLocker.VersionControl.WiseSVN
 						EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
 					}
 
-					return LockDetails.Empty;
+					return lockDetails;
 				}
-				
+
+				lockDetails.Path = path;
 				lockDetails.Date = ExtractLineValue("Lock Created:", result.output);
-				
+
 				// Locked message looks like this:
 				// Lock Comment (4 lines):
 				// Foo
@@ -539,6 +546,41 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			return lockDetails;
+		}
+
+		public delegate void LockDetailsHandler(LockDetails lockDetails);
+
+		// Ask the repository server for lock details of the specified file.
+		// NOTE: If assembly reload happens, request will be lost, complete handler won't be called.
+		public static void FetchLockDetailsAsync(string path, LockDetailsHandler onCompleteHandler, int timeout = COMMAND_TIMEOUT)
+		{
+			LockDetails result = LockDetails.Empty;
+
+			var thread = new System.Threading.Thread(() => {
+				result = FetchLockDetails(path, timeout, false);
+			});
+			thread.Start();
+
+			EditorApplication.CallbackFunction waitUpdate = null;
+			AssemblyReloadEvents.AssemblyReloadCallback assemblyReload = null;
+
+			waitUpdate = () => {
+				if (!thread.IsAlive) {
+					EditorApplication.update -= waitUpdate;
+					AssemblyReloadEvents.beforeAssemblyReload -= assemblyReload;
+					onCompleteHandler?.Invoke(result);
+				};
+			};
+
+			assemblyReload = () => {
+				// Do it before Unity does it. Cause Unity aborts the thread badly sometimes :(
+				if (thread.IsAlive) {
+					thread.Abort();
+				}
+			};
+
+			EditorApplication.update += waitUpdate;
+			AssemblyReloadEvents.beforeAssemblyReload += assemblyReload;
 		}
 
 		// Search for hidden files and folders starting with .
@@ -616,7 +658,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			if (options.Depth == SVNStatusDataOptions.SearchDepth.Empty) {
 
 				if (options.Offline && string.IsNullOrWhiteSpace(result.output)) {
-					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path, LockDetails = LockDetails.Empty}, 1);
+					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path, LockDetails = LockDetails.Empty }, 1);
 				}
 
 				// If -u is used, additional line is added at the end:
