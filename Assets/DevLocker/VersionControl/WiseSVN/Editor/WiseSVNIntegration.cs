@@ -548,39 +548,11 @@ namespace DevLocker.VersionControl.WiseSVN
 			return lockDetails;
 		}
 
-		public delegate void LockDetailsHandler(LockDetails lockDetails);
-
 		// Ask the repository server for lock details of the specified file.
 		// NOTE: If assembly reload happens, request will be lost, complete handler won't be called.
-		public static void FetchLockDetailsAsync(string path, LockDetailsHandler onCompleteHandler, int timeout = COMMAND_TIMEOUT)
+		public static SVNAsyncOperation<LockDetails> FetchLockDetailsAsync(string path, int timeout = COMMAND_TIMEOUT)
 		{
-			LockDetails result = LockDetails.Empty;
-
-			var thread = new System.Threading.Thread(() => {
-				result = FetchLockDetails(path, timeout, false);
-			});
-			thread.Start();
-
-			EditorApplication.CallbackFunction waitUpdate = null;
-			AssemblyReloadEvents.AssemblyReloadCallback assemblyReload = null;
-
-			waitUpdate = () => {
-				if (!thread.IsAlive) {
-					EditorApplication.update -= waitUpdate;
-					AssemblyReloadEvents.beforeAssemblyReload -= assemblyReload;
-					onCompleteHandler?.Invoke(result);
-				};
-			};
-
-			assemblyReload = () => {
-				// Do it before Unity does it. Cause Unity aborts the thread badly sometimes :(
-				if (thread.IsAlive) {
-					thread.Abort();
-				}
-			};
-
-			EditorApplication.update += waitUpdate;
-			AssemblyReloadEvents.beforeAssemblyReload += assemblyReload;
+			return SVNAsyncOperation<LockDetails>.Start(op => FetchLockDetails(path, timeout, false));
 		}
 
 		// Lock a file on the repository server.
@@ -616,6 +588,13 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			return LockOperationResult.Failed;
+		}
+
+		// Lock a file on the repository server.
+		// NOTE: If assembly reload happens, task will be lost, complete handler won't be called.
+		public static SVNAsyncOperation<LockOperationResult> LockFileAsync(string path, bool force, string message = "", string encoding = "", int timeout = COMMAND_TIMEOUT)
+		{
+			return SVNAsyncOperation<LockOperationResult>.Start(op => LockFile(path, force, message, encoding, timeout));
 		}
 
 		// Unlock a file on the repository server.
@@ -659,6 +638,13 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			return LockOperationResult.Failed;
+		}
+
+		// Unlock a file on the repository server.
+		// NOTE: If assembly reload happens, task will be lost, complete handler won't be called.
+		public static SVNAsyncOperation<LockOperationResult> UnlockFileAsync(string path, bool force, int timeout = COMMAND_TIMEOUT)
+		{
+			return SVNAsyncOperation<LockOperationResult>.Start(op => UnlockFile(path, force, timeout));
 		}
 
 		// Search for hidden files and folders starting with .
