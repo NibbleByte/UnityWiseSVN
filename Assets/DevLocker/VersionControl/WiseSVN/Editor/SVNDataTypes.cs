@@ -59,6 +59,13 @@ namespace DevLocker.VersionControl.WiseSVN
 		All = ~0,
 	}
 
+	public enum LockOperationResult
+	{
+		Failed,			// Failed for some reason.
+		LockedByOther,	// File is locked by another working copy (may be the same user). Use Force to enforce the operation.
+		Success,		// Operation succeeded.
+	}
+
 
 	[Serializable]
 	public struct SVNStatusData
