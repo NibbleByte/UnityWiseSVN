@@ -12,21 +12,22 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		protected abstract string FileArgumentsSeparator { get; }
 		protected abstract bool FileArgumentsSurroundQuotes { get; }
 
-		public abstract void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta);
-		public abstract void Update(IEnumerable<string> assetPaths, bool includeMeta);
-		public abstract void Commit(IEnumerable<string> assetPaths, bool includeMeta);
-		public abstract void Add(IEnumerable<string> assetPaths, bool includeMeta);
-		public abstract void Revert(IEnumerable<string> assetPaths, bool includeMeta);
+		// Most methods ask for list of asset paths, should the method add meta files and should it wait for the SVN client window to close.
+		public abstract void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false);
+		public abstract void Update(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false);
+		public abstract void Commit(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false);
+		public abstract void Add(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false);
+		public abstract void Revert(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false);
 
-		public abstract void GetLocks(IEnumerable<string> assetPaths, bool includeMeta);
-		public abstract void ReleaseLocks(IEnumerable<string> assetPaths, bool includeMeta);
+		public abstract void GetLocks(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false);
+		public abstract void ReleaseLocks(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false);
 
-		public abstract void ShowLog(string assetPath);
+		public abstract void ShowLog(string assetPath, bool wait = false);
 
-		public abstract void ResolveAll();
-		public abstract void Blame(string assetPath);
+		public abstract void ResolveAll(bool wait = false);
+		public abstract void Blame(string assetPath, bool wait = false);
 
-		public abstract void Cleanup();
+		public abstract void Cleanup(bool wait = false);
 
 		protected string AssetPathsToContextPaths(IEnumerable<string> assetPaths, bool includeMeta)
 		{

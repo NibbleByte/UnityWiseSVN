@@ -13,6 +13,12 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		SnailSVN,		// Good for MacOS
 	}
 
+	/// <summary>
+	/// This class is responsible for the "Assets/SVN/..." context menus that pop up SVN client windows.
+	/// You can do this from your code as well. For the most methods you have to provide list of asset paths,
+	/// should the method add meta files as well and should it wait for the SVN client window to close.
+	/// *** It is recommended to wait for update operations to finish! Check the Update method for more info. ***
+	/// </summary>
 	public static class SVNContextMenusManager
 	{
 		private static SVNContextMenusBase m_Integration;
@@ -100,9 +106,9 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			m_Integration?.CheckChanges(GetSelectedAssetPaths(), true);
 		}
 
-		public static void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta)
+		public static void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
-			m_Integration?.CheckChanges(assetPaths, includeMeta);
+			m_Integration?.CheckChanges(assetPaths, includeMeta, wait);
 		}
 
 
@@ -110,12 +116,23 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		[MenuItem("Assets/SVN/Update All", false, -950)]
 		public static void UpdateAll()
 		{
-			m_Integration?.Update(GetRootAssetPath(), false);
+			// It is recommended to freeze Unity while updating.
+			// If SVN downloads files while Unity is crunching assets, GUID database may get corrupted.
+			m_Integration?.Update(GetRootAssetPath(), false, true);
 		}
 
+		// It is recommended to freeze Unity while updating.
+		// If SVN downloads files while Unity is crunching assets, GUID database may get corrupted.
 		public static void Update(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			m_Integration?.Update(assetPaths, includeMeta);
+			m_Integration?.Update(assetPaths, includeMeta, true);
+		}
+
+		// It is recommended to freeze Unity while updating.
+		// If SVN downloads files while Unity is crunching assets, GUID database may get corrupted.
+		public static void UpdateAndDontWait(IEnumerable<string> assetPaths, bool includeMeta)
+		{
+			m_Integration?.Update(assetPaths, includeMeta, false);
 		}
 
 
@@ -132,9 +149,9 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			m_Integration?.Commit(GetSelectedAssetPaths(), true);
 		}
 
-		public static void Commit(IEnumerable<string> assetPaths, bool includeMeta)
+		public static void Commit(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
-			m_Integration?.Commit(assetPaths, includeMeta);
+			m_Integration?.Commit(assetPaths, includeMeta, wait);
 		}
 
 
@@ -145,9 +162,9 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			m_Integration?.Add(GetSelectedAssetPaths(), true);
 		}
 
-		public static void Add(IEnumerable<string> assetPaths, bool includeMeta)
+		public static void Add(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
-			m_Integration?.Add(assetPaths, includeMeta);
+			m_Integration?.Add(assetPaths, includeMeta, wait);
 		}
 
 
@@ -164,17 +181,22 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			m_Integration?.Revert(GetSelectedAssetPaths(), true);
 		}
 
-		public static void Revert(IEnumerable<string> assetPaths, bool includeMeta)
+		public static void Revert(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
-			m_Integration?.Revert(assetPaths, includeMeta);
+			m_Integration?.Revert(assetPaths, includeMeta, wait);
 		}
 
 
 
 		[MenuItem("Assets/SVN/Resolve All", false, -800)]
-		public static void ResolveAll()
+		private static void ResolveAllMenu()
 		{
-			m_Integration?.ResolveAll();
+			m_Integration?.ResolveAll(false);
+		}
+
+		public static void ResolveAll(bool wait = false)
+		{
+			m_Integration?.ResolveAll(wait);
 		}
 
 
@@ -186,9 +208,9 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			m_Integration?.GetLocks(GetSelectedAssetPaths(), true);
 		}
 
-		public static void GetLocks(IEnumerable<string> assetPaths, bool includeMeta)
+		public static void GetLocks(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
-			m_Integration?.GetLocks(assetPaths, includeMeta);
+			m_Integration?.GetLocks(assetPaths, includeMeta, wait);
 		}
 
 
@@ -199,9 +221,9 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			m_Integration?.ReleaseLocks(GetSelectedAssetPaths(), true);
 		}
 
-		public static void ReleaseLocks(IEnumerable<string> assetPaths, bool includeMeta)
+		public static void ReleaseLocks(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
-			m_Integration?.ReleaseLocks(assetPaths, includeMeta);
+			m_Integration?.ReleaseLocks(assetPaths, includeMeta, wait);
 		}
 
 
@@ -218,9 +240,9 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			m_Integration?.ShowLog(GetSelectedAssetPaths().FirstOrDefault());
 		}
 
-		public static void ShowLog(string assetPath)
+		public static void ShowLog(string assetPath, bool wait = false)
 		{
-			m_Integration?.ShowLog(assetPath);
+			m_Integration?.ShowLog(assetPath, wait);
 		}
 
 
@@ -231,9 +253,9 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			m_Integration?.Blame(GetSelectedAssetPaths().FirstOrDefault());
 		}
 
-		public static void Blame(string assetPath)
+		public static void Blame(string assetPath, bool wait = false)
 		{
-			m_Integration?.Blame(assetPath);
+			m_Integration?.Blame(assetPath, wait);
 		}
 
 
@@ -241,7 +263,13 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		[MenuItem("Assets/SVN/Cleanup", false, -500)]
 		public static void Cleanup()
 		{
-			m_Integration?.Cleanup();
+			m_Integration?.Cleanup(true);
+		}
+
+		// It is recommended to freeze Unity while Cleanup is working.
+		public static void CleanupAndDontWait()
+		{
+			m_Integration?.Cleanup(false);
 		}
 	}
 }

@@ -35,7 +35,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			});
 		}
 
-		public override void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta)
+		public override void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
 			if (!assetPaths.Any())
 				return;
@@ -49,29 +49,29 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			Application.OpenURL($"snailsvnfree://check-for-modifications{WiseSVNIntegration.ProjectRoot}/{path}");
 		}
 
-		public override void Update(IEnumerable<string> assetPaths, bool includeMeta)
+		public override void Update(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
 			if (!assetPaths.Any())
 				return;
 
-			var result = ExecuteCommand("update", GetWorkingPath(assetPaths), false);
+			var result = ExecuteCommand("update", GetWorkingPath(assetPaths), wait);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void Commit(IEnumerable<string> assetPaths, bool includeMeta)
+		public override void Commit(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
 			if (!assetPaths.Any())
 				return;
 
-			var result = ExecuteCommand("commit", GetWorkingPath(assetPaths), false);
+			var result = ExecuteCommand("commit", GetWorkingPath(assetPaths), wait);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void Add(IEnumerable<string> assetPaths, bool includeMeta)
+		public override void Add(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
 			if (!assetPaths.Any())
 				return;
@@ -89,66 +89,66 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 
 			var pathsArg = AssetPathsToContextPaths(includeMeta ? assetPaths.Concat(metas) : assetPaths, false);
 
-			var result = ExecuteCommand("add", pathsArg, WiseSVNIntegration.ProjectRoot, false);
+			var result = ExecuteCommand("add", pathsArg, WiseSVNIntegration.ProjectRoot, wait);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void Revert(IEnumerable<string> assetPaths, bool includeMeta)
+		public override void Revert(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
 			if (!assetPaths.Any())
 				return;
 
-			var result = ExecuteCommand("revert", GetWorkingPath(assetPaths), false);
+			var result = ExecuteCommand("revert", GetWorkingPath(assetPaths), wait);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void ResolveAll()
+		public override void ResolveAll(bool wait = false)
 		{
 			// Doesn't support resolve command (doesn't seem to have such a window?)
 			UnityEditor.EditorUtility.DisplayDialog("Not supported", "Sorry, resolve all functionality is currently not supported by SnailSVN.", "Sad");
 		}
 
 
-		public override void GetLocks(IEnumerable<string> assetPaths, bool includeMeta)
+		public override void GetLocks(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
 			if (!assetPaths.Any())
 				return;
 
-			var result = ExecuteCommand("lock", AssetPathsToContextPaths(assetPaths, includeMeta), WiseSVNIntegration.ProjectRoot, false);
+			var result = ExecuteCommand("lock", AssetPathsToContextPaths(assetPaths, includeMeta), WiseSVNIntegration.ProjectRoot, wait);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void ReleaseLocks(IEnumerable<string> assetPaths, bool includeMeta)
+		public override void ReleaseLocks(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
 			if (!assetPaths.Any())
 				return;
 
-			var result = ExecuteCommand("unlock", AssetPathsToContextPaths(assetPaths, includeMeta), WiseSVNIntegration.ProjectRoot, false);
+			var result = ExecuteCommand("unlock", AssetPathsToContextPaths(assetPaths, includeMeta), WiseSVNIntegration.ProjectRoot, wait);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void ShowLog(string assetPath)
+		public override void ShowLog(string assetPath, bool wait = false)
 		{
 			if (string.IsNullOrEmpty(assetPath))
 				return;
 
 			var pathArg = Directory.Exists(assetPath) ? assetPath : Path.GetDirectoryName(assetPath);
 
-			var result = ExecuteCommand("log", pathArg, false);
+			var result = ExecuteCommand("log", pathArg, wait);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void Blame(string assetPath)
+		public override void Blame(string assetPath, bool wait = false)
 		{
 			if (string.IsNullOrEmpty(assetPath))
 				return;
@@ -160,10 +160,10 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			Application.OpenURL($"snailsvnfree://svn-blame{WiseSVNIntegration.ProjectRoot}/{assetPath}");
 		}
 
-		public override void Cleanup()
+		public override void Cleanup(bool wait = false)
 		{
 			// NOTE: SnailSVN doesn't pop up dialog for clean up. It just does some shady stuff in the background and a notification is shown some time later.
-			var result = ExecuteCommand("cleanup", WiseSVNIntegration.ProjectRoot, false);
+			var result = ExecuteCommand("cleanup", WiseSVNIntegration.ProjectRoot, wait);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
