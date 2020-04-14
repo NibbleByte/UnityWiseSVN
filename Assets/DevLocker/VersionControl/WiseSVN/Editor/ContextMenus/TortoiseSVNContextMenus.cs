@@ -1,6 +1,5 @@
-using System.IO;
+using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
@@ -14,74 +13,58 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		protected override string FileArgumentsSeparator => "*";
 		protected override bool FileArgumentsSurroundQuotes => false;
 
-		public override void CheckChangesAll()
+		public override void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:repostatus /path:\"{WiseSVNIntegration.ProjectRoot}\"", false);
+			if (!assetPaths.Any())
+				return;
+
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:repostatus /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void CheckChanges()
+		public override void Update(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:repostatus /path:\"{GuidsToContextPaths(Selection.assetGUIDs, true)}\"", false);
+			if (!assetPaths.Any())
+				return;
+
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:update /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", true);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void Update(string filePath)
+		public override void Commit(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:update /path:\"{WiseSVNIntegration.ProjectRoot + filePath}\"", true);
+			if (!assetPaths.Any())
+				return;
+
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:commit /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void UpdateAll()
-		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:update /path:\"{WiseSVNIntegration.ProjectRoot}\"", true);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
-			}
-		}
 
-		public override void CommitAll()
-		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:commit /path:\"{WiseSVNIntegration.ProjectRoot}\"", false);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
-			}
-		}
 
-		public override void CommitSelected()
+		public override void Add(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:commit /path:\"{GuidsToContextPaths(Selection.assetGUIDs, true)}\"", false);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
-			}
-		}
+			if (!assetPaths.Any())
+				return;
 
-		public override void AddSelected()
-		{
-			var paths = Selection.assetGUIDs
-				.Select(AssetDatabase.GUIDToAssetPath)
-				.Where(path => !string.IsNullOrEmpty(path))
-				.ToList()
-				;
-
-			foreach (var path in paths) {
+			foreach (var path in assetPaths) {
 				if (!WiseSVNIntegration.CheckAndAddParentFolderIfNeeded(path))
 					return;
 			}
 
 			// Don't give versioned metas, as tortoiseSVN doesn't like it.
-			var metas = paths
+			var metas = assetPaths
 				.Select(path => path + ".meta")
 				.Where(path => WiseSVNIntegration.GetStatus(path).Status == VCFileStatus.Unversioned)
 				;
 
-			var pathsArg = AssetPathsToContextPaths(paths.Concat(metas), false);
+			var pathsArg = AssetPathsToContextPaths(includeMeta ? assetPaths.Concat(metas) : assetPaths, false);
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:add /path:\"{pathsArg}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
@@ -89,21 +72,18 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			}
 		}
 
-		public override void RevertAll()
+		public override void Revert(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:revert /path:\"{WiseSVNIntegration.ProjectRoot}\"", false);
+			if (!assetPaths.Any())
+				return;
+
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:revert /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void RevertSelected()
-		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:revert /path:\"{GuidsToContextPaths(Selection.assetGUIDs, true)}\"", false);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
-			}
-		}
+
 
 		public override void ResolveAll()
 		{
@@ -114,45 +94,54 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		}
 
 
-		public override void GetLocks()
+
+		public override void GetLocks(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:lock /path:\"{GuidsToContextPaths(Selection.assetGUIDs, true)}\"", false);
+			if (!assetPaths.Any())
+				return;
+
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:lock /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void ReleaseLocks()
+		public override void ReleaseLocks(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:unlock /path:\"{GuidsToContextPaths(Selection.assetGUIDs, true)}\"", false);
+			if (!assetPaths.Any())
+				return;
+
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:unlock /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void ShowLogAll()
+		public override void ShowLog(string assetPath)
 		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:log /path:\"{WiseSVNIntegration.ProjectRoot}\"", false);
+			if (string.IsNullOrEmpty(assetPath))
+				return;
+
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:log /path:\"{AssetPathToContextPaths(assetPath, false)}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void ShowLog()
+
+
+		public override void Blame(string assetPath)
 		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:log /path:\"{GuidToContextPaths(Selection.assetGUIDs.FirstOrDefault(), false)}\"", false);
+			if (string.IsNullOrEmpty(assetPath))
+				return;
+
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:blame /path:\"{AssetPathToContextPaths(assetPath, false)}\"", false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void Blame()
-		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:blame /path:\"{GuidToContextPaths(Selection.assetGUIDs.FirstOrDefault(), true)}\"", false);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
-			}
-		}
+
 
 		public override void Cleanup()
 		{

@@ -1,12 +1,10 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 {
-
-#if !UNITY_EDITOR_WIN
 	// SnailSVN: https://langui.net/snailsvn
 	// Use the "/Applications/SnailSVN.app/Contents/Resources/snailsvn.sh" executable as much as possible.
 	// usage: /Applications/SnailSVNLite.app/Contents/Resources/snailsvn.sh <subcommand> [args]
@@ -37,16 +35,12 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			});
 		}
 
-		public override void CheckChangesAll()
+		public override void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			// The snailsvn.sh currently doesn't accept "check-for-modifications" argument, but with some reverse engineering, managed to make it work like this.
-			// open "snailsvnfree://check-for-modifications/SomeFolderHere/UnityProject/Assets"
-			Application.OpenURL($"snailsvnfree://check-for-modifications{WiseSVNIntegration.ProjectRoot}");
-		}
+			if (!assetPaths.Any())
+				return;
 
-		public override void CheckChanges()
-		{
-			var path = GetWorkingPath(Selection.assetGUIDs);
+			var path = GetWorkingPath(assetPaths);
 			if (string.IsNullOrEmpty(path))
 				return;
 
@@ -55,58 +49,45 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			Application.OpenURL($"snailsvnfree://check-for-modifications{WiseSVNIntegration.ProjectRoot}/{path}");
 		}
 
-		public override void Update(string filePath)
+		public override void Update(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			var result = ExecuteCommand("update", Path.GetDirectoryName(filePath), false);
+			if (!assetPaths.Any())
+				return;
+
+			var result = ExecuteCommand("update", GetWorkingPath(assetPaths), false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void UpdateAll()
+		public override void Commit(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			var result = ExecuteCommand("update", WiseSVNIntegration.ProjectRoot, true);
+			if (!assetPaths.Any())
+				return;
+
+			var result = ExecuteCommand("commit", GetWorkingPath(assetPaths), false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
 		}
 
-		public override void CommitAll()
+		public override void Add(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			var result = ExecuteCommand("commit", WiseSVNIntegration.ProjectRoot, false);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
-			}
-		}
+			if (!assetPaths.Any())
+				return;
 
-		public override void CommitSelected()
-		{
-			var result = ExecuteCommand("commit", GetWorkingPath(Selection.assetGUIDs), false);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
-			}
-		}
-
-		public override void AddSelected()
-		{
-			var paths = Selection.assetGUIDs
-				.Select(AssetDatabase.GUIDToAssetPath)
-				.Where(path => !string.IsNullOrEmpty(path))
-				.ToList()
-				;
-
-			foreach (var path in paths) {
+			foreach (var path in assetPaths) {
 				if (!WiseSVNIntegration.CheckAndAddParentFolderIfNeeded(path))
 					return;
 			}
 
 			// Don't give versioned metas, as tortoiseSVN doesn't like it.
-			var metas = paths
+			var metas = assetPaths
 				.Select(path => path + ".meta")
 				.Where(path => WiseSVNIntegration.GetStatus(path).Status == VCFileStatus.Unversioned)
 				;
 
-			var pathsArg = AssetPathsToContextPaths(paths.Concat(metas), false);
+			var pathsArg = AssetPathsToContextPaths(includeMeta ? assetPaths.Concat(metas) : assetPaths, false);
 
 			var result = ExecuteCommand("add", pathsArg, WiseSVNIntegration.ProjectRoot, false);
 			if (!string.IsNullOrEmpty(result.error)) {
@@ -114,17 +95,12 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			}
 		}
 
-		public override void RevertAll()
+		public override void Revert(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			var result = ExecuteCommand("revert", WiseSVNIntegration.ProjectRoot, false);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
-			}
-		}
+			if (!assetPaths.Any())
+				return;
 
-		public override void RevertSelected()
-		{
-			var result = ExecuteCommand("revert", GetWorkingPath(Selection.assetGUIDs), false);
+			var result = ExecuteCommand("revert", GetWorkingPath(assetPaths), false);
 			if (!string.IsNullOrEmpty(result.error)) {
 				Debug.LogError($"SVN Error: {result.error}");
 			}
@@ -133,53 +109,55 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		public override void ResolveAll()
 		{
 			// Doesn't support resolve command (doesn't seem to have such a window?)
-			EditorUtility.DisplayDialog("Not supported", "Sorry, resolve all functionality is currently not supported by SnailSVN.", "Sad");
+			UnityEditor.EditorUtility.DisplayDialog("Not supported", "Sorry, resolve all functionality is currently not supported by SnailSVN.", "Sad");
 		}
 
 
-		public override void GetLocks()
+		public override void GetLocks(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			var result = ExecuteCommand("lock", GuidsToContextPaths(Selection.assetGUIDs, true), WiseSVNIntegration.ProjectRoot, false);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
-			}
-		}
-
-		public override void ReleaseLocks()
-		{
-			var result = ExecuteCommand("unlock", GuidsToContextPaths(Selection.assetGUIDs, true), WiseSVNIntegration.ProjectRoot, false);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
-			}
-		}
-
-		public override void ShowLogAll()
-		{
-			var result = ExecuteCommand("log", WiseSVNIntegration.ProjectRoot, false);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
-			}
-		}
-
-		public override void ShowLog()
-		{
-			var result = ExecuteCommand("log", GetWorkingPath(Selection.assetGUIDs), false);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
-			}
-		}
-
-		public override void Blame()
-		{
-			// Support only one file.
-			var path = AssetDatabase.GUIDToAssetPath(Selection.assetGUIDs.FirstOrDefault());
-
-			if (string.IsNullOrEmpty(path))
+			if (!assetPaths.Any())
 				return;
+
+			var result = ExecuteCommand("lock", AssetPathsToContextPaths(assetPaths, includeMeta), WiseSVNIntegration.ProjectRoot, false);
+			if (!string.IsNullOrEmpty(result.error)) {
+				Debug.LogError($"SVN Error: {result.error}");
+			}
+		}
+
+		public override void ReleaseLocks(IEnumerable<string> assetPaths, bool includeMeta)
+		{
+			if (!assetPaths.Any())
+				return;
+
+			var result = ExecuteCommand("unlock", AssetPathsToContextPaths(assetPaths, includeMeta), WiseSVNIntegration.ProjectRoot, false);
+			if (!string.IsNullOrEmpty(result.error)) {
+				Debug.LogError($"SVN Error: {result.error}");
+			}
+		}
+
+		public override void ShowLog(string assetPath)
+		{
+			if (string.IsNullOrEmpty(assetPath))
+				return;
+
+			var pathArg = Directory.Exists(assetPath) ? assetPath : Path.GetDirectoryName(assetPath);
+
+			var result = ExecuteCommand("log", pathArg, false);
+			if (!string.IsNullOrEmpty(result.error)) {
+				Debug.LogError($"SVN Error: {result.error}");
+			}
+		}
+
+		public override void Blame(string assetPath)
+		{
+			if (string.IsNullOrEmpty(assetPath))
+				return;
+
+			// Support only one file.
 
 			// The snailsvn.sh currently doesn't accept "blame" argument, but with some reverse engineering, managed to make it work like this.
 			// open "snailsvnfree://svn-blame/SomeFolderHere/UnityProject/Assets/foo.txt"
-			Application.OpenURL($"snailsvnfree://svn-blame{WiseSVNIntegration.ProjectRoot}/{path}");
+			Application.OpenURL($"snailsvnfree://svn-blame{WiseSVNIntegration.ProjectRoot}/{assetPath}");
 		}
 
 		public override void Cleanup()
@@ -191,5 +169,4 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			}
 		}
 	}
-#endif
 }

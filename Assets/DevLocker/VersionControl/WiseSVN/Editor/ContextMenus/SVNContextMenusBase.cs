@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using UnityEditor;
 using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
@@ -13,35 +12,21 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		protected abstract string FileArgumentsSeparator { get; }
 		protected abstract bool FileArgumentsSurroundQuotes { get; }
 
-		public abstract void CheckChangesAll();
-		public abstract void CheckChanges();
-		public abstract void Update(string filePath);
-		public abstract void UpdateAll();
-		public abstract void CommitAll();
-		public abstract void CommitSelected();
-		public abstract void AddSelected();
-		public abstract void RevertAll();
-		public abstract void RevertSelected();
+		public abstract void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta);
+		public abstract void Update(IEnumerable<string> assetPaths, bool includeMeta);
+		public abstract void Commit(IEnumerable<string> assetPaths, bool includeMeta);
+		public abstract void Add(IEnumerable<string> assetPaths, bool includeMeta);
+		public abstract void Revert(IEnumerable<string> assetPaths, bool includeMeta);
+
+		public abstract void GetLocks(IEnumerable<string> assetPaths, bool includeMeta);
+		public abstract void ReleaseLocks(IEnumerable<string> assetPaths, bool includeMeta);
+
+		public abstract void ShowLog(string assetPath);
+
 		public abstract void ResolveAll();
-		public abstract void GetLocks();
-		public abstract void ReleaseLocks();
-		public abstract void ShowLogAll();
-		public abstract void ShowLog();
-		public abstract void Blame();
+		public abstract void Blame(string assetPath);
+
 		public abstract void Cleanup();
-
-		protected string GuidsToContextPaths(string[] guids, bool includeMeta)
-		{
-			if (guids.Length == 0)
-				return string.Empty;
-
-			return AssetPathsToContextPaths(guids.Select(AssetDatabase.GUIDToAssetPath), includeMeta);
-		}
-
-		protected string GuidToContextPaths(string guid, bool includeMeta)
-		{
-			return AssetPathToContextPaths(AssetDatabase.GUIDToAssetPath(guid), includeMeta);
-		}
 
 		protected string AssetPathsToContextPaths(IEnumerable<string> assetPaths, bool includeMeta)
 		{
@@ -73,10 +58,10 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		}
 
 		// Gets common working path.
-		protected static string GetWorkingPath(string[] guids)
+		protected static string GetWorkingPath(IEnumerable<string> assetPaths)
 		{
 			// Find the most common path of the selected assets.
-			var paths = guids.Select(AssetDatabase.GUIDToAssetPath).ToList();
+			var paths = assetPaths.ToList();
 
 			int matchCharIndex = paths[0].Length;
 
