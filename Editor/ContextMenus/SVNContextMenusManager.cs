@@ -1,5 +1,7 @@
 using DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 
 namespace DevLocker.VersionControl.WiseSVN.ContextMenus
@@ -76,98 +78,168 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			return errorMsg;
 		}
 
-		[MenuItem("Assets/SVN/Check Changes All", false, -1000)]
-		static void CheckChangesAll()
+		private static IEnumerable<string> GetRootAssetPath()
 		{
-			m_Integration?.CheckChangesAll();
+			yield return ".";	// The root folder of the project (not the Assets folder).
+		}
+
+		private static IEnumerable<string> GetSelectedAssetPaths()
+		{
+			return Selection.assetGUIDs.Select(AssetDatabase.GUIDToAssetPath);
+		}
+
+		[MenuItem("Assets/SVN/Check Changes All", false, -1000)]
+		public static void CheckChangesAll()
+		{
+			m_Integration?.CheckChanges(GetRootAssetPath(), false);
 		}
 
 		[MenuItem("Assets/SVN/Check Changes", false, -1000)]
-		private static void CheckChanges()
+		public static void CheckChangesSelected()
 		{
-			m_Integration?.CheckChanges();
+			m_Integration?.CheckChanges(GetSelectedAssetPaths(), true);
 		}
 
-		public static void Update(string filePath)
+		public static void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			m_Integration?.Update(filePath);
+			m_Integration?.CheckChanges(assetPaths, includeMeta);
 		}
+
+
 
 		[MenuItem("Assets/SVN/Update All", false, -950)]
-		private static void UpdateAll()
+		public static void UpdateAll()
 		{
-			m_Integration?.UpdateAll();
+			m_Integration?.Update(GetRootAssetPath(), false);
 		}
 
-		[MenuItem("Assets/SVN/Commit All", false, -900)]
-		private static void CommitAll()
+		public static void Update(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			m_Integration?.CommitAll();
+			m_Integration?.Update(assetPaths, includeMeta);
+		}
+
+
+
+		[MenuItem("Assets/SVN/Commit All", false, -900)]
+		public static void CommitAll()
+		{
+			m_Integration?.Commit(GetRootAssetPath(), false);
 		}
 
 		[MenuItem("Assets/SVN/Commit", false, -900)]
-		private static void CommitSelected()
+		public static void CommitSelected()
 		{
-			m_Integration?.CommitSelected();
+			m_Integration?.Commit(GetSelectedAssetPaths(), true);
 		}
+
+		public static void Commit(IEnumerable<string> assetPaths, bool includeMeta)
+		{
+			m_Integration?.Commit(assetPaths, includeMeta);
+		}
+
+
 
 		[MenuItem("Assets/SVN/Add", false, -900)]
-		private static void AddSelected()
+		public static void AddSelected()
 		{
-			m_Integration?.AddSelected();
+			m_Integration?.Add(GetSelectedAssetPaths(), true);
 		}
 
-		[MenuItem("Assets/SVN/Revert All", false, -800)]
-		private static void RevertAll()
+		public static void Add(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			m_Integration?.RevertAll();
+			m_Integration?.Add(assetPaths, includeMeta);
+		}
+
+
+
+		[MenuItem("Assets/SVN/Revert All", false, -800)]
+		public static void RevertAll()
+		{
+			m_Integration?.Revert(GetRootAssetPath(), false);
 		}
 
 		[MenuItem("Assets/SVN/Revert", false, -800)]
-		private static void RevertSelected()
+		public static void RevertSelected()
 		{
-			m_Integration?.RevertSelected();
+			m_Integration?.Revert(GetSelectedAssetPaths(), true);
 		}
 
+		public static void Revert(IEnumerable<string> assetPaths, bool includeMeta)
+		{
+			m_Integration?.Revert(assetPaths, includeMeta);
+		}
+
+
+
 		[MenuItem("Assets/SVN/Resolve All", false, -800)]
-		private static void ResolveAll()
+		public static void ResolveAll()
 		{
 			m_Integration?.ResolveAll();
 		}
 
 
+
+
 		[MenuItem("Assets/SVN/Get Locks", false, -700)]
-		private static void GetLocks()
+		public static void GetLocksSelected()
 		{
-			m_Integration?.GetLocks();
+			m_Integration?.GetLocks(GetSelectedAssetPaths(), true);
 		}
+
+		public static void GetLocks(IEnumerable<string> assetPaths, bool includeMeta)
+		{
+			m_Integration?.GetLocks(assetPaths, includeMeta);
+		}
+
+
 
 		[MenuItem("Assets/SVN/Release Locks", false, -700)]
-		private static void ReleaseLocks()
+		public static void ReleaseLocksSelected()
 		{
-			m_Integration?.ReleaseLocks();
+			m_Integration?.ReleaseLocks(GetSelectedAssetPaths(), true);
 		}
 
-		[MenuItem("Assets/SVN/Show Log All", false, -500)]
-		private static void ShowLogAll()
+		public static void ReleaseLocks(IEnumerable<string> assetPaths, bool includeMeta)
 		{
-			m_Integration?.ShowLogAll();
+			m_Integration?.ReleaseLocks(assetPaths, includeMeta);
+		}
+
+
+
+		[MenuItem("Assets/SVN/Show Log All", false, -500)]
+		public static void ShowLogAll()
+		{
+			m_Integration?.ShowLog(GetRootAssetPath().First());
 		}
 
 		[MenuItem("Assets/SVN/Show Log", false, -500)]
-		private static void ShowLog()
+		public static void ShowLogSelected()
 		{
-			m_Integration?.ShowLog();
+			m_Integration?.ShowLog(GetSelectedAssetPaths().FirstOrDefault());
 		}
+
+		public static void ShowLog(string assetPath)
+		{
+			m_Integration?.ShowLog(assetPath);
+		}
+
+
 
 		[MenuItem("Assets/SVN/Blame", false, -500)]
-		private static void Blame()
+		public static void BlameSelected()
 		{
-			m_Integration?.Blame();
+			m_Integration?.Blame(GetSelectedAssetPaths().FirstOrDefault());
 		}
 
+		public static void Blame(string assetPath)
+		{
+			m_Integration?.Blame(assetPath);
+		}
+
+
+
 		[MenuItem("Assets/SVN/Cleanup", false, -500)]
-		private static void Cleanup()
+		public static void Cleanup()
 		{
 			m_Integration?.Cleanup();
 		}
