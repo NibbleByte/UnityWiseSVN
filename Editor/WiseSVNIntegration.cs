@@ -269,9 +269,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			var directory = Path.GetDirectoryName(path);
 
-			// Special case
-			if (string.IsNullOrEmpty(directory) && path == "Assets") {
-				directory = path;
+			// Special case - Root folders like Assets, ProjectSettings, etc...
+			if (string.IsNullOrEmpty(directory)) {
+				directory = ".";
 			}
 
 			var newDirectoryStatusData = GetStatus(directory);
@@ -306,12 +306,17 @@ namespace DevLocker.VersionControl.WiseSVN
 			return true;
 		}
 
+		// Adds all parent unversioned folders AND THEIR META FILES!
 		private static bool SVNAddDirectory(string newDirectory, ResultReporter reporter)
 		{
 			// --parents will add all unversioned parent directories as well.
 			reporter.Result = ShellUtils.ExecuteCommand(SVN_Command, $"add --parents --depth empty \"{SVNFormatPath(newDirectory)}\"", COMMAND_TIMEOUT, reporter);
 			if (reporter.Result.HasErrors)
 				return false;
+
+			// If working outside Assets folder, don't consider metas.
+			if (!newDirectory.StartsWith("Assets", StringComparison.OrdinalIgnoreCase))
+				return true;
 
 			// Now add all folder metas upwards
 			var directoryMeta = newDirectory + ".meta";
@@ -645,6 +650,41 @@ namespace DevLocker.VersionControl.WiseSVN
 		public static SVNAsyncOperation<LockOperationResult> UnlockFileAsync(string path, bool force, int timeout = COMMAND_TIMEOUT)
 		{
 			return SVNAsyncOperation<LockOperationResult>.Start(op => UnlockFile(path, force, timeout));
+		}
+
+		// Add files to SVN directly (without GUI).
+		public static bool Add(string path, bool includeMeta, bool recursive)
+		{
+			if (string.IsNullOrEmpty(path))
+				return true;
+
+			try {
+				RequestSilence();
+
+				using (var reporter = CreateLogger()) {
+
+					// Will add parent folders and their metas.
+					var success = CheckAndAddParentFolderIfNeeded(path, reporter);
+					if (success == false)
+						return false;
+
+					var depth = recursive ? "infinity" : "empty";
+					reporter.Result = ShellUtils.ExecuteCommand(SVN_Command, $"add --depth {depth} --force \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT, reporter);
+					if (reporter.Result.HasErrors)
+						return false;
+
+					if (includeMeta) {
+						reporter.Result = ShellUtils.ExecuteCommand(SVN_Command, $"add --depth {depth} --force \"{SVNFormatPath(path + ".meta")}\"", COMMAND_TIMEOUT, reporter);
+						if (reporter.Result.HasErrors)
+							return false;
+					}
+
+					return true;
+				}
+
+			} finally {
+				ClearSilence();
+			}
 		}
 
 		// Search for hidden files and folders starting with .
