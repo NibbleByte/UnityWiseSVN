@@ -693,30 +693,83 @@ namespace DevLocker.VersionControl.WiseSVN
 			try {
 				RequestSilence();
 
-				using (var reporter = CreateLogger()) {
+				// Will add parent folders and their metas.
+				var success = CheckAndAddParentFolderIfNeeded(path, null);
+				if (success == false)
+					return false;
 
-					// Will add parent folders and their metas.
-					var success = CheckAndAddParentFolderIfNeeded(path, reporter);
-					if (success == false)
+				var depth = recursive ? "infinity" : "empty";
+				var result = ShellUtils.ExecuteCommand(SVN_Command, $"add --depth {depth} --force \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT, null);
+				if (result.HasErrors)
+					return false;
+
+				if (includeMeta) {
+					result = ShellUtils.ExecuteCommand(SVN_Command, $"add --depth {depth} --force \"{SVNFormatPath(path + ".meta")}\"", COMMAND_TIMEOUT, null);
+					if (result.HasErrors)
 						return false;
-
-					var depth = recursive ? "infinity" : "empty";
-					reporter.Result = ShellUtils.ExecuteCommand(SVN_Command, $"add --depth {depth} --force \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT, reporter);
-					if (reporter.Result.HasErrors)
-						return false;
-
-					if (includeMeta) {
-						reporter.Result = ShellUtils.ExecuteCommand(SVN_Command, $"add --depth {depth} --force \"{SVNFormatPath(path + ".meta")}\"", COMMAND_TIMEOUT, reporter);
-						if (reporter.Result.HasErrors)
-							return false;
-					}
-
-					return true;
 				}
+
+				return true;
 
 			} finally {
 				ClearSilence();
 			}
+		}
+
+		// Commit files to SVN directly (without GUI).
+		// If you plan to commit large files, you might want to tweak the timeout argument.
+		// On commit all included locks will be unlocked unless specified not to by the keepLocks param.
+		// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		public static CommitOperationResult Commit(IEnumerable<string> assetPaths, bool includeMeta, bool recursive, string message, string encoding = "", bool keepLocks = false, int timeout = COMMAND_TIMEOUT * 10)
+		{
+			var targetsFile = FileUtil.GetUniqueTempPathInProject();
+			if (includeMeta) {
+				assetPaths = assetPaths.Select(path => path + ".meta").Concat(assetPaths);
+			}
+			File.WriteAllLines(targetsFile, assetPaths.Select(SVNFormatPath));
+
+
+			var depth = recursive ? "infinity" : "empty";
+			var encodingArg = string.IsNullOrEmpty(encoding) ? "" : $"--encoding {encoding}";
+			var keepLocksArg = keepLocks ? "--no-unlock" : "";
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"commit --targets \"{targetsFile}\" --depth {depth} --message \"{message}\" {encodingArg} {keepLocksArg}", timeout);
+			if (result.HasErrors) {
+
+				// svn: E155011: File '...' is out of date
+				// svn: E160024: resource out of date; try updating
+				if (result.error.Contains("E160024"))
+					return CommitOperationResult.OutOfDateError;
+
+				// svn: E155015: Aborting commit: '...' remains in conflict
+				if (result.error.Contains("E155015"))
+					return CommitOperationResult.ConflictsError;
+
+				// svn: E200009: '...' is not under version control
+				if (result.error.Contains("E200009"))
+					return CommitOperationResult.UnversionedError;
+
+				// svn: E165001: Commit blocked by pre-commit hook (exit code 1) with output: ...
+				if (result.error.Contains("E165001"))
+					return CommitOperationResult.PrecommitHookError;
+
+				// svn: E170013: Unable to connect to a repository at URL '...'
+				// svn: E731001: No such host is known.
+				if (result.error.Contains("E170013") || result.error.Contains("E731001"))
+					return CommitOperationResult.UnableToConnectError;
+
+				return CommitOperationResult.UnknownError;
+			}
+
+			return CommitOperationResult.Success;
+		}
+
+		// Commit files to SVN directly (without GUI).
+		// If you plan to commit large files, you might want to tweak the timeout argument.
+		// On commit all included locks will be unlocked unless specified not to by the keepLocks param.
+		public static SVNAsyncOperation<CommitOperationResult> CommitAsync(IEnumerable<string> assetPaths, bool includeMeta, bool recursive, string message, string encoding = "", bool keepLocks = false, int timeout = COMMAND_TIMEOUT * 10)
+		{
+			return SVNAsyncOperation<CommitOperationResult>.Start(op => Commit(assetPaths, includeMeta, recursive, message, encoding, keepLocks, timeout));
 		}
 
 		// Used to avoid spam (specially when importing the whole project and errors start popping up, interrupting the process).
@@ -727,7 +780,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		// Get statuses of files based on the options you provide.
 		// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
 		//		 If used with non-recursive option it will return single data with normal status (if non).
-		// NOTE2: this is a syncronious function.
+		// NOTE2: this is a synchronous operation.
 		//		 If you use it in online mode it might freeze your code for a long time.
 		//		 To avoid this, use the Async version!
 		public static IEnumerable<SVNStatusData> GetStatuses(string path, SVNStatusDataOptions options)

@@ -61,9 +61,20 @@ namespace DevLocker.VersionControl.WiseSVN
 
 	public enum LockOperationResult
 	{
-		Failed,			// Failed for some reason.
-		LockedByOther,	// File is locked by another working copy (may be the same user). Use Force to enforce the operation.
 		Success,		// Operation succeeded.
+		LockedByOther,	// File is locked by another working copy (may be the same user). Use Force to enforce the operation.
+		Failed,			// Failed for some reason.
+	}
+
+	public enum CommitOperationResult
+	{
+		Success,				// Operation succeeded.
+		OutOfDateError,			// Some folders/files have pending changes in the repository. Update them before trying to commit.
+		ConflictsError,			// Some folders/files have conflicts. Clear them before trying to commit.
+		UnversionedError,		// Can't commit unversioned files. Add them before trying to commit.
+		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
+		PrecommitHookError,		// Precommit hook denied the commit on the server side. Talk with your administrator about your commit company policies. Example: always commit with a valid message.
+		UnknownError,			// Failed for any other reason.
 	}
 
 
