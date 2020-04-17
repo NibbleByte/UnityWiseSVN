@@ -122,6 +122,12 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		public GUIContent GetFileStatusIconContent(VCFileStatus status)
 		{
+			// TODO: this is a legacy hack-fix. The enum status got new values and needs to be refreshed on old running clients. Remove someday.
+			var index = (int)status;
+			if (index >= FileStatusIcons.Length) {
+				LoadTextures();
+			}
+
 			return FileStatusIcons[(int)status];
 		}
 
