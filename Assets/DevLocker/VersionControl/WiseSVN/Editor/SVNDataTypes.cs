@@ -15,8 +15,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		Unversioned,
 		Missing,
 		External,
-		//Incomplete,
-		//Merged,
+		Incomplete,	// Not used
+		Merged, 	// Not used
 		Obstructed,
 		None,	// File not found or something worse....
 	}
