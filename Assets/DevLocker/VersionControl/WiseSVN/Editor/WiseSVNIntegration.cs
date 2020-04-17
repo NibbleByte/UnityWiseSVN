@@ -471,6 +471,38 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 		}
 
+		// Search for hidden files and folders starting with .
+		// Basically search for any "/." or "\."
+		public static bool IsHiddenPath(string path)
+		{
+			for (int i = 0, len = path.Length; i < len - 1; ++i) {
+				if (path[i + 1] == '.' && (path[i] == '/' || path[i] == '\\'))
+					return true;
+			}
+
+			return false;
+		}
+
+		private static string ExtractLineValue(string pattern, string str)
+		{
+			var lineIndex = str.IndexOf(pattern, StringComparison.OrdinalIgnoreCase);
+			if (lineIndex == -1)
+				return string.Empty;
+
+			var valueStartIndex = lineIndex + pattern.Length + 1;
+			var lineEndIndex = str.IndexOf("\n", valueStartIndex, StringComparison.OrdinalIgnoreCase);
+			if (lineEndIndex == -1) {
+				lineEndIndex = str.Length - 1;
+			}
+
+			// F@!$!#@!#!
+			if (str[lineEndIndex - 1] == '\r') {
+				lineEndIndex--;
+			}
+
+			return str.Substring(valueStartIndex, lineEndIndex - valueStartIndex);
+		}
+
 		// Ask the repository server for lock details of the specified file.
 		public static LockDetails FetchLockDetails(string path, int timeout = COMMAND_TIMEOUT, bool raiseError = false)
 		{
@@ -687,42 +719,17 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 		}
 
-		// Search for hidden files and folders starting with .
-		// Basically search for any "/." or "\."
-		public static bool IsHiddenPath(string path)
-		{
-			for(int i = 0, len = path.Length; i < len - 1; ++i) {
-				if (path[i + 1] == '.' && (path[i] == '/' || path[i] == '\\'))
-					return true;
-			}
-
-			return false;
-		}
-
-		private static string ExtractLineValue(string pattern, string str)
-		{
-			var lineIndex = str.IndexOf(pattern, StringComparison.OrdinalIgnoreCase);
-			if (lineIndex == -1)
-				return string.Empty;
-
-			var valueStartIndex = lineIndex + pattern.Length + 1;
-			var lineEndIndex = str.IndexOf("\n", valueStartIndex, StringComparison.OrdinalIgnoreCase);
-			if (lineEndIndex == -1) {
-				lineEndIndex = str.Length - 1;
-			}
-
-			// F@!$!#@!#!
-			if (str[lineEndIndex - 1] == '\r') {
-				lineEndIndex--;
-			}
-
-			return str.Substring(valueStartIndex, lineEndIndex - valueStartIndex);
-		}
-
 		// Used to avoid spam (specially when importing the whole project and errors start popping up, interrupting the process).
 		[NonSerialized]
 		private static string m_LastDisplayedError = string.Empty;
 
+
+		// Get statuses of files based on the options you provide.
+		// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
+		//		 If used with non-recursive option it will return single data with normal status (if non).
+		// NOTE2: this is a syncronious function.
+		//		 If you use it in online mode it might freeze your code for a long time.
+		//		 To avoid this, use the Async version!
 		public static IEnumerable<SVNStatusData> GetStatuses(string path, SVNStatusDataOptions options)
 		{
 			// File can be missing, if it was deleted by svn.
@@ -775,6 +782,39 @@ namespace DevLocker.VersionControl.WiseSVN
 			return ExtractStatuses(result.output, options);
 		}
 
+		// Get statuses of files based on the options you provide.
+		// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
+		//		 If used with non-recursive option it will return single data with normal status (if non).
+		public static SVNAsyncOperation<IEnumerable<SVNStatusData>> GetStatusesAsync(string path, bool recursive, bool offline, bool fetchLockDetails = true, int timeout = COMMAND_TIMEOUT)
+		{
+			// If default timeout, give some more time for online operations, just in case.
+			if (timeout == COMMAND_TIMEOUT && !offline) {
+				timeout *= 2;
+			}
+
+			var options = new SVNStatusDataOptions() {
+				Depth = recursive ? SVNStatusDataOptions.SearchDepth.Infinity : SVNStatusDataOptions.SearchDepth.Empty,
+				Timeout = timeout,
+				RaiseError = false,
+				Offline = offline,
+				FetchLockOwner = fetchLockDetails,  // If offline, this is ignored.
+			};
+
+			return SVNAsyncOperation<IEnumerable<SVNStatusData>>.Start(op => GetStatuses(path, options));
+		}
+
+		// Get statuses of files based on the options you provide.
+		// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
+		//		 If used with non-recursive option it will return single data with normal status (if non).
+		public static SVNAsyncOperation<IEnumerable<SVNStatusData>> GetStatusesAsync(string path, SVNStatusDataOptions options)
+		{
+			return SVNAsyncOperation<IEnumerable<SVNStatusData>>.Start(op => GetStatuses(path, options));
+		}
+
+
+		// Get offline status for a single file (non recursive). This won't make requests to the repository.
+		// Will return valid status even if the file has nothing to show (has no changes).
+		// If error happened, invalid status data will be returned (check statusData.IsValid).
 		public static SVNStatusData GetStatus(string path)
 		{
 			// Optimization: empty depth will return nothing if status is normal.
@@ -783,12 +823,44 @@ namespace DevLocker.VersionControl.WiseSVN
 			var statusData = GetStatuses(path, statusOptions).FirstOrDefault();
 
 			// If no path was found, error happened.
-			if (string.IsNullOrEmpty(statusData.Path)) {
+			if (!statusData.IsValid) {
 				// Fallback to unversioned as we don't touch them.
 				statusData.Status = VCFileStatus.Unversioned;
 			}
 
 			return statusData;
+		}
+
+		// Get status for a single file (non recursive).
+		// Will return valid status even if the file has nothing to show (has no changes).
+		// If error happened, invalid status data will be returned (check statusData.IsValid).
+		public static SVNAsyncOperation<SVNStatusData> GetStatusAsync(string path, bool offline, bool fetchLockDetails = true, int timeout = COMMAND_TIMEOUT)
+		{
+			// If default timeout, give some more time for online operations, just in case.
+			if (timeout == COMMAND_TIMEOUT && !offline) {
+				timeout *= 2;
+			}
+
+			var options = new SVNStatusDataOptions() {
+				Depth = SVNStatusDataOptions.SearchDepth.Empty,
+				Timeout = timeout,
+				RaiseError = false,
+				Offline = offline,
+				FetchLockOwner = fetchLockDetails,  // If offline, this is ignored.
+			};
+
+			return SVNAsyncOperation<SVNStatusData>.Start(op => {
+
+				var statusData = GetStatuses(path, options).FirstOrDefault();
+
+				// If no path was found, error happened.
+				if (!statusData.IsValid) {
+					// Fallback to unversioned as we don't touch them.
+					statusData.Status = VCFileStatus.Unversioned;
+				}
+
+				return statusData;
+			});
 		}
 
 		public static string SVNFormatPath(string path)
