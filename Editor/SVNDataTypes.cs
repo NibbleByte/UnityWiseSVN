@@ -80,6 +80,8 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		public LockDetails LockDetails;
 
+		public bool IsValid => !string.IsNullOrEmpty(Path);
+
 		public bool IsConflicted =>
 			Status == VCFileStatus.Conflicted ||
 			PropertyStatus == VCProperty.Conflicted ||
