@@ -149,7 +149,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 		// NOTE: This is called separately for the file and its meta.
-		public static void OnWillCreateAsset(string path)
+		private static void OnWillCreateAsset(string path)
 		{
 			if (!Enabled || TemporaryDisabled)
 				return;
@@ -174,7 +174,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 		}
 
-		public static AssetDeleteResult OnWillDeleteAsset(string path, RemoveAssetOptions option)
+		private static AssetDeleteResult OnWillDeleteAsset(string path, RemoveAssetOptions option)
 		{
 			if (!Enabled || TemporaryDisabled || m_ProjectPrefs.Exclude.Any(path.StartsWith))
 				return AssetDeleteResult.DidNotDelete;
@@ -198,7 +198,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 		}
 
-		public static AssetMoveResult OnWillMoveAsset(string oldPath, string newPath)
+		private static AssetMoveResult OnWillMoveAsset(string oldPath, string newPath)
 		{
 			if (!Enabled || TemporaryDisabled || m_ProjectPrefs.Exclude.Any(oldPath.StartsWith))
 				return AssetMoveResult.DidNotMove;
@@ -736,23 +736,28 @@ namespace DevLocker.VersionControl.WiseSVN
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"commit --targets \"{targetsFile}\" --depth {depth} --message \"{message}\" {encodingArg} {keepLocksArg}", timeout);
 			if (result.HasErrors) {
 
+				// Some folders/files have pending changes in the repository. Update them before trying to commit.
 				// svn: E155011: File '...' is out of date
 				// svn: E160024: resource out of date; try updating
 				if (result.error.Contains("E160024"))
 					return CommitOperationResult.OutOfDateError;
 
+				// Some folders/files have conflicts. Clear them before trying to commit.
 				// svn: E155015: Aborting commit: '...' remains in conflict
 				if (result.error.Contains("E155015"))
 					return CommitOperationResult.ConflictsError;
 
+				// Can't commit unversioned files directly. Add them before trying to commit. Recursive skips unversioned files.
 				// svn: E200009: '...' is not under version control
 				if (result.error.Contains("E200009"))
 					return CommitOperationResult.UnversionedError;
 
+				// Precommit hook denied the commit on the server side. Talk with your administrator about your commit company policies. Example: always commit with a valid message.
 				// svn: E165001: Commit blocked by pre-commit hook (exit code 1) with output: ...
 				if (result.error.Contains("E165001"))
 					return CommitOperationResult.PrecommitHookError;
 
+				// Unable to connect to repository indicating some network or server problems.
 				// svn: E170013: Unable to connect to a repository at URL '...'
 				// svn: E731001: No such host is known.
 				if (result.error.Contains("E170013") || result.error.Contains("E731001"))
