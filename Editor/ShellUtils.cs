@@ -72,7 +72,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			result.command = shellArgs.Command;
 			result.args = shellArgs.Args;
 			if (shellArgs.Logger != null) {
-				shellArgs.Logger.AppendLine(shellArgs.Command + " " + shellArgs);
+				shellArgs.Logger.AppendLine(shellArgs.Command + " " + shellArgs.Args);
 			}
 
 			ProcessStartInfo processStartInfo = new ProcessStartInfo(shellArgs.Command, shellArgs.Args);
