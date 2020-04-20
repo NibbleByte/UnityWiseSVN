@@ -716,6 +716,64 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 		}
 
+		// Update file or folder in SVN directly (without GUI).
+		// If you plan to update large files, you might want to tweak the timeout argument.
+		// The force param will auto-resolve tree conflicts occurring on incoming new files (add) over existing unversioned files in the working copy.
+		// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		public static UpdateOperationResult Update(string path, UpdateResolveConflicts resolveConflicts = UpdateResolveConflicts.Postpone, bool force = false, int revision = -1, int timeout = COMMAND_TIMEOUT * 10)
+		{
+			var depth = "infinity"; // Recursive whether it is a file or a folder. Keep it simple for now.
+			var forceArg = force ? $"--force" : "";
+			var revisionArg = revision > 0 ? $"--revision {revision}" : "";
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"update --depth {depth} {forceArg} {revisionArg} \"{SVNFormatPath(path)}\"", timeout);
+			if (result.HasErrors) {
+
+				// Tree conflicts limit the auto-resolve capabilities. In that case "Summary of conflicts" is not shown.
+				// svn: E155027: Tree conflict can only be resolved to 'working' state; '...' not resolved
+				if (result.error.Contains("E155027"))
+					return UpdateOperationResult.SuccessWithConflicts;
+
+				// Unable to connect to repository indicating some network or server problems.
+				// svn: E170013: Unable to connect to a repository at URL '...'
+				// svn: E731001: No such host is known.
+				if (result.error.Contains("E170013") || result.error.Contains("E731001"))
+					return UpdateOperationResult.UnableToConnectError;
+
+				return UpdateOperationResult.UnknownError;
+			}
+
+
+			// Update was successful, but some folders/files have conflicts. Some of them might get auto-resolved (depending on the resolveConflicts param)
+			// Summary of conflicts:
+			//  Text conflicts: 1
+			//  Tree conflicts: 2
+			// -- OR --
+			//  Text conflicts: 0 remaining (and 1 already resolved)
+			//  Tree conflicts: 0 remaining (and 1 already resolved)
+			if (result.output.Contains("Summary of conflicts:")) {
+				// Depending on the resolveConflicts param, conflicts may auto-resolve. Check if they did.
+				var TEXT_CONFLICTS = "Text conflicts: ";    // Space at the end is important.
+				var TREE_CONFLICTS = "Tree conflicts: ";
+				var textConflictsIndex = result.output.IndexOf(TEXT_CONFLICTS);
+				var treeConflictsIndex = result.output.IndexOf(TREE_CONFLICTS);
+				var noTextConflicts = textConflictsIndex == -1 || result.output[textConflictsIndex + 1] == '0';
+				var noTreeConflicts = treeConflictsIndex == -1 || result.output[treeConflictsIndex + 1] == '0';
+
+				return noTextConflicts && noTreeConflicts ? UpdateOperationResult.Success : UpdateOperationResult.SuccessWithConflicts;
+			}
+
+			return UpdateOperationResult.Success;
+		}
+
+		// Update file or folder in SVN directly (without GUI).
+		// If you plan to update large files, you might want to tweak the timeout argument.
+		// The force param will auto-resolve tree conflicts occurring on incoming new files (add) over existing unversioned files in the working copy.
+		public static SVNAsyncOperation<UpdateOperationResult> UpdateAsync(string path, UpdateResolveConflicts resolveConflicts = UpdateResolveConflicts.Postpone, bool force = false, int revision = -1, int timeout = COMMAND_TIMEOUT * 10)
+		{
+			return SVNAsyncOperation<UpdateOperationResult>.Start(op => Update(path, resolveConflicts, force, revision, timeout));
+		}
+
 		// Commit files to SVN directly (without GUI).
 		// If you plan to commit large files, you might want to tweak the timeout argument.
 		// On commit all included locks will be unlocked unless specified not to by the keepLocks param.

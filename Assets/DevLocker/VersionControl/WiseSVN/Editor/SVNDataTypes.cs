@@ -77,6 +77,32 @@ namespace DevLocker.VersionControl.WiseSVN
 		UnknownError,			// Failed for any other reason.
 	}
 
+	// How conflicts should be auto-resolved.
+	// http://svnbook.red-bean.com/en/1.8/svn.ref.svn.html#svn.ref.svn.sw.accept
+	public enum UpdateResolveConflicts
+	{
+		Postpone,       // Take no resolution action at all and instead allow the conflicts to be recorded for future resolution.
+		Working,        // Assuming that you've manually handled the conflict resolution, choose the version of the file as it currently stands in your working copy.
+		Base,           // Choose the file that was the (unmodified) BASE revision before you tried to integrate changes from the server into your working copy.
+
+		MineConflict,   // Resolve conflicted files by preferring local modifications over the changes fetched from the server in conflicting regions of each file's content.
+		TheirsConflict, // Resolve conflicted files by preferring the changes fetched from the server over local modifications in conflicting regions of each file's content.
+		MineFull,       // Resolve conflicted files by preserving all local modifications and discarding all changes fetched from the server during the operation which caused the conflict.
+		TheirsFull,     // Resolve conflicted files by discarding all local modifications and integrating all changes fetched from the server during the operation which caused the conflict.
+
+		// These need to have an environment variable set to work or pass editor as an argument.
+		Edit,           // Open each conflicted file in a text editor for manual resolution of line-based conflicts.
+		Launch,         // Launch an interactive merge conflict resolution tool for each conflicted file.
+	}
+
+	public enum UpdateOperationResult
+	{
+		Success,				// Operation succeeded.
+		SuccessWithConflicts,   // Update was successful, but some folders/files have conflicts.
+		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
+		UnknownError,			// Failed for any other reason.
+	}
+
 
 	[Serializable]
 	public struct SVNStatusData
