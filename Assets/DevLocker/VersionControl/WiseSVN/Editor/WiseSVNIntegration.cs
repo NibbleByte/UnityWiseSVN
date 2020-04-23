@@ -1,3 +1,4 @@
+using DevLocker.VersionControl.WiseSVN.Shell;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -102,8 +103,10 @@ namespace DevLocker.VersionControl.WiseSVN
 			private readonly ConcurrentQueue<string> m_CombinedOutput = new ConcurrentQueue<string>();
 
 			private bool m_HasErrors = false;
+			private bool m_HasCommand = false;
 			private bool m_LogOutput;
 			private bool m_Silent;
+
 
 			public ResultReporter(bool logOutput, bool silent, string initialText = "")
 			{
@@ -116,11 +119,12 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			public bool AbortRequested { get; private set; }
-			public event IShellMonitor.ShellRequestAbortEventHandler RequestAbort;
+			public event ShellRequestAbortEventHandler RequestAbort;
 
 			public void AppendCommand(string command, string args)
 			{
 				m_CombinedOutput.Enqueue(command + " " + args);
+				m_HasCommand = true;
 			}
 
 			public void AppendOutputLine(string line)
@@ -155,7 +159,7 @@ namespace DevLocker.VersionControl.WiseSVN
 							EditorUtility.DisplayDialog("SVN Error",
 								"SVN error happened while processing the assets. Check the logs.", "I will!");
 						}
-					} else if (m_LogOutput) {
+					} else if (m_LogOutput && m_HasCommand) {
 						Debug.Log(output);
 					}
 				}

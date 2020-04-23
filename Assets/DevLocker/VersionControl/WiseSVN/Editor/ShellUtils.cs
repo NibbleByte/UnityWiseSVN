@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Threading;
 
-namespace DevLocker.VersionControl.WiseSVN
+namespace DevLocker.VersionControl.WiseSVN.Shell
 {
+	public delegate void ShellRequestAbortEventHandler(bool kill);
+
 	// Using this interface the user can monitor what is the output of the command and even abort it.
 	// You can use one monitor on multiple commands in a row.
 	public interface IShellMonitor
@@ -13,7 +15,6 @@ namespace DevLocker.VersionControl.WiseSVN
 		void AppendErrorLine(string line);                  // Append line from the error stream.
 
 
-		public delegate void ShellRequestAbortEventHandler(bool kill);
 
 		bool AbortRequested { get; }						// If true, all subsequent commands will abort immediately.
 		event ShellRequestAbortEventHandler RequestAbort;   // Invoked when user requests abort of the operation.
@@ -136,7 +137,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			//
 			// Handle aborting.
 			//
-			IShellMonitor.ShellRequestAbortEventHandler abortHandler = null;
+			ShellRequestAbortEventHandler abortHandler = null;
 			if (shellArgs.Monitor != null) {
 				abortHandler = (bool kill) => {
 
