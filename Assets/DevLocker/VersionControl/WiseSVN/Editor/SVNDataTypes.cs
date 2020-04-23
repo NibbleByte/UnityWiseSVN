@@ -61,9 +61,10 @@ namespace DevLocker.VersionControl.WiseSVN
 
 	public enum LockOperationResult
 	{
-		Success,		// Operation succeeded.
-		LockedByOther,	// File is locked by another working copy (may be the same user). Use Force to enforce the operation.
-		Failed,			// Failed for some reason.
+		Success,				// Operation succeeded.
+		LockedByOther,			// File is locked by another working copy (may be the same user). Use Force to enforce the operation.
+		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
+		UnknownError,			// Failed for some reason.
 	}
 
 	public enum CommitOperationResult
