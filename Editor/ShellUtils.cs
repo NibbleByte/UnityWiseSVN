@@ -1,10 +1,25 @@
 using System.Diagnostics;
-using System.IO;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace DevLocker.VersionControl.WiseSVN
 {
+	// Using this interface the user can monitor what is the output of the command and even abort it.
+	// You can use one monitor on multiple commands in a row.
+	public interface IShellMonitor
+	{
+		// NOTE: These methods can be called from a different thread!
+		void AppendCommand(string command, string args);    // Append shell command + arguments.
+		void AppendOutputLine(string line);                 // Append line from the output stream.
+		void AppendErrorLine(string line);                  // Append line from the error stream.
+
+
+		public delegate void ShellRequestAbortEventHandler(bool kill);
+
+		bool AbortRequested { get; }						// If true, all subsequent commands will abort immediately.
+		event ShellRequestAbortEventHandler RequestAbort;   // Invoked when user requests abort of the operation.
+															// Kill will terminate the process immediately. If false, it will ask politely.
+	}
+
 	public class ShellUtils
 	{
 		public struct ShellArgs
@@ -14,53 +29,54 @@ namespace DevLocker.VersionControl.WiseSVN
 			public string WorkingDirectory;
 			public bool WaitForOutput;
 			public int WaitTimeout;		// WaitTimeout is in milliseconds. -1 means forever. Only if WaitForOutput is true.
-			public StringBuilder Logger;
+			public IShellMonitor Monitor;
 		}
 
 		public struct ShellResult
 		{
-			public string command;
-			public string args;
+			public string Command;
+			public string Args;
 
-			public string output;
-			public string error;
+			public string Output;
+			public string Error;
 
-			public bool HasErrors => !string.IsNullOrEmpty(error);
+			public bool HasErrors => !string.IsNullOrEmpty(Error);
 		}
+
+		public const string USER_ABORTED_LOG = "User aborted the operation...";
 
 		public static ShellResult ExecuteCommand(string command, string args)
 		{
 			return ExecuteCommand(command, args, true);
 		}
 
-		public static ShellResult ExecuteCommand(string command, string args, StringBuilder logger)
+		public static ShellResult ExecuteCommand(string command, string args, IShellMonitor monitor)
 		{
-			return ExecuteCommand(command, args, true, logger);
+			return ExecuteCommand(command, args, true, monitor);
 		}
 
-		public static ShellResult ExecuteCommand(string command, string args, bool waitForOutput, StringBuilder logger = null)
+		public static ShellResult ExecuteCommand(string command, string args, bool waitForOutput, IShellMonitor monitor = null)
 		{
 			return ExecuteCommand(new ShellArgs() {
 				Command = command,
 				Args = args,
 				WaitForOutput = waitForOutput,
 				WaitTimeout = -1,
-				Logger = logger
+				Monitor = monitor
 			});
 		}
 
-		public static ShellResult ExecuteCommand(string command, string args, int waitTimeout, StringBuilder logger = null)
+		public static ShellResult ExecuteCommand(string command, string args, int waitTimeout, IShellMonitor monitor = null)
 		{
 			return ExecuteCommand(new ShellArgs() {
 				Command = command,
 				Args = args,
 				WaitForOutput = true,
 				WaitTimeout = waitTimeout,
-				Logger = logger
+				Monitor = monitor
 			});
 		}
 
-		// WaitTimeout is in milliseconds. -1 means forever.
 		public static ShellResult ExecuteCommand(ShellArgs shellArgs)
 		{
 			shellArgs.Command = shellArgs.Command ?? string.Empty;
@@ -69,10 +85,19 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			ShellResult result = new ShellResult();
 
-			result.command = shellArgs.Command;
-			result.args = shellArgs.Args;
-			if (shellArgs.Logger != null) {
-				shellArgs.Logger.AppendLine(shellArgs.Command + " " + shellArgs.Args);
+			result.Command = shellArgs.Command;
+			result.Args = shellArgs.Args;
+			result.Output = string.Empty;
+			result.Error = string.Empty;
+
+			if (shellArgs.Monitor != null) {
+
+				if (shellArgs.Monitor.AbortRequested) {
+					result.Error = USER_ABORTED_LOG;
+					return result;
+				}
+
+				shellArgs.Monitor.AppendCommand(shellArgs.Command, shellArgs.Args);
 			}
 
 			ProcessStartInfo processStartInfo = new ProcessStartInfo(shellArgs.Command, shellArgs.Args);
@@ -89,54 +114,100 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			} catch (System.Exception ex) {
 				// Most probably file not found.
-				result.error = ex.ToString();
+				result.Error = ex.ToString();
 
-				if (shellArgs.Logger != null) {
-					shellArgs.Logger.AppendLine("> " + result.error);
+				if (shellArgs.Monitor != null) {
+					shellArgs.Monitor.AppendErrorLine(result.Error);
 				}
 
 				return result;
 			}
 
-			if (shellArgs.WaitForOutput) {
+			// Run and forget...
+			// TODO: No Process.Dispose() called - leak?!
+			if (!shellArgs.WaitForOutput) {
+				result.Output = string.Empty;
+				result.Error = string.Empty;
 
-				if (shellArgs.WaitTimeout < 0) {
+				return result;
+			}
 
-					using (StreamReader streamReader = process.StandardOutput) {
-						result.output = streamReader.ReadToEnd();
-					}
 
-					using (StreamReader streamReader = process.StandardError) {
-						result.error = streamReader.ReadToEnd();
-					}
+			//
+			// Handle aborting.
+			//
+			IShellMonitor.ShellRequestAbortEventHandler abortHandler = null;
+			if (shellArgs.Monitor != null) {
+				abortHandler = (bool kill) => {
 
-				} else {
+					shellArgs.Monitor?.AppendErrorLine(USER_ABORTED_LOG);
 
-					var outTask = Task.Run(() => process.StandardOutput.ReadToEndAsync());
-					var errTask = Task.Run(() => process.StandardError.ReadToEndAsync());
-
-					if (process.WaitForExit(shellArgs.WaitTimeout)) {
-						result.output = outTask.Result.TrimEnd('\r', '\n');
-						result.error = errTask.Result.TrimEnd('\r', '\n');
+					// TODO: Is this thread safe?
+					if (kill) {
+						process.Kill();
 					} else {
-						result.output = string.Empty;
-						result.error = $"Command [{shellArgs.Command} {shellArgs}] timed out.";
+						process.CloseMainWindow();
+					}
+				};
+
+				shellArgs.Monitor.RequestAbort += abortHandler;
+			}
+
+			//
+			// Subscribe for standard output.
+			//
+			DataReceivedEventHandler outputReadLineHandler = null;
+			outputReadLineHandler = (sender, args) => {
+				if (args.Data != null) {
+					result.Output += args.Data + "\n";
+					if (shellArgs.Monitor != null) {
+						shellArgs.Monitor.AppendOutputLine(args.Data);
 					}
 				}
+			};
+			process.OutputDataReceived += outputReadLineHandler;
+			process.BeginOutputReadLine();
+
+			//
+			// Subscribe for error output.
+			//
+			DataReceivedEventHandler errorReadLineHandler = null;
+			errorReadLineHandler = (sender, args) => {
+				if (args.Data != null) {
+					result.Error += args.Data + "\n";
+					if (shellArgs.Monitor != null) {
+						shellArgs.Monitor.AppendErrorLine(args.Data);
+					}
+				}
+			};
+			process.ErrorDataReceived += errorReadLineHandler;
+			process.BeginErrorReadLine();
 
 
-
+			if (shellArgs.WaitTimeout < 0) {
+				process.WaitForExit();
 
 			} else {
+				Stopwatch stopwatch = new Stopwatch();
+				stopwatch.Start();
+				while(!process.HasExited && stopwatch.ElapsedMilliseconds < shellArgs.WaitTimeout) {
+					Thread.Sleep(20);
+				}
+				stopwatch.Stop();
 
-				result.output = string.Empty;
-				result.error = string.Empty;
+				// If process is still running, the timeout kicked in.
+				if (!process.HasExited) {
+					result.Error += $"Command [{shellArgs.Command} {shellArgs.Args}] timed out.";
+				}
 			}
 
-
-			if (result.HasErrors && shellArgs.Logger != null) {
-				shellArgs.Logger.AppendLine("> " + result.error);
+			process.OutputDataReceived -= outputReadLineHandler;
+			process.ErrorDataReceived -= errorReadLineHandler;
+			if (shellArgs.Monitor != null) {
+				shellArgs.Monitor.RequestAbort -= abortHandler;
 			}
+
+			process.Dispose();
 
 			return result;
 		}

@@ -180,7 +180,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				var statusOptions = new SVNStatusDataOptions() {
 					Depth = SVNStatusDataOptions.SearchDepth.Infinity,
 					RaiseError = false,
-					Timeout = WiseSVNIntegration.COMMAND_TIMEOUT * 2,
+					Timeout = WiseSVNIntegration.ONLINE_COMMAND_TIMEOUT * 2,
 					Offline = !SVNPreferencesManager.Instance.DownloadRepositoryChanges,
 					FetchLockOwner = true,
 				};

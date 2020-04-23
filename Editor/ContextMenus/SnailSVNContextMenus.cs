@@ -55,8 +55,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ExecuteCommand("update", GetWorkingPath(assetPaths), wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -66,8 +66,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ExecuteCommand("commit", GetWorkingPath(assetPaths), wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -90,8 +90,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			var pathsArg = AssetPathsToContextPaths(includeMeta ? assetPaths.Concat(metas) : assetPaths, false);
 
 			var result = ExecuteCommand("add", pathsArg, WiseSVNIntegration.ProjectRoot, wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -101,8 +101,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ExecuteCommand("revert", GetWorkingPath(assetPaths), wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -119,8 +119,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ExecuteCommand("lock", AssetPathsToContextPaths(assetPaths, includeMeta), WiseSVNIntegration.ProjectRoot, wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -130,8 +130,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ExecuteCommand("unlock", AssetPathsToContextPaths(assetPaths, includeMeta), WiseSVNIntegration.ProjectRoot, wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -143,8 +143,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			var pathArg = Directory.Exists(assetPath) ? assetPath : Path.GetDirectoryName(assetPath);
 
 			var result = ExecuteCommand("log", pathArg, wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -164,8 +164,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			// NOTE: SnailSVN doesn't pop up dialog for clean up. It just does some shady stuff in the background and a notification is shown some time later.
 			var result = ExecuteCommand("cleanup", WiseSVNIntegration.ProjectRoot, wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 	}

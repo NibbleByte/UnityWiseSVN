@@ -19,8 +19,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:repostatus /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -30,8 +30,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:update /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -41,8 +41,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:commit /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -67,8 +67,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			var pathsArg = AssetPathsToContextPaths(includeMeta ? assetPaths.Concat(metas) : assetPaths, false);
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:add /path:\"{pathsArg}\"", wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -78,8 +78,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:revert /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -88,8 +88,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		public override void ResolveAll(bool wait = false)
 		{
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:resolve /path:\"{WiseSVNIntegration.ProjectRoot}\"", wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -101,8 +101,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:lock /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -112,8 +112,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:unlock /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -123,8 +123,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:log /path:\"{AssetPathToContextPaths(assetPath, false)}\"", wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -136,8 +136,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:blame /path:\"{AssetPathToContextPaths(assetPath, false)}\"", wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
@@ -146,8 +146,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		public override void Cleanup(bool wait = false)
 		{
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:cleanup /path:\"{WiseSVNIntegration.ProjectRoot}\"", wait);
-			if (!string.IsNullOrEmpty(result.error)) {
-				Debug.LogError($"SVN Error: {result.error}");
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 	}
