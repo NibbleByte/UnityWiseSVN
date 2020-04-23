@@ -1,3 +1,4 @@
+using DevLocker.VersionControl.WiseSVN.Shell;
 using System.Collections.Concurrent;
 using System.Threading;
 using UnityEditor;
@@ -126,7 +127,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			m_ErrorOutput.Enqueue(line);
 		}
 
-		public event IShellMonitor.ShellRequestAbortEventHandler RequestAbort;
+		public event ShellRequestAbortEventHandler RequestAbort;
 		#endregion
 	}
 }
