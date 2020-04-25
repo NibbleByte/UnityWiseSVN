@@ -164,14 +164,5 @@ namespace DevLocker.VersionControl.WiseSVN
 		public bool FetchLockOwner;	// If file is locked and this is true, another query (per locked file) will be made
 									// to the repository to find out the owner's user name. I.e. will execute "svn info [url]"
 									// Works only in online mode.
-
-		public SVNStatusDataOptions(SearchDepth depth)
-		{
-			Depth = depth;
-			RaiseError = true;
-			Timeout = WiseSVNIntegration.COMMAND_TIMEOUT;
-			Offline = true;
-			FetchLockOwner = false;
-		}
 	}
 }

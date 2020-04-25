@@ -14,6 +14,8 @@ namespace DevLocker.VersionControl.WiseSVN
 	[InitializeOnLoad]
 	public class WiseSVNIntegration : UnityEditor.AssetModificationProcessor
 	{
+		#region SVN CLI Definitions
+
 		private static readonly Dictionary<char, VCFileStatus> m_FileStatusMap = new Dictionary<char, VCFileStatus>
 		{
 			{' ', VCFileStatus.Normal},
@@ -71,14 +73,24 @@ namespace DevLocker.VersionControl.WiseSVN
 			{UpdateResolveConflicts.Launch, "launch"},
 		};
 
+		#endregion
+
 		public static readonly string ProjectRoot;
 
 		public static event Action ShowChangesUI;
 
+		// Is the integration enabled.
+		// If you want to temporarily disable it by code use RequestTemporaryDisable().
 		public static bool Enabled => m_PersonalPrefs.EnableCoreIntegration;
-		public static bool TemporaryDisabled => m_TemporaryDisabledCount > 0;	// Temporarily disable the integration (by code).
-		public static bool Silent => m_SilenceCount > 0;	// Do not show dialogs
 
+		// Temporarily disable the integration (by code).
+		// File operations like create, move and delete won't be monitored. You'll have to do the SVN operations yourself.
+		public static bool TemporaryDisabled => m_TemporaryDisabledCount > 0;
+
+		// Do not show dialogs. To use call RequestSilence();
+		public static bool Silent => m_SilenceCount > 0;
+
+		// Should the SVN Integration log operations.
 		public static SVNTraceLogs TraceLogs => m_PersonalPrefs.TraceLogs;
 
 		private static int m_SilenceCount = 0;
@@ -93,11 +105,16 @@ namespace DevLocker.VersionControl.WiseSVN
 			? "svn"
 			: Path.Combine(ProjectRoot, m_ProjectPrefs.PlatformSvnCLIPath);
 
-		internal const int COMMAND_TIMEOUT = 15000;	// Milliseconds
-		internal const int ONLINE_COMMAND_TIMEOUT = 45000;	// Milliseconds
+		internal const int COMMAND_TIMEOUT = 20000;	// Milliseconds
+		internal const int ONLINE_COMMAND_TIMEOUT = 45000;  // Milliseconds
+
+		// Used to avoid spam (specially when importing the whole project and errors start popping up, interrupting the process).
+		[NonSerialized]
+		private static string m_LastDisplayedError = string.Empty;
 
 		#region Logging
 
+		// Used to track the shell commands output for errors and log them on Dispose().
 		private class ResultReporter : IShellMonitor, IDisposable
 		{
 			private readonly ConcurrentQueue<string> m_CombinedOutput = new ConcurrentQueue<string>();
@@ -180,328 +197,179 @@ namespace DevLocker.VersionControl.WiseSVN
 			ProjectRoot = Path.GetDirectoryName(Application.dataPath);
 		}
 
-		// NOTE: This is called separately for the file and its meta.
-		private static void OnWillCreateAsset(string path)
+		// Temporarily don't show any dialogs.
+		// This increments an integer, so don't forget to decrement it by calling ClearSilence().
+		public static void RequestSilence()
 		{
-			if (!Enabled || TemporaryDisabled)
+			m_SilenceCount++;
+		}
+
+		// Allow dialogs to be shown again.
+		public static void ClearSilence()
+		{
+			if (m_SilenceCount == 0) {
+				Debug.LogError("WiseSVN: trying to clear silence more times than it was requested.");
 				return;
+			}
 
-			var pathStatusData = GetStatus(path);
-			if (pathStatusData.Status == VCFileStatus.Deleted) {
+			m_SilenceCount--;
+		}
 
-				var isMeta = path.EndsWith(".meta");
+		// Temporarily disable the integration (by code).
+		// File operations like create, move and delete won't be monitored. You'll have to do the SVN operations yourself.
+		// This increments an integer, so don't forget to decrement it by calling ClearTemporaryDisable().
+		public static void RequestTemporaryDisable()
+		{
+			m_TemporaryDisabledCount++;
+		}
 
-				if (!isMeta && !Silent) {
-					EditorUtility.DisplayDialog(
-						"Deleted file",
-						$"The desired location\n\"{path}\"\nis marked as deleted in SVN. The file will be replaced in SVN with the new one.\n\nIf this is an automated change, consider adding this file to the exclusion list in the project preferences:\n\"{WiseSVNProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n...or change your tool to silence the integration.",
-						"Replace");
+		// Allow SVN integration again.
+		public static void ClearTemporaryDisable()
+		{
+			if (m_TemporaryDisabledCount == 0) {
+				Debug.LogError("WiseSVN: trying to clear temporary disable more times than it was requested.");
+				return;
+			}
+
+			m_TemporaryDisabledCount--;
+		}
+
+
+		// Get statuses of files based on the options you provide.
+		// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
+		//		 If used with non-recursive option it will return single data with normal status (if non).
+		// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		public static IEnumerable<SVNStatusData> GetStatuses(string path, SVNStatusDataOptions options, IShellMonitor shellMonitor = null)
+		{
+			// File can be missing, if it was deleted by svn.
+			//if (!File.Exists(path) && !Directory.Exists(path)) {
+			//	if (!Silent) {
+			//		EditorUtility.DisplayDialog("SVN Error", "SVN error happened while processing the assets. Check the logs.", "I will!");
+			//	}
+			//	throw new IOException($"Trying to get status for file {path} that does not exist!");
+			//}
+			var depth = options.Depth == SVNStatusDataOptions.SearchDepth.Empty ? "empty" : "infinity";
+			var offline = options.Offline ? string.Empty : "-u";
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth={depth} {offline} \"{SVNFormatPath(path)}\"", options.Timeout, shellMonitor);
+
+			if (!string.IsNullOrEmpty(result.Error)) {
+
+				if (!options.RaiseError)
+					return Enumerable.Empty<SVNStatusData>();
+
+				string displayMessage;
+				bool isCritical = IsCriticalError(result.Error, out displayMessage);
+
+				if (!string.IsNullOrEmpty(displayMessage) && !Silent && m_LastDisplayedError != displayMessage) {
+					Debug.LogError($"{displayMessage}\n\n{result.Error}");
+					m_LastDisplayedError = displayMessage;
+					EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
 				}
 
-				using (var reporter = CreateReporter()) {
-					// File isn't still created, so we need to improvise.
-					var result = ShellUtils.ExecuteCommand(SVN_Command, $"revert \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT, reporter);
-					File.Delete(path);
+				if (isCritical) {
+					throw new IOException($"Trying to get status for file {path} caused error:\n{result.Error}");
+				} else {
+					return Enumerable.Empty<SVNStatusData>();
 				}
 			}
-		}
 
-		private static AssetDeleteResult OnWillDeleteAsset(string path, RemoveAssetOptions option)
-		{
-			if (!Enabled || TemporaryDisabled || m_ProjectPrefs.Exclude.Any(path.StartsWith))
-				return AssetDeleteResult.DidNotDelete;
+			// If no info is returned for path, the status is normal. Reflect this when searching for Empty depth.
+			if (options.Depth == SVNStatusDataOptions.SearchDepth.Empty) {
 
-			var oldStatus = GetStatus(path).Status;
-
-			if (oldStatus == VCFileStatus.Unversioned)
-				return AssetDeleteResult.DidNotDelete;
-
-			using (var reporter = CreateReporter()) {
-
-				var result = ShellUtils.ExecuteCommand(SVN_Command, $"delete --force \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT, reporter);
-				if (result.HasErrors)
-					return AssetDeleteResult.FailedDelete;
-
-				result = ShellUtils.ExecuteCommand(SVN_Command, $"delete --force \"{SVNFormatPath(path + ".meta")}\"", COMMAND_TIMEOUT, reporter);
-				if (result.HasErrors)
-					return AssetDeleteResult.FailedDelete;
-
-				return AssetDeleteResult.DidDelete;
-			}
-		}
-
-		private static AssetMoveResult OnWillMoveAsset(string oldPath, string newPath)
-		{
-			if (!Enabled || TemporaryDisabled || m_ProjectPrefs.Exclude.Any(oldPath.StartsWith))
-				return AssetMoveResult.DidNotMove;
-
-			var oldStatusData = GetStatus(oldPath);
-
-			if (oldStatusData.Status == VCFileStatus.Unversioned) {
-
-				var newStatusData = GetStatus(newPath);
-				if (newStatusData.Status == VCFileStatus.Deleted) {
-					if (Silent || EditorUtility.DisplayDialog(
-						"Deleted file",
-						$"The desired location\n\"{newPath}\"\nis marked as deleted in SVN. Are you trying to replace it with a new one?",
-						"Replace",
-						"Cancel")) {
-
-						using (var reporter = CreateReporter()) {
-							if (SVNReplaceFile(oldPath, newPath, reporter)) {
-								return AssetMoveResult.DidMove;
-							}
-						}
-
-					}
-
-					return AssetMoveResult.FailedMove;
+				if (options.Offline && string.IsNullOrWhiteSpace(result.Output)) {
+					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path, LockDetails = LockDetails.Empty }, 1);
 				}
 
-				return AssetMoveResult.DidNotMove;
-			}
-
-			if (oldStatusData.IsConflicted || (Directory.Exists(oldPath) && HasConflictsAny(oldPath))) {
-				if (Silent || EditorUtility.DisplayDialog(
-					"Conflicted files",
-					$"Failed to move the files\n\"{oldPath}\"\nbecause it has conflicts. Resolve them first!",
-					"Check changes",
-					"Cancel")) {
-					ShowChangesUI?.Invoke();
-				}
-
-				return AssetMoveResult.FailedMove;
-			}
-
-			using (var reporter = CreateReporter()) {
-
-				if (!CheckAndAddParentFolderIfNeeded(newPath, reporter))
-					return AssetMoveResult.FailedMove;
-
-				var result = ShellUtils.ExecuteCommand(SVN_Command, $"move \"{SVNFormatPath(oldPath)}\" \"{newPath}\"", COMMAND_TIMEOUT, reporter);
-				if (result.HasErrors)
-					return AssetMoveResult.FailedMove;
-
-				result = ShellUtils.ExecuteCommand(SVN_Command, $"move \"{SVNFormatPath(oldPath + ".meta")}\" \"{newPath}.meta\"", COMMAND_TIMEOUT, reporter);
-				if (result.HasErrors)
-					return AssetMoveResult.FailedMove;
-
-				return AssetMoveResult.DidMove;
-			}
-		}
-
-		public static bool CheckAndAddParentFolderIfNeeded(string path)
-		{
-			using (var reporter = CreateReporter()) {
-				return CheckAndAddParentFolderIfNeeded(path, reporter);
-			}
-		}
-
-		private static bool CheckAndAddParentFolderIfNeeded(string path, IShellMonitor shellMonitor = null)
-		{
-			var directory = Path.GetDirectoryName(path);
-
-			// Special case - Root folders like Assets, ProjectSettings, etc...
-			if (string.IsNullOrEmpty(directory)) {
-				directory = ".";
-			}
-
-			var newDirectoryStatusData = GetStatus(directory);
-			if (newDirectoryStatusData.IsConflicted) {
-				if (Silent || EditorUtility.DisplayDialog(
-					"Conflicted files",
-					$"Failed to move the files to \n\"{directory}\"\nbecause it has conflicts. Resolve them first!",
-					"Check changes",
-					"Cancel")) {
-					ShowChangesUI?.Invoke();
-				}
-
-				return false;
-			}
-
-			// Moving to unversioned folder -> add it to svn.
-			if (newDirectoryStatusData.Status == VCFileStatus.Unversioned) {
-
-				if (!Silent && !EditorUtility.DisplayDialog(
-					"Unversioned directory",
-					$"The target directory:\n\"{directory}\"\nis not under SVN control. Should it be added?",
-					"Add it!",
-					"Cancel"
-				))
-					return false;
-
-				if (!SVNAddDirectory(directory, shellMonitor))
-					return false;
-
-			}
-
-			return true;
-		}
-
-		// Adds all parent unversioned folders AND THEIR META FILES!
-		private static bool SVNAddDirectory(string newDirectory, IShellMonitor shellMonitor = null)
-		{
-			// --parents will add all unversioned parent directories as well.
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"add --parents --depth empty \"{SVNFormatPath(newDirectory)}\"", COMMAND_TIMEOUT, shellMonitor);
-			if (result.HasErrors)
-				return false;
-
-			// If working outside Assets folder, don't consider metas.
-			if (!newDirectory.StartsWith("Assets", StringComparison.OrdinalIgnoreCase))
-				return true;
-
-			// Now add all folder metas upwards
-			var directoryMeta = newDirectory + ".meta";
-			var directoryMetaStatus = GetStatus(directoryMeta).Status; // Will be unversioned.
-			while (directoryMetaStatus == VCFileStatus.Unversioned) {
-
-				result = ShellUtils.ExecuteCommand(SVN_Command, $"add \"{SVNFormatPath(directoryMeta)}\"", COMMAND_TIMEOUT, shellMonitor);
-				if (result.HasErrors)
-					return false;
-
-				directoryMeta = Path.GetDirectoryName(directoryMeta) + ".meta";
-				directoryMetaStatus = GetStatus(directoryMeta).Status;
-			}
-
-			return true;
-		}
-
-		private static bool SVNReplaceFile(string oldPath, string newPath, IShellMonitor shellMonitor = null)
-		{
-			File.Move(oldPath, newPath);
-			File.Move(oldPath + ".meta", newPath + ".meta");
-
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"add \"{SVNFormatPath(newPath)}\"", COMMAND_TIMEOUT, shellMonitor);
-			if (result.HasErrors)
-				return false;
-
-			result = ShellUtils.ExecuteCommand(SVN_Command, $"add \"{SVNFormatPath(newPath + ".meta")}\"", COMMAND_TIMEOUT, shellMonitor);
-			if (result.HasErrors)
-				return false;
-
-			return false;
-		}
-
-
-		private static bool IsCriticalError(string error, out string displayMessage)
-		{
-			// svn: warning: W155010: The node '...' was not found.
-			// This can be returned when path is under unversioned directory. In that case we consider it is unversioned as well.
-			if (error.Contains("W155010")) {
-				displayMessage = string.Empty;
-				return false;
-			}
-
-			// svn: warning: W155007: '...' is not a working copy!
-			// This can be returned when project is not a valid svn checkout. (Probably)
-			if (error.Contains("W155007")) {
-				displayMessage = string.Empty;
-				return false;
-			}
-
-			// System.ComponentModel.Win32Exception (0x80004005): ApplicationName='...', CommandLine='...', Native error= The system cannot find the file specified.
-			// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
-			// This is allowed only if there isn't ProjectPreference specified CLI path.
-			if (error.Contains("0x80004005") && string.IsNullOrEmpty(m_ProjectPrefs.PlatformSvnCLIPath)) {
-				displayMessage = $"SVN CLI (Command Line Interface) not found. " +
-					$"Please install it or specify path to a valid svn.exe in the svn preferences at:\n{WiseSVNProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
-					$"You can also disable the SVN integration.";
-
-				return false;
-			}
-
-			// Same as above but the specified svn.exe in the project preferences is missing.
-			if (error.Contains("0x80004005") && !string.IsNullOrEmpty(m_ProjectPrefs.PlatformSvnCLIPath)) {
-				displayMessage = $"Cannot find the specified in the svn project preferences svn.exe:\n{m_ProjectPrefs.PlatformSvnCLIPath}\n\n" +
-					$"You can reconfigure the svn preferences at:\n{WiseSVNProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
-					$"You can also disable the SVN integration.";
-
-				return false;
-			}
-
-			displayMessage = "SVN error happened while processing the assets. Check the logs.";
-			return true;
-		}
-
-		private static IEnumerable<SVNStatusData> ExtractStatuses(string output, SVNStatusDataOptions options, IShellMonitor shellMonitor = null)
-		{
-			using (var sr = new StringReader(output)) {
-				string line;
-				while ((line = sr.ReadLine()) != null) {
-
-					var lineLen = line.Length;
-
-					// Last status was deleted / added+, so this is telling us where it moved to / from. Skip it.
-					if (lineLen > 8 && line[8] == '>')
-						continue;
-
-					// Tree conflict "local dir edit, incoming dir delete or move upon switch / update" or similar.
-					if (lineLen > 6 && line[6] == '>')
-						continue;
-
-					// If there are any conflicts, the report will have two additional lines like this:
-					// Summary of conflicts:
-					// Text conflicts: 1
-					if (line.StartsWith("Summary", StringComparison.Ordinal))
-						break;
-
-					// If -u is used, additional line is added at the end:
-					// Status against revision:     14
-					if (line.StartsWith("Status", StringComparison.Ordinal))
-						break;
-
-					// All externals append separate sections with their statuses:
-					// Performing status on external item at '...':
-					if (line.StartsWith("Performing status", StringComparison.Ordinal))
-						continue;
-
-					// If user has files in the "ignore-on-commit" list, this is added at the end plus empty line:
-					// ---Changelist 'ignore-on-commit': ...
-					if (string.IsNullOrEmpty(line))
-						continue;
-					if (line.StartsWith("---", StringComparison.Ordinal))
-						break;
-
-					// Rules are described in "svn help status".
-					var statusData = new SVNStatusData();
-					statusData.Status = m_FileStatusMap[line[0]];
-					statusData.PropertyStatus = m_PropertyStatusMap[line[1]];
-					statusData.LockStatus = m_LockStatusMap[line[5]];
-					statusData.TreeConflictStatus = m_ConflictStatusMap[line[6]];
-					statusData.LockDetails = LockDetails.Empty;
-
-					// 7 columns statuses + space;
-					int pathStart = 7 + 1;
-
-					if (!options.Offline) {
-						// + remote status + revision
-						pathStart += 13;
-						statusData.RemoteStatus = m_RemoteStatusMap[line[8]];
-					}
-
-					statusData.Path = line.Substring(pathStart);
-
-					// NOTE: If you pass absolute path to svn, the output will be with absolute path -> always pass relative path and we'll be good.
-					// If path is not relative, make it.
-					//if (!statusData.Path.StartsWith("Assets", StringComparison.Ordinal)) {
-					//	// Length+1 to skip '/'
-					//	statusData.Path = statusData.Path.Remove(0, ProjectRoot.Length + 1);
-					//}
-
-					if (IsHiddenPath(statusData.Path))
-						continue;
-
-
-					if (!options.Offline && options.FetchLockOwner) {
-						if (statusData.LockStatus != VCLockStatus.NoLock && statusData.LockStatus != VCLockStatus.BrokenLock) {
-							statusData.LockDetails = FetchLockDetails(statusData.Path, options.Timeout, options.RaiseError, shellMonitor);
-						}
-					}
-
-					yield return statusData;
+				// If -u is used, additional line is added at the end:
+				// Status against revision:     14
+				if (!options.Offline && result.Output.StartsWith("Status", StringComparison.Ordinal)) {
+					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path, LockDetails = LockDetails.Empty }, 1);
 				}
 			}
+
+			return ExtractStatuses(result.Output, options, shellMonitor);
 		}
+
+		// Get statuses of files based on the options you provide.
+		// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
+		//		 If used with non-recursive option it will return single data with normal status (if non).
+		public static SVNAsyncOperation<IEnumerable<SVNStatusData>> GetStatusesAsync(string path, bool recursive, bool offline, bool fetchLockDetails = true, int timeout = -1)
+		{
+			var options = new SVNStatusDataOptions() {
+				Depth = recursive ? SVNStatusDataOptions.SearchDepth.Infinity : SVNStatusDataOptions.SearchDepth.Empty,
+				Timeout = timeout,
+				RaiseError = false,
+				Offline = offline,
+				FetchLockOwner = fetchLockDetails,  // If offline, this is ignored.
+			};
+
+			return GetStatusesAsync(path, options);
+		}
+
+		// Get statuses of files based on the options you provide.
+		// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
+		//		 If used with non-recursive option it will return single data with normal status (if non).
+		public static SVNAsyncOperation<IEnumerable<SVNStatusData>> GetStatusesAsync(string path, SVNStatusDataOptions options)
+		{
+			// Do ToList() to enforce enumerate and fetch lock statuses as well.
+			return SVNAsyncOperation<IEnumerable<SVNStatusData>>.Start(op => GetStatuses(path, options, op).ToList());
+		}
+
+
+		// Get offline status for a single file (non recursive). This won't make requests to the repository (so it shouldn't be that slow).
+		// Will return valid status even if the file has nothing to show (has no changes).
+		// If error happened, invalid status data will be returned (check statusData.IsValid).
+		public static SVNStatusData GetStatus(string path, IShellMonitor shellMonitor = null)
+		{
+			// Optimization: empty depth will return nothing if status is normal.
+			// If path is modified, added, deleted, unversioned, it will return proper value.
+			var statusOptions = new SVNStatusDataOptions() {
+				Depth = SVNStatusDataOptions.SearchDepth.Empty,
+				RaiseError = true,
+				Timeout = COMMAND_TIMEOUT,
+				Offline = true,
+				FetchLockOwner = false,
+			};
+
+			var statusData = GetStatuses(path, statusOptions, shellMonitor).FirstOrDefault();
+
+			// If no path was found, error happened.
+			if (!statusData.IsValid) {
+				// Fallback to unversioned as we don't touch them.
+				statusData.Status = VCFileStatus.Unversioned;
+			}
+
+			return statusData;
+		}
+
+		// Get status for a single file (non recursive).
+		// Will return valid status even if the file has nothing to show (has no changes).
+		// If error happened, invalid status data will be returned (check statusData.IsValid).
+		public static SVNAsyncOperation<SVNStatusData> GetStatusAsync(string path, bool offline, bool fetchLockDetails = true, int timeout = -1)
+		{
+			var options = new SVNStatusDataOptions() {
+				Depth = SVNStatusDataOptions.SearchDepth.Empty,
+				Timeout = timeout,
+				RaiseError = false,
+				Offline = offline,
+				FetchLockOwner = fetchLockDetails,  // If offline, this is ignored.
+			};
+
+			return SVNAsyncOperation<SVNStatusData>.Start(op => {
+
+				var statusData = GetStatuses(path, options, op).FirstOrDefault();
+
+				// If no path was found, error happened.
+				if (!statusData.IsValid) {
+					// Fallback to unversioned as we don't touch them.
+					statusData.Status = VCFileStatus.Unversioned;
+				}
+
+				return statusData;
+			});
+		}
+
 
 		// Ask the repository server for lock details of the specified file.
 		// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
@@ -687,42 +555,11 @@ namespace DevLocker.VersionControl.WiseSVN
 			return SVNAsyncOperation<LockOperationResult>.Start(op => UnlockFile(path, force, timeout, op));
 		}
 
-		// Add files to SVN directly (without GUI).
-		public static bool Add(string path, bool includeMeta, bool recursive, IShellMonitor shellMonitor = null)
-		{
-			if (string.IsNullOrEmpty(path))
-				return true;
-
-			try {
-				RequestSilence();
-
-				// Will add parent folders and their metas.
-				var success = CheckAndAddParentFolderIfNeeded(path, shellMonitor);
-				if (success == false)
-					return false;
-
-				var depth = recursive ? "infinity" : "empty";
-				var result = ShellUtils.ExecuteCommand(SVN_Command, $"add --depth {depth} --force \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT, shellMonitor);
-				if (result.HasErrors)
-					return false;
-
-				if (includeMeta) {
-					result = ShellUtils.ExecuteCommand(SVN_Command, $"add --depth {depth} --force \"{SVNFormatPath(path + ".meta")}\"", COMMAND_TIMEOUT, shellMonitor);
-					if (result.HasErrors)
-						return false;
-				}
-
-				return true;
-
-			} finally {
-				ClearSilence();
-			}
-		}
-
 		// Update file or folder in SVN directly (without GUI).
 		// The force param will auto-resolve tree conflicts occurring on incoming new files (add) over existing unversioned files in the working copy.
 		// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
-		public static UpdateOperationResult Update(string path,
+		public static UpdateOperationResult Update(
+			string path,
 			UpdateResolveConflicts resolveConflicts = UpdateResolveConflicts.Postpone,
 			bool force = false,
 			int revision = -1,
@@ -779,7 +616,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		// Update file or folder in SVN directly (without GUI).
 		// The force param will auto-resolve tree conflicts occurring on incoming new files (add) over existing unversioned files in the working copy.
 		// DANGER: SVN updating while editor is crunching assets IS DANGEROUS! It WILL corrupt your asset guids. Use with caution!!!
-		public static SVNAsyncOperation<UpdateOperationResult> UpdateAsyncDANGER(string path,
+		public static SVNAsyncOperation<UpdateOperationResult> UpdateAsyncDANGER(
+			string path,
 			UpdateResolveConflicts resolveConflicts = UpdateResolveConflicts.Postpone,
 			bool force = false,
 			int revision = -1,
@@ -792,7 +630,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		// Commit files to SVN directly (without GUI).
 		// On commit all included locks will be unlocked unless specified not to by the keepLocks param.
 		// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
-		public static CommitOperationResult Commit(IEnumerable<string> assetPaths,
+		public static CommitOperationResult Commit(
+			IEnumerable<string> assetPaths,
 			bool includeMeta,
 			bool recursive,
 			string message,
@@ -851,147 +690,125 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		// Commit files to SVN directly (without GUI).
 		// On commit all included locks will be unlocked unless specified not to by the keepLocks param.
-		public static SVNAsyncOperation<CommitOperationResult> CommitAsync(IEnumerable<string> assetPaths, bool includeMeta, bool recursive, string message, string encoding = "", bool keepLocks = false, int timeout = -1)
+		public static SVNAsyncOperation<CommitOperationResult> CommitAsync(
+			IEnumerable<string> assetPaths,
+			bool includeMeta, bool recursive,
+			string message,
+			string encoding = "",
+			bool keepLocks = false,
+			int timeout = -1
+			)
 		{
 			return SVNAsyncOperation<CommitOperationResult>.Start(op => Commit(assetPaths, includeMeta, recursive, message, encoding, keepLocks, timeout, op));
 		}
 
-		// Used to avoid spam (specially when importing the whole project and errors start popping up, interrupting the process).
-		[NonSerialized]
-		private static string m_LastDisplayedError = string.Empty;
 
-
-		// Get statuses of files based on the options you provide.
-		// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
-		//		 If used with non-recursive option it will return single data with normal status (if non).
-		// NOTE2: this is a synchronous operation.
-		//		 If you use it in online mode it might freeze your code for a long time.
-		//		 To avoid this, use the Async version!
-		public static IEnumerable<SVNStatusData> GetStatuses(string path, SVNStatusDataOptions options, IShellMonitor shellMonitor = null)
+		// Add files to SVN directly (without GUI).
+		public static bool Add(string path, bool includeMeta, bool recursive, IShellMonitor shellMonitor = null)
 		{
-			// File can be missing, if it was deleted by svn.
-			//if (!File.Exists(path) && !Directory.Exists(path)) {
-			//	if (!Silent) {
-			//		EditorUtility.DisplayDialog("SVN Error", "SVN error happened while processing the assets. Check the logs.", "I will!");
-			//	}
-			//	throw new IOException($"Trying to get status for file {path} that does not exist!");
-			//}
-			var depth = options.Depth == SVNStatusDataOptions.SearchDepth.Empty ? "empty" : "infinity";
-			var offline = options.Offline ? string.Empty : "-u";
+			if (string.IsNullOrEmpty(path))
+				return true;
 
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth={depth} {offline} \"{SVNFormatPath(path)}\"", options.Timeout, shellMonitor);
+			// Will add parent folders and their metas.
+			var success = CheckAndAddParentFolderIfNeeded(path, false, shellMonitor);
+			if (success == false)
+				return false;
 
-			if (!string.IsNullOrEmpty(result.Error)) {
+			var depth = recursive ? "infinity" : "empty";
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"add --depth {depth} --force \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT, shellMonitor);
+			if (result.HasErrors)
+				return false;
 
-				if (!options.RaiseError)
-					return Enumerable.Empty<SVNStatusData>();
-
-				string displayMessage;
-				bool isCritical = IsCriticalError(result.Error, out displayMessage);
-
-				if (!string.IsNullOrEmpty(displayMessage) && !Silent && m_LastDisplayedError != displayMessage) {
-					Debug.LogError($"{displayMessage}\n\n{result.Error}");
-					m_LastDisplayedError = displayMessage;
-					EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
-				}
-
-				if (isCritical) {
-					throw new IOException($"Trying to get status for file {path} caused error:\n{result.Error}");
-				} else {
-					return Enumerable.Empty<SVNStatusData>();
-				}
+			if (includeMeta) {
+				result = ShellUtils.ExecuteCommand(SVN_Command, $"add --depth {depth} --force \"{SVNFormatPath(path + ".meta")}\"", COMMAND_TIMEOUT, shellMonitor);
+				if (result.HasErrors)
+					return false;
 			}
 
-			// If no info is returned for path, the status is normal. Reflect this when searching for Empty depth.
-			if (options.Depth == SVNStatusDataOptions.SearchDepth.Empty) {
+			return true;
+		}
 
-				if (options.Offline && string.IsNullOrWhiteSpace(result.Output)) {
-					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path, LockDetails = LockDetails.Empty }, 1);
-				}
+		// Adds all parent unversioned folders AND THEIR META FILES!
+		// If this is needed it will ask the user for permission if promptUser is true.
+		public static bool CheckAndAddParentFolderIfNeeded(string path, bool promptUser)
+		{
+			using (var reporter = CreateReporter()) {
+				return CheckAndAddParentFolderIfNeeded(path, promptUser, reporter);
+			}
+		}
 
-				// If -u is used, additional line is added at the end:
-				// Status against revision:     14
-				if (!options.Offline && result.Output.StartsWith("Status", StringComparison.Ordinal)) {
-					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path, LockDetails = LockDetails.Empty }, 1);
-				}
+		// Adds all parent unversioned folders AND THEIR META FILES!
+		// If this is needed it will ask the user for permission if promptUser is true.
+		public static bool CheckAndAddParentFolderIfNeeded(string path, bool promptUser, IShellMonitor shellMonitor = null)
+		{
+			var directory = Path.GetDirectoryName(path);
+
+			// Special case - Root folders like Assets, ProjectSettings, etc...
+			if (string.IsNullOrEmpty(directory)) {
+				directory = ".";
 			}
 
-			return ExtractStatuses(result.Output, options, shellMonitor);
-		}
-
-		// Get statuses of files based on the options you provide.
-		// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
-		//		 If used with non-recursive option it will return single data with normal status (if non).
-		public static SVNAsyncOperation<IEnumerable<SVNStatusData>> GetStatusesAsync(string path, bool recursive, bool offline, bool fetchLockDetails = true, int timeout = -1)
-		{
-			var options = new SVNStatusDataOptions() {
-				Depth = recursive ? SVNStatusDataOptions.SearchDepth.Infinity : SVNStatusDataOptions.SearchDepth.Empty,
-				Timeout = timeout,
-				RaiseError = false,
-				Offline = offline,
-				FetchLockOwner = fetchLockDetails,  // If offline, this is ignored.
-			};
-
-			return GetStatusesAsync(path, options);
-		}
-
-		// Get statuses of files based on the options you provide.
-		// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
-		//		 If used with non-recursive option it will return single data with normal status (if non).
-		public static SVNAsyncOperation<IEnumerable<SVNStatusData>> GetStatusesAsync(string path, SVNStatusDataOptions options)
-		{
-			// Do ToList() to enforce enumerate and fetch lock statuses as well.
-			return SVNAsyncOperation<IEnumerable<SVNStatusData>>.Start(op => GetStatuses(path, options, op).ToList());
-		}
-
-
-		// Get offline status for a single file (non recursive). This won't make requests to the repository.
-		// Will return valid status even if the file has nothing to show (has no changes).
-		// If error happened, invalid status data will be returned (check statusData.IsValid).
-		public static SVNStatusData GetStatus(string path, IShellMonitor shellMonitor = null)
-		{
-			// Optimization: empty depth will return nothing if status is normal.
-			// If path is modified, added, deleted, unversioned, it will return proper value.
-			var statusOptions = new SVNStatusDataOptions(SVNStatusDataOptions.SearchDepth.Empty);
-			var statusData = GetStatuses(path, statusOptions, shellMonitor).FirstOrDefault();
-
-			// If no path was found, error happened.
-			if (!statusData.IsValid) {
-				// Fallback to unversioned as we don't touch them.
-				statusData.Status = VCFileStatus.Unversioned;
-			}
-
-			return statusData;
-		}
-
-		// Get status for a single file (non recursive).
-		// Will return valid status even if the file has nothing to show (has no changes).
-		// If error happened, invalid status data will be returned (check statusData.IsValid).
-		public static SVNAsyncOperation<SVNStatusData> GetStatusAsync(string path, bool offline, bool fetchLockDetails = true, int timeout = -1)
-		{
-			var options = new SVNStatusDataOptions() {
-				Depth = SVNStatusDataOptions.SearchDepth.Empty,
-				Timeout = timeout,
-				RaiseError = false,
-				Offline = offline,
-				FetchLockOwner = fetchLockDetails,  // If offline, this is ignored.
-			};
-
-			return SVNAsyncOperation<SVNStatusData>.Start(op => {
-
-				var statusData = GetStatuses(path, options, op).FirstOrDefault();
-
-				// If no path was found, error happened.
-				if (!statusData.IsValid) {
-					// Fallback to unversioned as we don't touch them.
-					statusData.Status = VCFileStatus.Unversioned;
+			var newDirectoryStatusData = GetStatus(directory);
+			if (newDirectoryStatusData.IsConflicted) {
+				if (!Silent && promptUser && EditorUtility.DisplayDialog(
+					"Conflicted files",
+					$"Failed to move the files to \n\"{directory}\"\nbecause it has conflicts. Resolve them first!",
+					"Check changes",
+					"Cancel")) {
+					ShowChangesUI?.Invoke();
 				}
 
-				return statusData;
-			});
+				return false;
+			}
+
+			// Moving to unversioned folder -> add it to svn.
+			if (newDirectoryStatusData.Status == VCFileStatus.Unversioned) {
+
+				if (!Silent && promptUser && !EditorUtility.DisplayDialog(
+					"Unversioned directory",
+					$"The target directory:\n\"{directory}\"\nis not under SVN control. Should it be added?",
+					"Add it!",
+					"Cancel"
+				))
+					return false;
+
+				if (!AddParentFolders(directory, shellMonitor))
+					return false;
+
+			}
+
+			return true;
 		}
 
-		public static bool HasConflictsAny(string path, int timeout = COMMAND_TIMEOUT * 4, IShellMonitor shellMonitor = null)
+		// Adds all parent unversioned folders AND THEIR META FILES!
+		public static bool AddParentFolders(string newDirectory, IShellMonitor shellMonitor = null)
+		{
+			// --parents will add all unversioned parent directories as well.
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"add --parents --depth empty \"{SVNFormatPath(newDirectory)}\"", COMMAND_TIMEOUT, shellMonitor);
+			if (result.HasErrors)
+				return false;
+
+			// If working outside Assets folder, don't consider metas.
+			if (!newDirectory.StartsWith("Assets", StringComparison.OrdinalIgnoreCase))
+				return true;
+
+			// Now add all folder metas upwards
+			var directoryMeta = newDirectory + ".meta";
+			var directoryMetaStatus = GetStatus(directoryMeta).Status; // Will be unversioned.
+			while (directoryMetaStatus == VCFileStatus.Unversioned) {
+
+				result = ShellUtils.ExecuteCommand(SVN_Command, $"add \"{SVNFormatPath(directoryMeta)}\"", COMMAND_TIMEOUT, shellMonitor);
+				if (result.HasErrors)
+					return false;
+
+				directoryMeta = Path.GetDirectoryName(directoryMeta) + ".meta";
+				directoryMetaStatus = GetStatus(directoryMeta).Status;
+			}
+
+			return true;
+		}
+
+		public static bool HasAnyConflicts(string path, int timeout = COMMAND_TIMEOUT * 4, IShellMonitor shellMonitor = null)
 		{
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth=infinity \"{SVNFormatPath(path)}\"", timeout, shellMonitor);
 
@@ -1026,6 +843,254 @@ namespace DevLocker.VersionControl.WiseSVN
 			return false;
 		}
 
+		// NOTE: This is called separately for the file and its meta.
+		private static void OnWillCreateAsset(string path)
+		{
+			if (!Enabled || TemporaryDisabled)
+				return;
+
+			var pathStatusData = GetStatus(path);
+			if (pathStatusData.Status == VCFileStatus.Deleted) {
+
+				var isMeta = path.EndsWith(".meta");
+
+				if (!isMeta && !Silent) {
+					EditorUtility.DisplayDialog(
+						"Deleted file",
+						$"The desired location\n\"{path}\"\nis marked as deleted in SVN. The file will be replaced in SVN with the new one.\n\nIf this is an automated change, consider adding this file to the exclusion list in the project preferences:\n\"{WiseSVNProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n...or change your tool to silence the integration.",
+						"Replace");
+				}
+
+				using (var reporter = CreateReporter()) {
+					// File isn't still created, so we need to improvise.
+					var result = ShellUtils.ExecuteCommand(SVN_Command, $"revert \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT, reporter);
+					File.Delete(path);
+				}
+			}
+		}
+
+		private static AssetDeleteResult OnWillDeleteAsset(string path, RemoveAssetOptions option)
+		{
+			if (!Enabled || TemporaryDisabled || m_ProjectPrefs.Exclude.Any(path.StartsWith))
+				return AssetDeleteResult.DidNotDelete;
+
+			var oldStatus = GetStatus(path).Status;
+
+			if (oldStatus == VCFileStatus.Unversioned)
+				return AssetDeleteResult.DidNotDelete;
+
+			using (var reporter = CreateReporter()) {
+
+				var result = ShellUtils.ExecuteCommand(SVN_Command, $"delete --force \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT, reporter);
+				if (result.HasErrors)
+					return AssetDeleteResult.FailedDelete;
+
+				result = ShellUtils.ExecuteCommand(SVN_Command, $"delete --force \"{SVNFormatPath(path + ".meta")}\"", COMMAND_TIMEOUT, reporter);
+				if (result.HasErrors)
+					return AssetDeleteResult.FailedDelete;
+
+				return AssetDeleteResult.DidDelete;
+			}
+		}
+
+		private static AssetMoveResult OnWillMoveAsset(string oldPath, string newPath)
+		{
+			if (!Enabled || TemporaryDisabled || m_ProjectPrefs.Exclude.Any(oldPath.StartsWith))
+				return AssetMoveResult.DidNotMove;
+
+			var oldStatusData = GetStatus(oldPath);
+
+			if (oldStatusData.Status == VCFileStatus.Unversioned) {
+
+				var newStatusData = GetStatus(newPath);
+				if (newStatusData.Status == VCFileStatus.Deleted) {
+					if (Silent || EditorUtility.DisplayDialog(
+						"Deleted file",
+						$"The desired location\n\"{newPath}\"\nis marked as deleted in SVN. Are you trying to replace it with a new one?",
+						"Replace",
+						"Cancel")) {
+
+						using (var reporter = CreateReporter()) {
+							if (SVNReplaceFile(oldPath, newPath, reporter)) {
+								return AssetMoveResult.DidMove;
+							}
+						}
+
+					}
+
+					return AssetMoveResult.FailedMove;
+				}
+
+				return AssetMoveResult.DidNotMove;
+			}
+
+			if (oldStatusData.IsConflicted || (Directory.Exists(oldPath) && HasAnyConflicts(oldPath))) {
+				if (Silent || EditorUtility.DisplayDialog(
+					"Conflicted files",
+					$"Failed to move the files\n\"{oldPath}\"\nbecause it has conflicts. Resolve them first!",
+					"Check changes",
+					"Cancel")) {
+					ShowChangesUI?.Invoke();
+				}
+
+				return AssetMoveResult.FailedMove;
+			}
+
+			using (var reporter = CreateReporter()) {
+
+				if (!CheckAndAddParentFolderIfNeeded(newPath, true, reporter))
+					return AssetMoveResult.FailedMove;
+
+				var result = ShellUtils.ExecuteCommand(SVN_Command, $"move \"{SVNFormatPath(oldPath)}\" \"{newPath}\"", COMMAND_TIMEOUT, reporter);
+				if (result.HasErrors)
+					return AssetMoveResult.FailedMove;
+
+				result = ShellUtils.ExecuteCommand(SVN_Command, $"move \"{SVNFormatPath(oldPath + ".meta")}\" \"{newPath}.meta\"", COMMAND_TIMEOUT, reporter);
+				if (result.HasErrors)
+					return AssetMoveResult.FailedMove;
+
+				return AssetMoveResult.DidMove;
+			}
+		}
+
+		private static bool SVNReplaceFile(string oldPath, string newPath, IShellMonitor shellMonitor = null)
+		{
+			File.Move(oldPath, newPath);
+			File.Move(oldPath + ".meta", newPath + ".meta");
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"add \"{SVNFormatPath(newPath)}\"", COMMAND_TIMEOUT, shellMonitor);
+			if (result.HasErrors)
+				return false;
+
+			result = ShellUtils.ExecuteCommand(SVN_Command, $"add \"{SVNFormatPath(newPath + ".meta")}\"", COMMAND_TIMEOUT, shellMonitor);
+			if (result.HasErrors)
+				return false;
+
+			return false;
+		}
+
+
+		private static bool IsCriticalError(string error, out string displayMessage)
+		{
+			// svn: warning: W155010: The node '...' was not found.
+			// This can be returned when path is under unversioned directory. In that case we consider it is unversioned as well.
+			if (error.Contains("W155010")) {
+				displayMessage = string.Empty;
+				return false;
+			}
+
+			// svn: warning: W155007: '...' is not a working copy!
+			// This can be returned when project is not a valid svn checkout. (Probably)
+			if (error.Contains("W155007")) {
+				displayMessage = string.Empty;
+				return false;
+			}
+
+			// System.ComponentModel.Win32Exception (0x80004005): ApplicationName='...', CommandLine='...', Native error= The system cannot find the file specified.
+			// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
+			// This is allowed only if there isn't ProjectPreference specified CLI path.
+			if (error.Contains("0x80004005") && string.IsNullOrEmpty(m_ProjectPrefs.PlatformSvnCLIPath)) {
+				displayMessage = $"SVN CLI (Command Line Interface) not found. " +
+					$"Please install it or specify path to a valid svn.exe in the svn preferences at:\n{WiseSVNProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
+					$"You can also disable the SVN integration.";
+
+				return false;
+			}
+
+			// Same as above but the specified svn.exe in the project preferences is missing.
+			if (error.Contains("0x80004005") && !string.IsNullOrEmpty(m_ProjectPrefs.PlatformSvnCLIPath)) {
+				displayMessage = $"Cannot find the specified in the svn project preferences svn.exe:\n{m_ProjectPrefs.PlatformSvnCLIPath}\n\n" +
+					$"You can reconfigure the svn preferences at:\n{WiseSVNProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
+					$"You can also disable the SVN integration.";
+
+				return false;
+			}
+
+			displayMessage = "SVN error happened while processing the assets. Check the logs.";
+			return true;
+		}
+
+		private static IEnumerable<SVNStatusData> ExtractStatuses(string output, SVNStatusDataOptions options, IShellMonitor shellMonitor = null)
+		{
+			using (var sr = new StringReader(output)) {
+				string line;
+				while ((line = sr.ReadLine()) != null) {
+
+					var lineLen = line.Length;
+
+					// Last status was deleted / added+, so this is telling us where it moved to / from. Skip it.
+					if (lineLen > 8 && line[8] == '>')
+						continue;
+
+					// Tree conflict "local dir edit, incoming dir delete or move upon switch / update" or similar.
+					if (lineLen > 6 && line[6] == '>')
+						continue;
+
+					// If there are any conflicts, the report will have two additional lines like this:
+					// Summary of conflicts:
+					// Text conflicts: 1
+					if (line.StartsWith("Summary", StringComparison.Ordinal))
+						break;
+
+					// If -u is used, additional line is added at the end:
+					// Status against revision:     14
+					if (line.StartsWith("Status", StringComparison.Ordinal))
+						break;
+
+					// All externals append separate sections with their statuses:
+					// Performing status on external item at '...':
+					if (line.StartsWith("Performing status", StringComparison.Ordinal))
+						continue;
+
+					// If user has files in the "ignore-on-commit" list, this is added at the end plus empty line:
+					// ---Changelist 'ignore-on-commit': ...
+					if (string.IsNullOrEmpty(line))
+						continue;
+					if (line.StartsWith("---", StringComparison.Ordinal))
+						break;
+
+					// Rules are described in "svn help status".
+					var statusData = new SVNStatusData();
+					statusData.Status = m_FileStatusMap[line[0]];
+					statusData.PropertyStatus = m_PropertyStatusMap[line[1]];
+					statusData.LockStatus = m_LockStatusMap[line[5]];
+					statusData.TreeConflictStatus = m_ConflictStatusMap[line[6]];
+					statusData.LockDetails = LockDetails.Empty;
+
+					// 7 columns statuses + space;
+					int pathStart = 7 + 1;
+
+					if (!options.Offline) {
+						// + remote status + revision
+						pathStart += 13;
+						statusData.RemoteStatus = m_RemoteStatusMap[line[8]];
+					}
+
+					statusData.Path = line.Substring(pathStart);
+
+					// NOTE: If you pass absolute path to svn, the output will be with absolute path -> always pass relative path and we'll be good.
+					// If path is not relative, make it.
+					//if (!statusData.Path.StartsWith("Assets", StringComparison.Ordinal)) {
+					//	// Length+1 to skip '/'
+					//	statusData.Path = statusData.Path.Remove(0, ProjectRoot.Length + 1);
+					//}
+
+					if (IsHiddenPath(statusData.Path))
+						continue;
+
+
+					if (!options.Offline && options.FetchLockOwner) {
+						if (statusData.LockStatus != VCLockStatus.NoLock && statusData.LockStatus != VCLockStatus.BrokenLock) {
+							statusData.LockDetails = FetchLockDetails(statusData.Path, options.Timeout, options.RaiseError, shellMonitor);
+						}
+					}
+
+					yield return statusData;
+				}
+			}
+		}
+
+
 
 		private static string ExtractLineValue(string pattern, string str)
 		{
@@ -1052,37 +1117,6 @@ namespace DevLocker.VersionControl.WiseSVN
 			// NOTE: @ is added at the end of path, to avoid problems when file name contains @, and SVN mistakes that as "At revision" syntax".
 			//		https://stackoverflow.com/questions/757435/how-to-escape-characters-in-subversion-managed-file-names
 			return path + "@";
-		}
-
-		public static void RequestSilence()
-		{
-			m_SilenceCount++;
-		}
-
-		public static void ClearSilence()
-		{
-			if (m_SilenceCount == 0) {
-				Debug.LogError("WiseSVN: trying to clear silence more times than it was requested.");
-				return;
-			}
-
-			m_SilenceCount--;
-		}
-
-
-		public static void RequestTemporaryDisable()
-		{
-			m_TemporaryDisabledCount++;
-		}
-
-		public static void ClearTemporaryDisable()
-		{
-			if (m_TemporaryDisabledCount == 0) {
-				Debug.LogError("WiseSVN: trying to clear temporary disable more times than it was requested.");
-				return;
-			}
-
-			m_TemporaryDisabledCount--;
 		}
 
 		// Use for debug.
