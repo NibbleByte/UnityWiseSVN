@@ -122,15 +122,16 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		}
 
 		// It is recommended to freeze Unity while updating.
-		// If SVN downloads files while Unity is crunching assets, GUID database may get corrupted.
+		// DANGER: SVN updating while editor is crunching assets IS DANGEROUS! It WILL corrupt your asset guids. Use with caution!!!
+		//		   This is the reason why this method freezes your editor and waits for the update to finish.
 		public static void Update(IEnumerable<string> assetPaths, bool includeMeta)
 		{
 			m_Integration?.Update(assetPaths, includeMeta, true);
 		}
 
 		// It is recommended to freeze Unity while updating.
-		// If SVN downloads files while Unity is crunching assets, GUID database may get corrupted.
-		public static void UpdateAndDontWait(IEnumerable<string> assetPaths, bool includeMeta)
+		// DANGER: SVN updating while editor is crunching assets IS DANGEROUS! It WILL corrupt your asset guids. Use with caution!!!
+		public static void UpdateAndDontWaitDANGER(IEnumerable<string> assetPaths, bool includeMeta)
 		{
 			m_Integration?.Update(assetPaths, includeMeta, false);
 		}

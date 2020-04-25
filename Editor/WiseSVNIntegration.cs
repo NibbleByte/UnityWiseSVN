@@ -1,3 +1,7 @@
+#if UNITY_2020_2_OR_NEWER || UNITY_2019_4_OR_NEWER || (UNITY_2018_4_OR_NEWER && !UNITY_2018_4_19 && !UNITY_2018_4_18 && !UNITY_2018_4_17 && !UNITY_2018_4_16 && !UNITY_2018_4_15)
+#define CAN_DISABLE_REFRESH
+#endif
+
 using DevLocker.VersionControl.WiseSVN.Shell;
 using System;
 using System.Collections.Concurrent;
@@ -14,7 +18,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	[InitializeOnLoad]
 	public class WiseSVNIntegration : UnityEditor.AssetModificationProcessor
 	{
-		#region SVN CLI Definitions
+#region SVN CLI Definitions
 
 		private static readonly Dictionary<char, VCFileStatus> m_FileStatusMap = new Dictionary<char, VCFileStatus>
 		{
@@ -73,7 +77,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			{UpdateResolveConflicts.Launch, "launch"},
 		};
 
-		#endregion
+#endregion
 
 		public static readonly string ProjectRoot;
 
@@ -112,7 +116,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		[NonSerialized]
 		private static string m_LastDisplayedError = string.Empty;
 
-		#region Logging
+#region Logging
 
 		// Used to track the shell commands output for errors and log them on Dispose().
 		private class ResultReporter : IShellMonitor, IDisposable
@@ -190,7 +194,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			return logger;
 		}
 
-		#endregion
+#endregion
 
 		static WiseSVNIntegration()
 		{
@@ -573,7 +577,20 @@ namespace DevLocker.VersionControl.WiseSVN
 			var forceArg = force ? $"--force" : "";
 			var revisionArg = revision > 0 ? $"--revision {revision}" : "";
 
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"update --depth {depth} {acceptArg} {forceArg} {revisionArg} \"{SVNFormatPath(path)}\"", timeout, shellMonitor);
+#if CAN_DISABLE_REFRESH
+			AssetDatabase.DisallowAutoRefresh();
+#endif
+			ShellUtils.ShellResult result;
+			try {
+				result = ShellUtils.ExecuteCommand(SVN_Command, $"update --depth {depth} {acceptArg} {forceArg} {revisionArg} \"{SVNFormatPath(path)}\"", timeout, shellMonitor);
+			}
+			finally {
+
+#if CAN_DISABLE_REFRESH
+			AssetDatabase.AllowAutoRefresh();
+#endif
+			}
+
 			if (result.HasErrors) {
 
 				// Tree conflicts limit the auto-resolve capabilities. In that case "Summary of conflicts" is not shown.
@@ -613,6 +630,21 @@ namespace DevLocker.VersionControl.WiseSVN
 			return UpdateOperationResult.Success;
 		}
 
+#if CAN_DISABLE_REFRESH
+		// Update file or folder in SVN directly (without GUI).
+		// The force param will auto-resolve tree conflicts occurring on incoming new files (add) over existing unversioned files in the working copy.
+		// DANGER: SVN updating while editor is crunching assets IS DANGEROUS! This Update method will disable unity auto-refresh feature until it has finished.
+		public static SVNAsyncOperation<UpdateOperationResult> UpdateAsync(
+			string path,
+			UpdateResolveConflicts resolveConflicts = UpdateResolveConflicts.Postpone,
+			bool force = false,
+			int revision = -1,
+			int timeout = -1
+			)
+		{
+			return SVNAsyncOperation<UpdateOperationResult>.Start(op => Update(path, resolveConflicts, force, revision, timeout, op));
+		}
+#else
 		// Update file or folder in SVN directly (without GUI).
 		// The force param will auto-resolve tree conflicts occurring on incoming new files (add) over existing unversioned files in the working copy.
 		// DANGER: SVN updating while editor is crunching assets IS DANGEROUS! It WILL corrupt your asset guids. Use with caution!!!
@@ -626,6 +658,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			return SVNAsyncOperation<UpdateOperationResult>.Start(op => Update(path, resolveConflicts, force, revision, timeout, op));
 		}
+#endif
 
 		// Commit files to SVN directly (without GUI).
 		// On commit all included locks will be unlocked unless specified not to by the keepLocks param.
