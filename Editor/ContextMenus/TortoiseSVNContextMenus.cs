@@ -55,7 +55,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			foreach (var path in assetPaths) {
-				if (!WiseSVNIntegration.CheckAndAddParentFolderIfNeeded(path))
+				if (!WiseSVNIntegration.CheckAndAddParentFolderIfNeeded(path, true))
 					return;
 			}
 
