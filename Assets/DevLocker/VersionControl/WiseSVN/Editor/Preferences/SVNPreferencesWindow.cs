@@ -2,7 +2,7 @@ using DevLocker.VersionControl.WiseSVN.ContextMenus;
 using UnityEditor;
 using UnityEngine;
 
-namespace DevLocker.VersionControl.WiseSVN
+namespace DevLocker.VersionControl.WiseSVN.Preferences
 {
 	internal class WiseSVNProjectPreferencesWindow : EditorWindow
 	{

@@ -1,3 +1,4 @@
+using DevLocker.VersionControl.WiseSVN.ContextMenus;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -16,7 +17,7 @@ namespace DevLocker.VersionControl.WiseSVN.Documentation
 
 		private SVNAsyncOperation<IEnumerable<SVNStatusData>> m_SVNOperation;
 
-		[MenuItem("Assets/SVN/Example Status Window")]
+		//[MenuItem("Assets/SVN/Example Status Window")]
 		private static void Init()
 		{
 			var window = (ExampleStatusWindow)GetWindow(typeof(ExampleStatusWindow), false, "Example SVN Window");
@@ -83,6 +84,24 @@ namespace DevLocker.VersionControl.WiseSVN.Documentation
 				}
 
 				EditorGUI.EndDisabledGroup();
+			}
+			EditorGUILayout.EndHorizontal();
+
+			EditorGUILayout.Space();
+
+			EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
+			{
+				GUILayout.FlexibleSpace();
+
+				GUILayout.Label("External SVN Client:");
+
+				if (GUILayout.Button("Commit", GUILayout.ExpandWidth(false))) {
+					SVNContextMenusManager.CommitAll();
+				}
+
+				if (GUILayout.Button("Update", GUILayout.ExpandWidth(false))) {
+					SVNContextMenusManager.UpdateAll();
+				}
 			}
 			EditorGUILayout.EndHorizontal();
 
