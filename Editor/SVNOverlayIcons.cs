@@ -1,3 +1,4 @@
+using DevLocker.VersionControl.WiseSVN.Preferences;
 using System;
 using UnityEditor;
 using UnityEngine;

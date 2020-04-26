@@ -2,6 +2,7 @@
 #define CAN_DISABLE_REFRESH
 #endif
 
+using DevLocker.VersionControl.WiseSVN.Preferences;
 using DevLocker.VersionControl.WiseSVN.Shell;
 using System;
 using System.Collections.Concurrent;
@@ -14,6 +15,10 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN
 {
+	// The core implementation of the SVN integration.
+	// Hooks up to file operations (create, move, delete) and executes corresponding SVN operations.
+	// Takes care of the meta files as well.
+	// Also provides API to integrate SVN with your tools - wraps SVN commands for your convenience.
 	// SVN console commands: https://tortoisesvn.net/docs/nightly/TortoiseSVN_en/tsvn-cli-main.html
 	[InitializeOnLoad]
 	public class WiseSVNIntegration : UnityEditor.AssetModificationProcessor

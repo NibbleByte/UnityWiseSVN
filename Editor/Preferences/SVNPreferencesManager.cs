@@ -6,7 +6,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace DevLocker.VersionControl.WiseSVN
+namespace DevLocker.VersionControl.WiseSVN.Preferences
 {
 	internal class SVNPreferencesManager : ScriptableObject
 	{

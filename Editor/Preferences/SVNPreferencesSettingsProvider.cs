@@ -2,7 +2,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace DevLocker.VersionControl.WiseSVN
+namespace DevLocker.VersionControl.WiseSVN.Preferences
 {
 #if !UNITY_2017
 	// Provide Unity Preferences / Project Settings entry for the WiseSVN.
