@@ -31,6 +31,7 @@ For up to date documentation, check: https://github.com/NibbleByte/UnityWiseSVN
 * Survives assembly reloads
 * You don't have to leave Unity to do SVN chores.
 * Works on Windows and MacOS (maybe Linux?).
+* Survives assembly reloads
 
 ========= Usage =========
 Do your file operations in Unity and the plugin will handle the rest.
@@ -43,5 +44,6 @@ Preferred workflow is to always work inside Unity - use the \"Assets/SVN/...\" m
 This is an issue with how Unity works, not the plugin iteself. Unity says its by "design".**
 
 Community:
+* [Assets Store](https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636)
 * [Unity Forum](https://forum.unity.com/threads/wise-svn-powerful-tortoisesvn-snailsvn-integration.844168/)
 * [Reddit](https://www.reddit.com/r/Unity3D/comments/fgjovk/finally_a_fully_working_tortoisesvn_snailsvn/)
