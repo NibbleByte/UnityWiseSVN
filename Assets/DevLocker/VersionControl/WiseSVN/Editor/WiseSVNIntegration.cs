@@ -15,15 +15,17 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN
 {
-	// The core implementation of the SVN integration.
-	// Hooks up to file operations (create, move, delete) and executes corresponding SVN operations.
-	// Takes care of the meta files as well.
-	// Also provides API to integrate SVN with your tools - wraps SVN commands for your convenience.
-	// SVN console commands: https://tortoisesvn.net/docs/nightly/TortoiseSVN_en/tsvn-cli-main.html
+	/// <summary>
+	/// The core implementation of the SVN integration.
+	/// Hooks up to file operations (create, move, delete) and executes corresponding SVN operations.
+	/// Takes care of the meta files as well.
+	/// Also provides API to integrate SVN with your tools - wraps SVN commands for your convenience.
+	/// SVN console commands: https://tortoisesvn.net/docs/nightly/TortoiseSVN_en/tsvn-cli-main.html
+	/// </summary>
 	[InitializeOnLoad]
 	public class WiseSVNIntegration : UnityEditor.AssetModificationProcessor
 	{
-#region SVN CLI Definitions
+		#region SVN CLI Definitions
 
 		private static readonly Dictionary<char, VCFileStatus> m_FileStatusMap = new Dictionary<char, VCFileStatus>
 		{
@@ -49,11 +51,11 @@ namespace DevLocker.VersionControl.WiseSVN
 			{'B', VCLockStatus.BrokenLock},
 		};
 
-		private static readonly Dictionary<char, VCProperty> m_PropertyStatusMap = new Dictionary<char, VCProperty>
+		private static readonly Dictionary<char, VCPropertiesStatus> m_PropertyStatusMap = new Dictionary<char, VCPropertiesStatus>
 		{
-			{' ', VCProperty.Normal},
-			{'C', VCProperty.Conflicted},
-			{'M', VCProperty.Modified},
+			{' ', VCPropertiesStatus.Normal},
+			{'C', VCPropertiesStatus.Conflicted},
+			{'M', VCPropertiesStatus.Modified},
 		};
 
 		private static readonly Dictionary<char, VCTreeConflictStatus> m_ConflictStatusMap = new Dictionary<char, VCTreeConflictStatus>
@@ -82,24 +84,32 @@ namespace DevLocker.VersionControl.WiseSVN
 			{UpdateResolveConflicts.Launch, "launch"},
 		};
 
-#endregion
+		#endregion
 
 		public static readonly string ProjectRoot;
 
 		public static event Action ShowChangesUI;
 
-		// Is the integration enabled.
-		// If you want to temporarily disable it by code use RequestTemporaryDisable().
+		/// <summary>
+		/// Is the integration enabled.
+		/// If you want to temporarily disable it by code use RequestTemporaryDisable().
+		/// </summary>
 		public static bool Enabled => m_PersonalPrefs.EnableCoreIntegration;
 
-		// Temporarily disable the integration (by code).
-		// File operations like create, move and delete won't be monitored. You'll have to do the SVN operations yourself.
+		/// <summary>
+		/// Temporarily disable the integration (by code).
+		/// File operations like create, move and delete won't be monitored. You'll have to do the SVN operations yourself.
+		/// </summary>
 		public static bool TemporaryDisabled => m_TemporaryDisabledCount > 0;
 
-		// Do not show dialogs. To use call RequestSilence();
+		/// <summary>
+		/// Do not show dialogs. To use call RequestSilence();
+		/// </summary>
 		public static bool Silent => m_SilenceCount > 0;
 
-		// Should the SVN Integration log operations.
+		/// <summary>
+		/// Should the SVN Integration log operations.
+		/// </summary>
 		public static SVNTraceLogs TraceLogs => m_PersonalPrefs.TraceLogs;
 
 		private static int m_SilenceCount = 0;
@@ -121,7 +131,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		[NonSerialized]
 		private static string m_LastDisplayedError = string.Empty;
 
-#region Logging
+		#region Logging
 
 		// Used to track the shell commands output for errors and log them on Dispose().
 		private class ResultReporter : IShellMonitor, IDisposable
@@ -199,21 +209,25 @@ namespace DevLocker.VersionControl.WiseSVN
 			return logger;
 		}
 
-#endregion
+		#endregion
 
 		static WiseSVNIntegration()
 		{
 			ProjectRoot = Path.GetDirectoryName(Application.dataPath);
 		}
 
-		// Temporarily don't show any dialogs.
-		// This increments an integer, so don't forget to decrement it by calling ClearSilence().
+		/// <summary>
+		/// Temporarily don't show any dialogs.
+		/// This increments an integer, so don't forget to decrement it by calling ClearSilence().
+		/// </summary>
 		public static void RequestSilence()
 		{
 			m_SilenceCount++;
 		}
 
-		// Allow dialogs to be shown again.
+		/// <summary>
+		/// Allow dialogs to be shown again.
+		/// </summary>
 		public static void ClearSilence()
 		{
 			if (m_SilenceCount == 0) {
@@ -224,15 +238,19 @@ namespace DevLocker.VersionControl.WiseSVN
 			m_SilenceCount--;
 		}
 
-		// Temporarily disable the integration (by code).
-		// File operations like create, move and delete won't be monitored. You'll have to do the SVN operations yourself.
-		// This increments an integer, so don't forget to decrement it by calling ClearTemporaryDisable().
+		/// <summary>
+		/// Temporarily disable the integration (by code).
+		/// File operations like create, move and delete won't be monitored. You'll have to do the SVN operations yourself.
+		/// This increments an integer, so don't forget to decrement it by calling ClearTemporaryDisable().
+		/// </summary>
 		public static void RequestTemporaryDisable()
 		{
 			m_TemporaryDisabledCount++;
 		}
 
-		// Allow SVN integration again.
+		/// <summary>
+		/// Allow SVN integration again.
+		/// </summary>
 		public static void ClearTemporaryDisable()
 		{
 			if (m_TemporaryDisabledCount == 0) {
@@ -244,10 +262,12 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 
-		// Get statuses of files based on the options you provide.
-		// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
-		//		 If used with non-recursive option it will return single data with normal status (if non).
-		// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// <summary>
+		/// Get statuses of files based on the options you provide.
+		/// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
+		///		 If used with non-recursive option it will return single data with normal status (if non).
+		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// </summary>
 		public static IEnumerable<SVNStatusData> GetStatuses(string path, SVNStatusDataOptions options, IShellMonitor shellMonitor = null)
 		{
 			// File can be missing, if it was deleted by svn.
@@ -300,9 +320,11 @@ namespace DevLocker.VersionControl.WiseSVN
 			return ExtractStatuses(result.Output, options, shellMonitor);
 		}
 
-		// Get statuses of files based on the options you provide.
-		// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
-		//		 If used with non-recursive option it will return single data with normal status (if non).
+		/// <summary>
+		/// Get statuses of files based on the options you provide.
+		/// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
+		///		 If used with non-recursive option it will return single data with normal status (if non).
+		/// </summary>
 		public static SVNAsyncOperation<IEnumerable<SVNStatusData>> GetStatusesAsync(string path, bool recursive, bool offline, bool fetchLockDetails = true, int timeout = -1)
 		{
 			var options = new SVNStatusDataOptions() {
@@ -316,9 +338,11 @@ namespace DevLocker.VersionControl.WiseSVN
 			return GetStatusesAsync(path, options);
 		}
 
-		// Get statuses of files based on the options you provide.
-		// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
-		//		 If used with non-recursive option it will return single data with normal status (if non).
+		/// <summary>
+		/// Get statuses of files based on the options you provide.
+		/// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
+		///		 If used with non-recursive option it will return single data with normal status (if non).
+		/// </summary>
 		public static SVNAsyncOperation<IEnumerable<SVNStatusData>> GetStatusesAsync(string path, SVNStatusDataOptions options)
 		{
 			// Do ToList() to enforce enumerate and fetch lock statuses as well.
@@ -326,9 +350,11 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 
-		// Get offline status for a single file (non recursive). This won't make requests to the repository (so it shouldn't be that slow).
-		// Will return valid status even if the file has nothing to show (has no changes).
-		// If error happened, invalid status data will be returned (check statusData.IsValid).
+		/// <summary>
+		/// Get offline status for a single file (non recursive). This won't make requests to the repository (so it shouldn't be that slow).
+		/// Will return valid status even if the file has nothing to show (has no changes).
+		/// If error happened, invalid status data will be returned (check statusData.IsValid).
+		/// </summary>
 		public static SVNStatusData GetStatus(string path, IShellMonitor shellMonitor = null)
 		{
 			// Optimization: empty depth will return nothing if status is normal.
@@ -352,9 +378,11 @@ namespace DevLocker.VersionControl.WiseSVN
 			return statusData;
 		}
 
-		// Get status for a single file (non recursive).
-		// Will return valid status even if the file has nothing to show (has no changes).
-		// If error happened, invalid status data will be returned (check statusData.IsValid).
+		/// <summary>
+		/// Get status for a single file (non recursive).
+		/// Will return valid status even if the file has nothing to show (has no changes).
+		/// If error happened, invalid status data will be returned (check statusData.IsValid).
+		/// </summary>
 		public static SVNAsyncOperation<SVNStatusData> GetStatusAsync(string path, bool offline, bool fetchLockDetails = true, int timeout = -1)
 		{
 			var options = new SVNStatusDataOptions() {
@@ -380,8 +408,10 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 
-		// Ask the repository server for lock details of the specified file.
-		// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// <summary>
+		/// Ask the repository server for lock details of the specified file.
+		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// </summary>
 		public static LockDetails FetchLockDetails(string path, int timeout = ONLINE_COMMAND_TIMEOUT, bool raiseError = false, IShellMonitor shellMonitor = null)
 		{
 			string url;
@@ -463,15 +493,20 @@ namespace DevLocker.VersionControl.WiseSVN
 			return lockDetails;
 		}
 
-		// Ask the repository server for lock details of the specified file.
-		// NOTE: If assembly reload happens, request will be lost, complete handler won't be called.
+		/// <summary>
+		/// Ask the repository server for lock details of the specified file.
+		/// NOTE: If assembly reload happens, request will be lost, complete handler won't be called.
+		/// </summary>
 		public static SVNAsyncOperation<LockDetails> FetchLockDetailsAsync(string path, int timeout = -1)
 		{
 			return SVNAsyncOperation<LockDetails>.Start(op => FetchLockDetails(path, timeout, false, op));
 		}
 
-		// Lock a file on the repository server.
-		// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+
+		/// <summary>
+		/// Lock a file on the repository server.
+		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// </summary>
 		public static LockOperationResult LockFile(string path, bool force, string message = "", string encoding = "", int timeout = ONLINE_COMMAND_TIMEOUT, IShellMonitor shellMonitor = null)
 		{
 			var messageArg = string.IsNullOrEmpty(message) ? string.Empty : $"--message \"{message}\"";
@@ -504,15 +539,19 @@ namespace DevLocker.VersionControl.WiseSVN
 			return LockOperationResult.UnknownError;
 		}
 
-		// Lock a file on the repository server.
-		// NOTE: If assembly reload happens, task will be lost, complete handler won't be called.
+		/// <summary>
+		/// Lock a file on the repository server.
+		/// NOTE: If assembly reload happens, task will be lost, complete handler won't be called.
+		/// </summary>
 		public static SVNAsyncOperation<LockOperationResult> LockFileAsync(string path, bool force, string message = "", string encoding = "", int timeout = -1)
 		{
 			return SVNAsyncOperation<LockOperationResult>.Start(op => LockFile(path, force, message, encoding, timeout, op));
 		}
 
-		// Unlock a file on the repository server.
-		// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// <summary>
+		/// Unlock a file on the repository server.
+		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// </summary>
 		public static LockOperationResult UnlockFile(string path, bool force, int timeout = ONLINE_COMMAND_TIMEOUT, IShellMonitor shellMonitor = null)
 		{
 			var forceArg = force ? "--force" : string.Empty;
@@ -557,16 +596,20 @@ namespace DevLocker.VersionControl.WiseSVN
 			return LockOperationResult.UnknownError;
 		}
 
-		// Unlock a file on the repository server.
-		// NOTE: If assembly reload happens, task will be lost, complete handler won't be called.
+		/// <summary>
+		/// Unlock a file on the repository server.
+		/// NOTE: If assembly reload happens, task will be lost, complete handler won't be called.
+		/// </summary>
 		public static SVNAsyncOperation<LockOperationResult> UnlockFileAsync(string path, bool force, int timeout = -1)
 		{
 			return SVNAsyncOperation<LockOperationResult>.Start(op => UnlockFile(path, force, timeout, op));
 		}
 
-		// Update file or folder in SVN directly (without GUI).
-		// The force param will auto-resolve tree conflicts occurring on incoming new files (add) over existing unversioned files in the working copy.
-		// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// <summary>
+		/// Update file or folder in SVN directly (without GUI).
+		/// The force param will auto-resolve tree conflicts occurring on incoming new files (add) over existing unversioned files in the working copy.
+		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// </summary>
 		public static UpdateOperationResult Update(
 			string path,
 			UpdateResolveConflicts resolveConflicts = UpdateResolveConflicts.Postpone,
@@ -636,9 +679,11 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 #if CAN_DISABLE_REFRESH
-		// Update file or folder in SVN directly (without GUI).
-		// The force param will auto-resolve tree conflicts occurring on incoming new files (add) over existing unversioned files in the working copy.
-		// DANGER: SVN updating while editor is crunching assets IS DANGEROUS! This Update method will disable unity auto-refresh feature until it has finished.
+		/// <summary>
+		/// Update file or folder in SVN directly (without GUI).
+		/// The force param will auto-resolve tree conflicts occurring on incoming new files (add) over existing unversioned files in the working copy.
+		/// DANGER: SVN updating while editor is crunching assets IS DANGEROUS! This Update method will disable unity auto-refresh feature until it has finished.
+		/// </summary>
 		public static SVNAsyncOperation<UpdateOperationResult> UpdateAsync(
 			string path,
 			UpdateResolveConflicts resolveConflicts = UpdateResolveConflicts.Postpone,
@@ -650,9 +695,11 @@ namespace DevLocker.VersionControl.WiseSVN
 			return SVNAsyncOperation<UpdateOperationResult>.Start(op => Update(path, resolveConflicts, force, revision, timeout, op));
 		}
 #else
-		// Update file or folder in SVN directly (without GUI).
-		// The force param will auto-resolve tree conflicts occurring on incoming new files (add) over existing unversioned files in the working copy.
-		// DANGER: SVN updating while editor is crunching assets IS DANGEROUS! It WILL corrupt your asset guids. Use with caution!!!
+		/// <summary>
+		/// Update file or folder in SVN directly (without GUI).
+		/// The force param will auto-resolve tree conflicts occurring on incoming new files (add) over existing unversioned files in the working copy.
+		/// DANGER: SVN updating while editor is crunching assets IS DANGEROUS! It WILL corrupt your asset guids. Use with caution!!!
+		/// </summary>
 		public static SVNAsyncOperation<UpdateOperationResult> UpdateAsyncDANGER(
 			string path,
 			UpdateResolveConflicts resolveConflicts = UpdateResolveConflicts.Postpone,
@@ -665,9 +712,11 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 #endif
 
-		// Commit files to SVN directly (without GUI).
-		// On commit all included locks will be unlocked unless specified not to by the keepLocks param.
-		// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// <summary>
+		/// Commit files to SVN directly (without GUI).
+		/// On commit all included locks will be unlocked unless specified not to by the keepLocks param.
+		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// </summary>
 		public static CommitOperationResult Commit(
 			IEnumerable<string> assetPaths,
 			bool includeMeta,
@@ -726,8 +775,10 @@ namespace DevLocker.VersionControl.WiseSVN
 			return CommitOperationResult.Success;
 		}
 
-		// Commit files to SVN directly (without GUI).
-		// On commit all included locks will be unlocked unless specified not to by the keepLocks param.
+		/// <summary>
+		/// Commit files to SVN directly (without GUI).
+		/// On commit all included locks will be unlocked unless specified not to by the keepLocks param.
+		/// </summary>
 		public static SVNAsyncOperation<CommitOperationResult> CommitAsync(
 			IEnumerable<string> assetPaths,
 			bool includeMeta, bool recursive,
@@ -741,7 +792,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 
-		// Add files to SVN directly (without GUI).
+		/// <summary>
+		/// Add files to SVN directly (without GUI).
+		/// </summary>
 		public static bool Add(string path, bool includeMeta, bool recursive, IShellMonitor shellMonitor = null)
 		{
 			if (string.IsNullOrEmpty(path))
@@ -766,8 +819,10 @@ namespace DevLocker.VersionControl.WiseSVN
 			return true;
 		}
 
-		// Adds all parent unversioned folders AND THEIR META FILES!
-		// If this is needed it will ask the user for permission if promptUser is true.
+		/// <summary>
+		/// Adds all parent unversioned folders AND THEIR META FILES!
+		/// If this is needed it will ask the user for permission if promptUser is true.
+		/// </summary>
 		public static bool CheckAndAddParentFolderIfNeeded(string path, bool promptUser)
 		{
 			using (var reporter = CreateReporter()) {
@@ -775,8 +830,10 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 		}
 
-		// Adds all parent unversioned folders AND THEIR META FILES!
-		// If this is needed it will ask the user for permission if promptUser is true.
+		/// <summary>
+		/// Adds all parent unversioned folders AND THEIR META FILES!
+		/// If this is needed it will ask the user for permission if promptUser is true.
+		/// </summary>
 		public static bool CheckAndAddParentFolderIfNeeded(string path, bool promptUser, IShellMonitor shellMonitor = null)
 		{
 			var directory = Path.GetDirectoryName(path);
@@ -818,7 +875,9 @@ namespace DevLocker.VersionControl.WiseSVN
 			return true;
 		}
 
-		// Adds all parent unversioned folders AND THEIR META FILES!
+		/// <summary>
+		/// Adds all parent unversioned folders AND THEIR META FILES!
+		/// </summary>
 		public static bool AddParentFolders(string newDirectory, IShellMonitor shellMonitor = null)
 		{
 			// --parents will add all unversioned parent directories as well.
@@ -846,6 +905,9 @@ namespace DevLocker.VersionControl.WiseSVN
 			return true;
 		}
 
+		/// <summary>
+		/// Check if file or folder has conflicts.
+		/// </summary>
 		public static bool HasAnyConflicts(string path, int timeout = COMMAND_TIMEOUT * 4, IShellMonitor shellMonitor = null)
 		{
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth=infinity \"{SVNFormatPath(path)}\"", timeout, shellMonitor);
@@ -869,8 +931,10 @@ namespace DevLocker.VersionControl.WiseSVN
 			return result.Output.Contains("Summary of conflicts:");
 		}
 
-		// Search for hidden files and folders starting with .
-		// Basically search for any "/." or "\."
+		/// <summary>
+		/// Search for hidden files and folders starting with .
+		/// Basically search for any "/." or "\."
+		/// </summary>
 		public static bool IsHiddenPath(string path)
 		{
 			for (int i = 0, len = path.Length; i < len - 1; ++i) {
@@ -880,6 +944,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			return false;
 		}
+
 
 		// NOTE: This is called separately for the file and its meta.
 		private static void OnWillCreateAsset(string path)
@@ -1090,7 +1155,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					// Rules are described in "svn help status".
 					var statusData = new SVNStatusData();
 					statusData.Status = m_FileStatusMap[line[0]];
-					statusData.PropertyStatus = m_PropertyStatusMap[line[1]];
+					statusData.PropertiesStatus = m_PropertyStatusMap[line[1]];
 					statusData.LockStatus = m_LockStatusMap[line[5]];
 					statusData.TreeConflictStatus = m_ConflictStatusMap[line[6]];
 					statusData.LockDetails = LockDetails.Empty;

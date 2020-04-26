@@ -112,7 +112,16 @@ namespace DevLocker.VersionControl.WiseSVN
 			//
 			// File Status
 			//
-			GUIContent fileStatusIcon = SVNPreferencesManager.Instance.GetFileStatusIconContent(statusData.Status);
+			var fileStatus = statusData.Status;
+			switch(statusData.PropertiesStatus) {
+				case VCPropertiesStatus.Conflicted:
+					fileStatus = VCFileStatus.Conflicted;
+					break;
+				case VCPropertiesStatus.Modified:
+					fileStatus = (fileStatus != VCFileStatus.Conflicted) ? VCFileStatus.Modified : VCFileStatus.Conflicted;
+					break;
+			}
+			GUIContent fileStatusIcon = SVNPreferencesManager.Instance.GetFileStatusIconContent(fileStatus);
 
 			if (fileStatusIcon != null && fileStatusIcon.image != null) {
 				var iconRect = new Rect(selectionRect);

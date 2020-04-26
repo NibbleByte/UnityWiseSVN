@@ -8,12 +8,14 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN
 {
-	// Caches known statuses for files and folders.
-	// Refreshes periodically or if file was modified or moved.
-	// Status extraction happens in another thread so overhead should be minimal.
-	//
-	// NOTE: Keep in mind that this cache can be out of date.
-	//		 If you want up to date information, use the WiseSVNIntegration API for direct SVN queries.
+	/// <summary>
+	/// Caches known statuses for files and folders.
+	/// Refreshes periodically or if file was modified or moved.
+	/// Status extraction happens in another thread so overhead should be minimal.
+	///
+	/// NOTE: Keep in mind that this cache can be out of date.
+	///		 If you want up to date information, use the WiseSVNIntegration API for direct SVN queries.
+	/// </summary>
 	public class SVNStatusesDatabase : ScriptableObject
 	{
 		private const string INVALID_GUID = "00000000000000000000000000000000";
@@ -43,7 +45,9 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
 
-		// The database update can be enabled, but the SVN integration to be disabled as a whole.
+		/// <summary>
+		/// The database update can be enabled, but the SVN integration to be disabled as a whole.
+		/// </summary>
 		public bool IsActive => m_PersonalPrefs.PopulateStatusesDatabase && m_PersonalPrefs.EnableCoreIntegration;
 		private bool DoTraceLogs => (m_PersonalPrefs.TraceLogs & SVNTraceLogs.DatabaseUpdates) != 0;
 
@@ -346,7 +350,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		//
 		#region Invalidate Database
 
-		// Force the database to refresh its statuses cache onto another thread.
+		/// <summary>
+		/// Force the database to refresh its statuses cache onto another thread.
+		/// </summary>
 		public void InvalidateDatabase()
 		{
 			if (!IsActive || PendingUpdate || WiseSVNIntegration.TemporaryDisabled)
@@ -445,9 +451,11 @@ namespace DevLocker.VersionControl.WiseSVN
 		//
 		#region Manage status data
 
-		// Get known status for guid.
-		// Unversioned files should return unversioned status.
-		// If status is not known, the file should be versioned unmodified or still undetected.
+		/// <summary>
+		/// Get known status for guid.
+		/// Unversioned files should return unversioned status.
+		/// If status is not known, the file should be versioned unmodified or still undetected.
+		/// </summary>
 		public SVNStatusData GetKnownStatusData(string guid)
 		{
 			if (string.IsNullOrEmpty(guid)) {
