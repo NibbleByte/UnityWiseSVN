@@ -9,7 +9,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	/// Hooks up to Unity file changes API and refreshes when needed to.
 	/// </summary>
 	[InitializeOnLoad]
-	public static class SVNOverlayIcons
+	internal static class SVNOverlayIcons
 	{
 		private static SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
 

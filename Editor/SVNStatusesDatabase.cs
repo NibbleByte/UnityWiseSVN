@@ -7,7 +7,13 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN
 {
-	internal class SVNStatusesDatabase : ScriptableObject
+	// Caches known statuses for files and folders.
+	// Refreshes periodically or if file was modified or moved.
+	// Status extraction happens in another thread so overhead should be minimal.
+	//
+	// NOTE: Keep in mind that this cache can be out of date.
+	//		 If you want up to date information, use the WiseSVNIntegration API for direct SVN queries.
+	public class SVNStatusesDatabase : ScriptableObject
 	{
 		private const string INVALID_GUID = "00000000000000000000000000000000";
 		private const string ASSETS_FOLDER_GUID = "00000000000000001000000000000000";
@@ -339,6 +345,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		//
 		#region Invalidate Database
 
+		// Force the database to refresh its statuses cache onto another thread.
 		public void InvalidateDatabase()
 		{
 			if (!IsActive || PendingUpdate || WiseSVNIntegration.TemporaryDisabled)
@@ -436,6 +443,10 @@ namespace DevLocker.VersionControl.WiseSVN
 		//=============================================================================
 		//
 		#region Manage status data
+
+		// Get known status for guid.
+		// Unversioned files should return unversioned status.
+		// If status is not known, the file should be versioned unmodified or still undetected.
 		public SVNStatusData GetKnownStatusData(string guid)
 		{
 			if (string.IsNullOrEmpty(guid)) {
