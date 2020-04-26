@@ -2,7 +2,6 @@ using System;
 
 namespace DevLocker.VersionControl.WiseSVN
 {
-	// Stolen from UVC plugin.
 	public enum VCFileStatus
 	{
 		Normal,
@@ -21,7 +20,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		None,	// File not found or something worse....
 	}
 
-	public enum VCProperty
+	public enum VCPropertiesStatus
 	{
 		None,
 		Normal,
@@ -105,11 +104,14 @@ namespace DevLocker.VersionControl.WiseSVN
 	}
 
 
+	/// <summary>
+	/// Data containing all SVN status knowledge about file or folder.
+	/// </summary>
 	[Serializable]
 	public struct SVNStatusData
 	{
 		public VCFileStatus Status;
-		public VCProperty PropertyStatus;
+		public VCPropertiesStatus PropertiesStatus;
 		public VCTreeConflictStatus TreeConflictStatus;
 		public VCLockStatus LockStatus;
 		public VCRemoteFileStatus RemoteStatus;
@@ -122,13 +124,13 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		public bool IsConflicted =>
 			Status == VCFileStatus.Conflicted ||
-			PropertyStatus == VCProperty.Conflicted ||
+			PropertiesStatus == VCPropertiesStatus.Conflicted ||
 			TreeConflictStatus == VCTreeConflictStatus.TreeConflict;
 
 		public bool Equals(SVNStatusData other)
 		{
 			return Status == other.Status
-				&& PropertyStatus == other.PropertyStatus
+				&& PropertiesStatus == other.PropertiesStatus
 				&& TreeConflictStatus == other.TreeConflictStatus
 				&& LockStatus == other.LockStatus
 				&& RemoteStatus == other.RemoteStatus
@@ -136,6 +138,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 	}
 
+	/// <summary>
+	/// Data containing SVN lock details.
+	/// </summary>
 	[Serializable]
 	public struct LockDetails
 	{

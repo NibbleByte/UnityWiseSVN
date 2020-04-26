@@ -5,8 +5,10 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 {
 	public delegate void ShellRequestAbortEventHandler(bool kill);
 
-	// Using this interface the user can monitor what is the output of the command and even abort it.
-	// You can use one monitor on multiple commands in a row.
+	/// <summary>
+	/// Using this interface the user can monitor what is the output of the command and even abort it.
+	/// You can use one monitor on multiple commands in a row.
+	/// </summary>
 	public interface IShellMonitor
 	{
 		// NOTE: These methods can be called from a different thread!
