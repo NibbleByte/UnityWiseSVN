@@ -4,7 +4,16 @@
 
 Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) user interface. A must have plugin if you use SVN as your version control system in your project.
 
-## Installation:
+## Table of Contents
+[Installation](#installation)<br />
+[Prerequisites](#prerequisites)<br />
+[Features](#features)<br />
+[Usage](#usage)<br />
+[Overlay Icons](#overlay-icons)<br />
+[Screenshots](#screenshots)<br />
+[Community](#community)<br />
+
+## Installation
 * Github upm package (pointless if you use git?) - merge this to your `Packages/manifest.json`
 ```
 {
@@ -14,14 +23,14 @@ Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https:/
 ```
 * Asset Store plugin: https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636
 
-## Prerequisites:
+## Prerequisites
 * Have SVN installed
   * Have installed SVN command line interface (CLI)
 * (Optional) Have [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) installed.
 
 ![SVN CLI](https://i.stack.imgur.com/ZquvH.png)
 
-## Features:
+## Features
 * **Hooks up to Unity move and delete file operations and executes respective svn commands to stay in sync.**
   * **Handles meta files as well.**
   * Moving assets to unversioned folder will ask the user to add that folder to SVN as well.
@@ -35,6 +44,7 @@ Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https:/
 * Survives assembly reloads
 * You don't have to leave Unity to do SVN chores.
 * Works on Windows and MacOS (maybe Linux?).
+* Simple API to integrate with your tools.
 
 *Check the screenshots below*
 
@@ -66,5 +76,6 @@ This is an issue with how Unity works, not the plugin iteself. Unity says its by
 ![Preferences](Docs/Screenshots/WiseSVN-Preferences-Shot.png)
 
 ## Community
+* [Assets Store](https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636)
 * [Unity Forum](https://forum.unity.com/threads/wise-svn-powerful-tortoisesvn-snailsvn-integration.844168/)
 * [Reddit](https://www.reddit.com/r/Unity3D/comments/fgjovk/finally_a_fully_working_tortoisesvn_snailsvn/)
