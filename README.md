@@ -5,30 +5,12 @@
 Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) user interface. A must have plugin if you use SVN as your version control system in your project.
 
 ## Table of Contents
-[Installation](#installation)<br />
-[Prerequisites](#prerequisites)<br />
 [Features](#features)<br />
 [Usage](#usage)<br />
+[Installation](#installation)<br />
 [Overlay Icons](#overlay-icons)<br />
 [Screenshots](#screenshots)<br />
 [Community](#community)<br />
-
-## Installation
-* Github upm package (pointless if you use git?) - merge this to your `Packages/manifest.json`
-```
-{
-  "dependencies": {
-    "devlocker.versioncontrol.wisesvn": "https://github.com/NibbleByte/UnityWiseSVN.git#upm"
-}
-```
-* Asset Store plugin: https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636
-
-## Prerequisites
-* Have SVN installed
-  * Have installed SVN command line interface (CLI)
-* (Optional) Have [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) installed.
-
-![SVN CLI](https://i.stack.imgur.com/ZquvH.png)
 
 ## Features
 * **Hooks up to Unity move and delete file operations and executes respective svn commands to stay in sync.**
@@ -56,6 +38,25 @@ User SVN operations are available in the menu (or right-click on any asset): `As
 **WARNING: Never focus Unity while the project is updating in the background. Newly added asset guids may get corrupted in which case the Library folder needs to be deleted. <br />
 Preferred workflow is to always work inside Unity - use the \"Assets/SVN/...\" menus. \"Assets/SVN/Update All\" will block Unity while updating, to avoid Unity processing assets at the same time. <br />
 This is an issue with how Unity works, not the plugin iteself. Unity says its by "design".**
+
+## Installation
+* Github upm package (pointless if you use git?) - merge this to your `Packages/manifest.json`
+```
+{
+  "dependencies": {
+    "devlocker.versioncontrol.wisesvn": "https://github.com/NibbleByte/UnityWiseSVN.git#upm"
+}
+```
+* Asset Store plugin: https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636
+
+#### Prerequisites
+* Have SVN installed
+  * Have installed SVN command line interface (CLI)
+* (Optional) Have [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) installed.
+
+![SVN CLI](https://i.stack.imgur.com/ZquvH.png)
+
+
 
 ## Overlay Icons
 * Unversioned <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNUnversionedIcon.png" width="16">
