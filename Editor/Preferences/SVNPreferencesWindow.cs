@@ -1,5 +1,6 @@
 using DevLocker.VersionControl.WiseSVN.ContextMenus;
 using System;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -22,8 +23,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			window.m_PersonalPrefs = SVNPreferencesManager.Instance.PersonalPrefs.Clone();
 			window.m_ProjectPrefs = SVNPreferencesManager.Instance.ProjectPrefs.Clone();
 			window.ShowUtility();
-			window.position = new Rect(500f, 250f, 400f, 300f);
-			window.minSize = new Vector2(400f, 300f);
+			window.position = new Rect(500f, 250f, 520f, 400f);
+			window.minSize = new Vector2(520f, 400f);
 		}
 
 		// So SerializedObject() can work with it.
@@ -35,6 +36,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 		private Vector2 m_ProjectPreferencesScroll;
 		private const string m_DownloadRepositoryChangesHint = "Work online - will ask the repository if there are any changes on the server.\nEnabling this will show locks and out of date additional icons.\nRefreshes might be slower due to the network communication, but shouldn't slow down your editor.";
+
+		private bool m_FoldBranchesDatabaseHint = true;
 
 		private void OnGUI()
 		{
@@ -58,16 +61,15 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				var prevColor = GUI.backgroundColor;
 				GUI.backgroundColor = Color.green / 1.2f;
 				if (GUILayout.Button("Save All", GUILayout.MaxWidth(150f))) {
-					m_ProjectPrefs.SvnCLIPath = m_ProjectPrefs.SvnCLIPath.Trim();
-					m_ProjectPrefs.SvnCLIPathMacOS = m_ProjectPrefs.SvnCLIPathMacOS.Trim();
-					m_ProjectPrefs.Exclude.RemoveAll(p => string.IsNullOrWhiteSpace(p));
 
+					SanitizeBeforeSave();
 					SVNPreferencesManager.Instance.SavePreferences(m_PersonalPrefs, m_ProjectPrefs);
 
 					// When turning on the integration do instant refresh.
 					// Works when editor started with disabled integration. Doing it here to avoid circle dependency.
 					if (m_PersonalPrefs.EnableCoreIntegration) {
 						SVNStatusesDatabase.Instance.InvalidateDatabase();
+						SVNBranchesDatabase.Instance.InvalidateDatabase();
 					}
 				}
 				GUI.backgroundColor = prevColor;
@@ -98,6 +100,30 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 
 			EditorGUIUtility.labelWidth -= labelWidthAdd;
+		}
+
+		private void SanitizeBeforeSave()
+		{
+			m_ProjectPrefs.SvnCLIPath = m_ProjectPrefs.SvnCLIPath.Trim();
+			m_ProjectPrefs.SvnCLIPathMacOS = m_ProjectPrefs.SvnCLIPathMacOS.Trim();
+			m_ProjectPrefs.Exclude.RemoveAll(p => string.IsNullOrWhiteSpace(p));
+
+			if (m_ProjectPrefs.EnableBranchesDatabase) {
+
+				if (m_ProjectPrefs.BranchesDatabaseScanParameters.Count == 0) {
+					EditorUtility.DisplayDialog("Branches Database", "In order to use Branches Database, you must provide at least one scan parameters element.\n\nBranches Database will be disabled.", "Ok");
+					m_ProjectPrefs.EnableBranchesDatabase = false;
+				}
+
+				m_ProjectPrefs.BranchesDatabaseScanParameters = m_ProjectPrefs.BranchesDatabaseScanParameters
+					.Select(sp => sp.Sanitized())
+					.ToList();
+
+				if (m_ProjectPrefs.BranchesDatabaseScanParameters.Any(sp => !sp.IsValid)) {
+					EditorUtility.DisplayDialog("Branches Database", "Some of the branches scan parameters have invalid data. Please fix it.\n\nBranches Database will be disabled.", "Ok");
+					m_ProjectPrefs.EnableBranchesDatabase = false;
+				}
+			}
 		}
 
 		private void DrawPersonalPreferences()
@@ -145,6 +171,37 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			m_ProjectPrefs.SvnCLIPath = EditorGUILayout.TextField(new GUIContent("SVN CLI Path", "If you desire to use specific SVN CLI (svn.exe) located in the project, write down its path relative to the root folder."), m_ProjectPrefs.SvnCLIPath);
 			m_ProjectPrefs.SvnCLIPathMacOS = EditorGUILayout.TextField(new GUIContent("SVN CLI Path MacOS", "Same as above, but for MacOS."), m_ProjectPrefs.SvnCLIPathMacOS);
 
+			m_ProjectPrefs.EnableBranchesDatabase = EditorGUILayout.Toggle(new GUIContent("Enable Branches Database", "Scans the SVN repository for Unity projects in branches and keeps them in a simple database."), m_ProjectPrefs.EnableBranchesDatabase);
+			if (m_ProjectPrefs.EnableBranchesDatabase) {
+
+				EditorGUI.indentLevel++;
+				m_FoldBranchesDatabaseHint = EditorGUILayout.Foldout(m_FoldBranchesDatabaseHint, "Branches Database Hint:");
+				var branchesHint = "Provide at least one branches scan parameter below.\n\n" +
+				                   "\"Entry Point URL\" serves as a starting location where scan will commence.\n\n" +
+				                   "\"Branch Signature Root Entries\" should contain names of files or folders that mark the beginning of a branch. This will be shown as a branch's name.\n\n" +
+				                   "Example setup:\n" +
+				                   "  /branches/VariantA/Server\n" +
+				                   "  /branches/VariantA/UnityClient\n" +
+				                   "  /branches/VariantB/Server\n" +
+				                   "  /branches/VariantB/UnityClient\n\n" +
+				                   "Set \"Entry Point URL\" to \"https://companyname.com/branches\" as a starting point.\n" +
+				                   "\"VariantA\" and \"VariantB\" should be considered as branch roots.\n" +
+				                   "UnityClient folder is not a branch root.\n" +
+				                   "Set \"Branch Signature Root Entries\" to { \"Server\", \"UnityClient\" } to match the roots ...\n\n" +
+				                   "Only one Unity project per branch is supported!" +
+				                   ""
+					;
+				if (m_FoldBranchesDatabaseHint) {
+					EditorGUILayout.BeginHorizontal();
+					GUILayout.Space((EditorGUI.indentLevel + 1) * 16f);
+					GUILayout.Label(branchesHint, EditorStyles.helpBox);
+					EditorGUILayout.EndHorizontal();
+				}
+
+				EditorGUILayout.PropertyField(sp.FindPropertyRelative("BranchesDatabaseScanParameters"), new GUIContent("Branches Scan Parameters", "Must have at least one entry to work properly."), true);
+				EditorGUI.indentLevel--;
+			}
+
 			EditorGUILayout.PropertyField(sp.FindPropertyRelative("Exclude"), new GUIContent("Exclude Paths", "Asset paths that will be ignored by the SVN integrations. Use with caution."), true);
 
 			so.ApplyModifiedProperties();
@@ -160,7 +217,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				var style = new GUIStyle(EditorStyles.label);
 				style.normal.textColor = Color.blue;
 				style.active.textColor = Color.red;
-				if (GUILayout.Button("Icons taken from TortoiseSVN (created by Lübbe Onken)", style, GUILayout.ExpandWidth(true))) {
+				if (GUILayout.Button("Icons taken from TortoiseSVN (created by LÑŒbbe Onken)", style, GUILayout.ExpandWidth(true))) {
 					var assetStoreURL = "https://tortoisesvn.net/";
 					Application.OpenURL(assetStoreURL);
 				}

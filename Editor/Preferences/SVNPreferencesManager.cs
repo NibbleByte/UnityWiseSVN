@@ -59,12 +59,19 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			public string PlatformSvnCLIPath => SvnCLIPathMacOS;
 #endif
 
+			// Enable svn branches database.
+			public bool EnableBranchesDatabase;
+			
+			// SVN parameters used for scanning branches in the SVN repo.
+			public List<BranchScanParameters> BranchesDatabaseScanParameters = new List<BranchScanParameters>();
+
 			public List<string> Exclude = new List<string>();
 
 			public ProjectPreferences Clone()
 			{
 				var clone = (ProjectPreferences) MemberwiseClone();
 
+				clone.BranchesDatabaseScanParameters = new List<BranchScanParameters>(BranchesDatabaseScanParameters);
 				clone.Exclude = new List<string>(this.Exclude);
 
 				return clone;

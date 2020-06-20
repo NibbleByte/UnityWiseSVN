@@ -52,7 +52,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		private bool DoTraceLogs => (m_PersonalPrefs.TraceLogs & SVNTraceLogs.DatabaseUpdates) != 0;
 
 
-		[SerializeField] private List<GuidStatusDataBind> StatusDatas = new List<GuidStatusDataBind>();
+		[SerializeField] private List<GuidStatusDataBind> m_StatusDatas = new List<GuidStatusDataBind>();
 		private double m_LastRefreshTime;   // TODO: Maybe serialize this?
 
 		public event Action DatabaseChanged;
@@ -259,7 +259,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			var statuses = m_PendingStatuses;
 			m_PendingStatuses = null;
-			StatusDatas.Clear();
+			m_StatusDatas.Clear();
 
 			// Mark update as finished.
 			PendingUpdate = false;
@@ -462,7 +462,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				Debug.LogError($"Asking for status with empty guid");
 			}
 
-			foreach (var bind in StatusDatas) {
+			foreach (var bind in m_StatusDatas) {
 				if (bind.Guid.Equals(guid, StringComparison.Ordinal))
 					return bind.Data;
 			}
@@ -477,7 +477,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				return false;
 			}
 
-			foreach (var bind in StatusDatas) {
+			foreach (var bind in m_StatusDatas) {
 				if (bind.Guid.Equals(guid, StringComparison.Ordinal)) {
 
 					if (bind.Data.Equals(statusData))
@@ -503,7 +503,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 			}
 
-			StatusDatas.Add(new GuidStatusDataBind() { Guid = guid, Data = statusData });
+			m_StatusDatas.Add(new GuidStatusDataBind() { Guid = guid, Data = statusData });
 			return true;
 		}
 
@@ -514,9 +514,9 @@ namespace DevLocker.VersionControl.WiseSVN
 				Debug.LogError($"Trying to remove empty guid");
 			}
 
-			for(int i = 0; i < StatusDatas.Count; ++i) {
-				if (StatusDatas[i].Guid.Equals(guid, StringComparison.Ordinal)) {
-					StatusDatas.RemoveAt(i);
+			for(int i = 0; i < m_StatusDatas.Count; ++i) {
+				if (m_StatusDatas[i].Guid.Equals(guid, StringComparison.Ordinal)) {
+					m_StatusDatas.RemoveAt(i);
 					return true;
 				}
 			}

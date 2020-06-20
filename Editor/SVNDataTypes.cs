@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN
 {
@@ -62,6 +64,15 @@ namespace DevLocker.VersionControl.WiseSVN
 	{
 		Success,				// Operation succeeded.
 		LockedByOther,			// File is locked by another working copy (may be the same user). Use Force to enforce the operation.
+		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
+		UnknownError,			// Failed for some reason.
+	}
+
+	public enum ListOperationResult
+	{
+		Success,				// Operation succeeded.
+		URLNotFound,			// URL target was not found.
+		InvalidWorkingCopy,		// URL is local path that is not a proper SVN working copy.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
 		UnknownError,			// Failed for some reason.
 	}
@@ -169,5 +180,66 @@ namespace DevLocker.VersionControl.WiseSVN
 		public bool FetchLockOwner;	// If file is locked and this is true, another query (per locked file) will be made
 									// to the repository to find out the owner's user name. I.e. will execute "svn info [url]"
 									// Works only in online mode.
+	}
+
+
+	/// <summary>
+	/// Describes location of a Unity project in some branch at the SVN repository.
+	/// NOTE: UnityProjectURL can be the same as BranchURL or a sub-folder of it, depending on what you call branches.
+	/// </summary>
+	[Serializable]
+	public struct BranchProject
+	{
+		public string BranchName;
+		public string BranchURL;
+		public string BranchRelativePath;
+		public string UnityProjectURL;
+		public string UnityProjectRelativePath;
+	}
+
+	/// <summary>
+	/// Parameters used to scan the SVN repository for branches.
+	/// </summary>
+	[Serializable]
+	public struct BranchScanParameters
+	{
+		[Tooltip("SVN url where scan for branches should start recursively.")]
+		public string EntryPointURL;
+
+		// Entries that must be found in folders to recognize them as a branch. Used as a branch name.
+		// Example:
+		//	/branches/VariantA/Server			/branches/VariantB/Server
+		//	/branches/VariantA/UnityClient		/branches/VariantB/UnityClient
+		// In this setup, VariantA and VariantB should be considered the root of the branch, not the UnityClient folder.
+		// The recognize entries in this case would be: { "Server", "UnityClient" };
+		[Tooltip("Entries to look for in folders to recognize them as branches.")]
+		public string[] BranchSignatureRootEntries;
+
+		// File or folder names excluded during recursive scan.
+		[Tooltip("Folder names to exclude during the recursive scan.")]
+		public string[] ExcludesFolderNames;
+
+		public bool IsValid => !string.IsNullOrEmpty(EntryPointURL) && BranchSignatureRootEntries.Length > 0;
+
+		public BranchScanParameters Sanitized()
+		{
+			var clone = (BranchScanParameters) MemberwiseClone();
+
+			clone.EntryPointURL = EntryPointURL.Trim();
+
+			clone.BranchSignatureRootEntries = BranchSignatureRootEntries
+				.Select(s => s.Trim().Replace("/", ""))
+				.Where(s => !string.IsNullOrEmpty(s))
+				.ToArray()
+				;
+
+			clone.ExcludesFolderNames = ExcludesFolderNames
+					.Select(s => s.Trim().Replace("/", ""))
+					.Where(s => !string.IsNullOrEmpty(s))
+					.ToArray()
+				;
+
+			return clone;
+		}
 	}
 }
