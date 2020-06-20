@@ -932,6 +932,62 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 		/// <summary>
+		/// List files and folders in specified url directory.
+		/// Results will be appended to resultPaths. Paths will be relative to the url.
+		/// If entry is a folder, it will end with a '/' character.
+		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// </summary>
+		public static ListOperationResult ListURL(string url, bool recursive, List<string> resultPaths, int timeout = ONLINE_COMMAND_TIMEOUT, IShellMonitor shellMonitor = null)
+		{
+			var depth = recursive ? "infinity" : "immediates";
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"list --depth {depth} \"{SVNFormatPath(url)}\"", timeout, shellMonitor);
+
+			if (!string.IsNullOrEmpty(result.Error)) {
+
+				// Unable to connect to repository indicating some network or server problems.
+				// svn: E170013: Unable to connect to a repository at URL '...'
+				// svn: E731001: No such host is known.
+				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
+					return ListOperationResult.UnableToConnectError;
+
+				// URL target not found.
+				// svn: E200009: Could not list all targets because some targets don't exist
+				if (result.Error.Contains("E200009"))
+					return ListOperationResult.URLNotFound;
+
+				// URL is local path that is not a proper SVN working copy.
+				// svn: E155007: '...' is not a working copy
+				if (result.Error.Contains("E155007"))
+					return ListOperationResult.InvalidWorkingCopy;
+
+				return ListOperationResult.UnknownError;
+			}
+
+			var output = result.Output.Replace("\r", "");
+			resultPaths.AddRange(output.Split('\n'));
+
+			return ListOperationResult.Success;
+		}
+
+		/// <summary>
+		/// List files and folders in specified url directory.
+		/// Results will be appended to resultPaths. Paths will be relative to the url.
+		/// If entry is a folder, it will end with a '/' character.
+		/// NOTE: If assembly reload happens, task will be lost, complete handler won't be called.
+		/// </summary>
+		public static SVNAsyncOperation<ListOperationResult> ListURLAsync(string url, bool recursive, List<string> resultPaths, int timeout = -1)
+		{
+			var threadResults = new List<string>();
+			var operation = SVNAsyncOperation<ListOperationResult>.Start(op => ListURL(url, recursive, threadResults, timeout, op));
+			operation.Completed += (op) => {
+				resultPaths.AddRange(threadResults);
+			};
+
+			return operation;
+		}
+
+		/// <summary>
 		/// Search for hidden files and folders starting with .
 		/// Basically search for any "/." or "\."
 		/// </summary>
