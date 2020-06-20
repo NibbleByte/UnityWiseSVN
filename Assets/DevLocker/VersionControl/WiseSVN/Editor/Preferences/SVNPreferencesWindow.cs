@@ -211,13 +211,20 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		{
 			EditorGUILayout.LabelField("About:", EditorStyles.boldLabel);
 			{
-				EditorGUILayout.LabelField("Created by Filip Slavov (NibbleByte)");
+				var urlStyle = new GUIStyle(EditorStyles.label);
+				urlStyle.normal.textColor = EditorGUIUtility.isProSkin ? new Color(1.00f, 0.65f, 0.00f) : Color.blue;
+				urlStyle.active.textColor = Color.red;
+
+				const string mail = "NibbleByte3@gmail.com";
+
+				GUILayout.Label("Created by Filip Slavov", GUILayout.ExpandWidth(false));
+				if (GUILayout.Button(mail, urlStyle, GUILayout.ExpandWidth(false))) {
+					Application.OpenURL("mailto:"+mail);
+				}
+
 				EditorGUILayout.LabelField("In collaboration with Snapshot Games");
 
-				var style = new GUIStyle(EditorStyles.label);
-				style.normal.textColor = Color.blue;
-				style.active.textColor = Color.red;
-				if (GUILayout.Button("Icons taken from TortoiseSVN (created by Lьbbe Onken)", style, GUILayout.ExpandWidth(true))) {
+				if (GUILayout.Button("Icons taken from TortoiseSVN (created by Lьbbe Onken)", urlStyle, GUILayout.ExpandWidth(true))) {
 					var assetStoreURL = "https://tortoisesvn.net/";
 					Application.OpenURL(assetStoreURL);
 				}
