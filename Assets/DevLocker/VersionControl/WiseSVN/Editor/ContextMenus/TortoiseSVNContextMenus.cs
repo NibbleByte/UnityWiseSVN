@@ -151,6 +151,29 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
+
+
+		public override void RepoBrowser(string url, bool wait = false)
+		{
+			if (string.IsNullOrEmpty(url))
+				return;
+
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:repobrowser /path:\"{url}\"", wait);
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
+		}
+
+		public override void Switch(string localPath, string url, bool wait = false)
+		{
+			if (string.IsNullOrEmpty(localPath) || string.IsNullOrEmpty(url))
+				return;
+
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:switch /path:\"{localPath}\" /url:\"{url}\"", wait);
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
+		}
 	}
 #endif
 }

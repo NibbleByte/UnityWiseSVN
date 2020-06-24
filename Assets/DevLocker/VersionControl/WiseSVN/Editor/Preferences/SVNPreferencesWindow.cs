@@ -171,7 +171,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			m_ProjectPrefs.SvnCLIPath = EditorGUILayout.TextField(new GUIContent("SVN CLI Path", "If you desire to use specific SVN CLI (svn.exe) located in the project, write down its path relative to the root folder."), m_ProjectPrefs.SvnCLIPath);
 			m_ProjectPrefs.SvnCLIPathMacOS = EditorGUILayout.TextField(new GUIContent("SVN CLI Path MacOS", "Same as above, but for MacOS."), m_ProjectPrefs.SvnCLIPathMacOS);
 
-			m_ProjectPrefs.EnableBranchesDatabase = EditorGUILayout.Toggle(new GUIContent("Enable Branches Database", "Scans the SVN repository for Unity projects in branches and keeps them in a simple database."), m_ProjectPrefs.EnableBranchesDatabase);
+			const string branchesEnableHint = "Scans the SVN repository for Unity projects in branches and keeps them in a simple database.\n\nSingle scan may take up to a few minutes, depending on your network connection and the complexity of your repository.";
+			m_ProjectPrefs.EnableBranchesDatabase = EditorGUILayout.Toggle(new GUIContent("Enable Branches Database", branchesEnableHint), m_ProjectPrefs.EnableBranchesDatabase);
 			if (m_ProjectPrefs.EnableBranchesDatabase) {
 
 				EditorGUI.indentLevel++;

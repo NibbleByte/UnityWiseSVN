@@ -285,10 +285,18 @@ namespace DevLocker.VersionControl.WiseSVN
 					lastBranch.BranchName = Path.GetFileName(url);
 					lastBranch.BranchURL = url;
 					lastBranch.BranchRelativePath = url.Remove(0, scanParams.EntryPointURL.Length + 1);
+					lastBranch.UnityProjectRelativePath = null;
+					lastBranch.UnityProjectURL = null;
 				}
 
 				// This is a Unity project folder.
 				if (m_UnityProjectEntries.IsSubsetOf(normalizedEntries)) {
+					if (!string.IsNullOrEmpty(lastBranch.UnityProjectURL)) {
+						// TODO: if BranchURL == UnityURL => Shouldn't be a problem.
+						//		 if BranchURL != UnityRL => take the Unity folder name from the Working Copy (or find its original name in the repository branch). Accept only that name.
+						Debug.LogError($"Multiple Unity projects found in the branch \"{lastBranch.BranchURL}\". This is still not supported.\n{lastBranch.UnityProjectURL}\n{url}");
+					}
+
 					lastBranch.UnityProjectURL = url;
 					lastBranch.UnityProjectRelativePath = url.Remove(0, scanParams.EntryPointURL.Length + 1);
 					results.Add(lastBranch);

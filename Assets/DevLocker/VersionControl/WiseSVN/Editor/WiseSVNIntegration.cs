@@ -988,6 +988,36 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 		/// <summary>
+		/// Convert Unity asset path to svn URL. Works with files and folders.
+		/// </summary>
+		public static string AssetPathToURL(string assetPath)
+		{
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(assetPath)}\"", COMMAND_TIMEOUT);
+
+			return ExtractLineValue("URL:", result.Output);
+		}
+
+		/// <summary>
+		/// Get working copy root path on disk (the root of your checkout). Working copy root can be different from the Unity project folder.
+		/// </summary>
+		public static string WorkingCopyRootPath()
+		{
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(ProjectRoot)}\"", COMMAND_TIMEOUT);
+
+			return ExtractLineValue("Working Copy Root Path:", result.Output);
+		}
+
+		/// <summary>
+		/// Get working copy root URL at your svn repository. Working copy root can be different from the Unity project folder.
+		/// </summary>
+		public static string WorkingCopyRootURL()
+		{
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(WorkingCopyRootPath())}\"", COMMAND_TIMEOUT);
+
+			return ExtractLineValue("URL:", result.Output);
+		}
+
+		/// <summary>
 		/// Search for hidden files and folders starting with .
 		/// Basically search for any "/." or "\."
 		/// </summary>
