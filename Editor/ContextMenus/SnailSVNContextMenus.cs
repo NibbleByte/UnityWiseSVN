@@ -169,5 +169,17 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
+
+		public override void RepoBrowser(string url, bool wait = false)
+		{
+			// TODO: Implement
+			throw new System.NotSupportedException();
+		}
+
+		public override void Switch(string localPath, string url, bool wait = false)
+		{
+			// TODO: Implement
+			throw new System.NotSupportedException();
+		}
 	}
 }

@@ -24,6 +24,10 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 
 		public abstract void ShowLog(string assetPath, bool wait = false);
 
+		public abstract void RepoBrowser(string url, bool wait = false);
+
+		public abstract void Switch(string localPath, string url, bool wait = false);
+
 		public abstract void ResolveAll(bool wait = false);
 		public abstract void Blame(string assetPath, bool wait = false);
 

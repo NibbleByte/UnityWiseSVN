@@ -272,5 +272,22 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		{
 			m_Integration?.Cleanup(false);
 		}
+
+		/// <summary>
+		/// Open Repo-Browser at url location. You can get url from local working copy by using WiseSVNIntegration.AssetPathToURL(path);
+		/// </summary>
+		public static void RepoBrowser(string url, bool wait = false)
+		{
+			m_Integration?.RepoBrowser(url, wait);
+		}
+
+		/// <summary>
+		/// Open Switch dialog. localPath specifies the target directory and url the URL to switch to.
+		/// Most likely you want the root of the working copy (checkout), not just the Unity project. To get it use WiseSVNIntegration.WorkingCopyRootPath();
+		/// </summary>
+		public static void Switch(string localPath, string url, bool wait = false)
+		{
+			m_Integration?.Switch(localPath, url, wait);
+		}
 	}
 }

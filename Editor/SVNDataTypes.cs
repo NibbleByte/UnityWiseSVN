@@ -225,7 +225,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			var clone = (BranchScanParameters) MemberwiseClone();
 
-			clone.EntryPointURL = EntryPointURL.Trim();
+			clone.EntryPointURL = EntryPointURL.Trim().TrimEnd('/', '\\');
 
 			clone.BranchSignatureRootEntries = BranchSignatureRootEntries
 				.Select(s => s.Trim().Replace("/", ""))
