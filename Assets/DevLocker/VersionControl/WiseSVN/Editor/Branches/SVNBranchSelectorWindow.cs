@@ -130,7 +130,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			// In case someone deletes the object in the mean time.
-			if (m_TargetAsset == null) {
+			if (m_TargetAsset == null || focusedWindow != this || !UnityEditorInternal.InternalEditorUtility.isApplicationActive) {
 				Close();
 				return;
 			}
@@ -218,10 +218,14 @@ namespace DevLocker.VersionControl.WiseSVN
 
 						if (repoBrowser) {
 							SVNContextMenusManager.RepoBrowser(branchProject.UnityProjectURL + "/" + AssetDatabase.GetAssetPath(m_TargetAsset));
+							Close();
 						}
+
 						if (showLog) {
 							SVNContextMenusManager.ShowLog(branchProject.UnityProjectURL + "/" + AssetDatabase.GetAssetPath(m_TargetAsset));
+							Close();
 						}
+
 						if (switchBranch) {
 							bool confirm = EditorUtility.DisplayDialog("Switch Operation",
 								"Unity needs to be closed while switching. Do you want to close it?\n\n" +
@@ -229,7 +233,22 @@ namespace DevLocker.VersionControl.WiseSVN
 								"Yes!", "No"
 								);
 							if (confirm && UnityEditor.SceneManagement.EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) {
-								SVNContextMenusManager.Switch(WiseSVNIntegration.WorkingCopyRootPath(), branchProject.BranchURL);
+								var localPath = WiseSVNIntegration.WorkingCopyRootPath();
+								var targetUrl = branchProject.BranchURL;
+
+								if (branchProject.BranchURL != branchProject.UnityProjectURL) {
+									bool useBranchRoot = EditorUtility.DisplayDialog("Switch what?",
+										"What do you want to switch?\n" +
+										"- Working copy root (the whole checkout)\n" +
+										"- Unity project folder",
+										"Working copy root", "Unity project");
+									if (!useBranchRoot) {
+										localPath = WiseSVNIntegration.ProjectRoot;
+										targetUrl = branchProject.UnityProjectURL;
+									}
+								}
+
+								SVNContextMenusManager.Switch(localPath, targetUrl);
 								EditorApplication.Exit(0);
 							}
 						}
@@ -240,11 +259,6 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 
 			}
-		}
-
-		private void OnLostFocus()
-		{
-			Close();
 		}
 	}
 }
