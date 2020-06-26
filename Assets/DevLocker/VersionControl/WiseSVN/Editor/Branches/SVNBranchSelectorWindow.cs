@@ -1,4 +1,5 @@
 using DevLocker.VersionControl.WiseSVN.ContextMenus;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -10,28 +11,6 @@ namespace DevLocker.VersionControl.WiseSVN
 	/// </summary>
 	public class SVNBranchSelectorWindow : EditorWindow
 	{
-		[MenuItem("Assets/SVN/Branch Selector", false, -490)]
-		private static void OpenBranchesSelector()
-		{
-			//var centerPos = GUIUtility.GUIToScreenPoint(Event.current.mousePosition);
-			var centerPos = new Vector2(Screen.currentResolution.width, Screen.currentResolution.height) / 2f;
-			OpenBranchesSelector(Selection.assetGUIDs.Select(AssetDatabase.GUIDToAssetPath).FirstOrDefault(), centerPos);
-		}
-
-		public static void OpenBranchesSelector(string assetPath, Vector2 center)
-		{
-			var window = CreateInstance<SVNBranchSelectorWindow>();
-
-			window.m_TargetAsset = AssetDatabase.LoadMainAssetAtPath(assetPath);
-
-			Vector2 size = new Vector2(350f, 200);
-			Rect popupRect = new Rect(center - size / 2, size);
-
-			window.minSize = size;
-			window.position = popupRect;
-			window.ShowPopup();
-		}
-
 		private bool m_Initialized = false;
 
 		private Object m_TargetAsset;
@@ -60,6 +39,18 @@ namespace DevLocker.VersionControl.WiseSVN
 		private GUIStyle BranchLabelStyle;
 
 		private readonly string[] LoadingDots = new[] { ".  ", ".. ", "..." };
+
+		[MenuItem("Assets/SVN/Branch Selector", false, -490)]
+		private static void OpenBranchesSelector()
+		{
+			var window = CreateInstance<SVNBranchSelectorWindow>();
+			window.titleContent = new GUIContent("Branch Selector");
+
+			var assetPath = Selection.assetGUIDs.Select(AssetDatabase.GUIDToAssetPath).FirstOrDefault();
+			window.m_TargetAsset = AssetDatabase.LoadMainAssetAtPath(assetPath);
+
+			window.ShowUtility();
+		}
 
 		private void InitializeStyles()
 		{
@@ -111,6 +102,18 @@ namespace DevLocker.VersionControl.WiseSVN
 			BranchLabelStyle.margin = margin;
 		}
 
+		// This is initialized on first OnGUI rather upon creation because it gets overriden.
+		private void InitializePositionAndSize()
+		{
+			// TODO: How will this behave with two monitors?
+			var center = new Vector2(Screen.currentResolution.width, Screen.currentResolution.height) / 2f;
+			Vector2 size = new Vector2(350f, 300);
+			Rect popupRect = new Rect(center - size / 2, size);
+
+			minSize = size;
+			position = popupRect;
+		}
+
 		void OnEnable()
 		{
 			SVNBranchesDatabase.Instance.DatabaseChanged -= Repaint;
@@ -126,20 +129,12 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			if (!m_Initialized) {
 				InitializeStyles();
+				InitializePositionAndSize();
+
 				m_Initialized = true;
 			}
 
-			// In case someone deletes the object in the mean time.
-			if (m_TargetAsset == null || focusedWindow != this || !UnityEditorInternal.InternalEditorUtility.isApplicationActive) {
-				Close();
-				return;
-			}
-
 			EditorGUILayout.BeginVertical(BorderStyle);
-
-			using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar)) {
-				GUILayout.Label("Branch Selector", WindowTitleStyle, GUILayout.ExpandWidth(true));
-			}
 
 			DrawContent();
 
@@ -152,7 +147,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				GUILayout.Label("Asset:", ToolbarTitleStyle, GUILayout.Width(60f));
 
-				m_TargetAsset = EditorGUILayout.ObjectField(m_TargetAsset, m_TargetAsset.GetType(), false, GUILayout.ExpandWidth(true));
+				m_TargetAsset = EditorGUILayout.ObjectField(m_TargetAsset, m_TargetAsset ? m_TargetAsset.GetType() : typeof(Object), false, GUILayout.ExpandWidth(true));
 
 				if (SVNBranchesDatabase.Instance.IsUpdating) {
 					int dots = ((int)EditorApplication.timeSinceStartup) % 3;
@@ -184,7 +179,9 @@ namespace DevLocker.VersionControl.WiseSVN
 			using (new EditorGUILayout.VerticalScope()) {
 
 				if (SVNBranchesDatabase.Instance.IsUpdating) {
-					EditorGUILayout.LabelField("Scanning branches for Unity projects...");
+					EditorGUILayout.LabelField("Scanning branches for Unity projects...", GUILayout.ExpandHeight(true));
+				} else if (m_TargetAsset == null) {
+					EditorGUILayout.LabelField("Please select target asset....", GUILayout.ExpandHeight(true));
 				} else {
 					DrawBranchesList();
 				}
@@ -218,12 +215,10 @@ namespace DevLocker.VersionControl.WiseSVN
 
 						if (repoBrowser) {
 							SVNContextMenusManager.RepoBrowser(branchProject.UnityProjectURL + "/" + AssetDatabase.GetAssetPath(m_TargetAsset));
-							Close();
 						}
 
 						if (showLog) {
 							SVNContextMenusManager.ShowLog(branchProject.UnityProjectURL + "/" + AssetDatabase.GetAssetPath(m_TargetAsset));
-							Close();
 						}
 
 						if (switchBranch) {
