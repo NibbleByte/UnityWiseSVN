@@ -19,6 +19,8 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private const string WindowSizePrefsKey = "SVNBranchSelectorWindow";
 
+		private SVNBranchesDatabase Database => SVNBranchesDatabase.Instance;
+
 		private GUIStyle BorderStyle;
 
 		private GUIContent RefreshBranchesContent;
@@ -35,6 +37,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		private GUIContent RepoBrowserContent;
 		private GUIContent ShowLogContent;
 		private GUIContent SwitchBranchContent;
+		private GUIContent CheckForConflictsContent;
 
 		private GUIStyle MiniIconButtonlessStyle;
 
@@ -85,10 +88,12 @@ namespace DevLocker.VersionControl.WiseSVN
 			RepoBrowserContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-RepoBrowser"), "Repo-Browser in this branch at the target asset.");
 			ShowLogContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ShowLog"), "Show Log in this branch at the target asset.");
 			SwitchBranchContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-Switch"), "Switch working copy to another branch.\nOpens TortoiseSVN dialog.");
+			CheckForConflictsContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-CheckForConflicts"), "Scan all branches for potential conflicts.\nThis will look for any changes made to the target asset in the branches.");
 
 			if (RepoBrowserContent.image == null) RepoBrowserContent.text = "R";
 			if (ShowLogContent.image == null) ShowLogContent.text = "L";
 			if (SwitchBranchContent.image == null) SwitchBranchContent.text = "S";
+			if (CheckForConflictsContent.image == null) CheckForConflictsContent.text = "C";
 
 			MiniIconButtonlessStyle = new GUIStyle(GUI.skin.button);
 			MiniIconButtonlessStyle.hover.background = MiniIconButtonlessStyle.normal.background;
@@ -126,13 +131,13 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		void OnEnable()
 		{
-			SVNBranchesDatabase.Instance.DatabaseChanged -= Repaint;
-			SVNBranchesDatabase.Instance.DatabaseChanged += Repaint;
+			Database.DatabaseChanged -= Repaint;
+			Database.DatabaseChanged += Repaint;
 		}
 
 		private void OnDisable()
 		{
-			SVNBranchesDatabase.Instance.DatabaseChanged -= Repaint;
+			Database.DatabaseChanged -= Repaint;
 			EditorPrefs.SetString(WindowSizePrefsKey, $"{position.width};{position.height}");
 		}
 
@@ -158,14 +163,17 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				GUILayout.Label("Asset:", ToolbarTitleStyle, GUILayout.Width(60f));
 
+				var prevColor = GUI.backgroundColor;
+				GUI.backgroundColor = m_TargetAsset == null ? new Color(0.93f, 0.40f, 0.40f) : prevColor;
+
 				m_TargetAsset = EditorGUILayout.ObjectField(m_TargetAsset, m_TargetAsset ? m_TargetAsset.GetType() : typeof(Object), false, GUILayout.ExpandWidth(true));
 
-				if (SVNBranchesDatabase.Instance.IsUpdating) {
-					int dots = ((int)EditorApplication.timeSinceStartup) % 3;
-					GUILayout.Label($"Scanning{LoadingDots[dots]}", ToolbarLabelStyle, GUILayout.ExpandWidth(false));
-					Repaint();
-				} else {
-					GUILayout.Label($"Branches: {SVNBranchesDatabase.Instance.BranchProjects.Count}", ToolbarLabelStyle, GUILayout.ExpandWidth(false));
+				GUI.backgroundColor = prevColor;
+
+				GUILayout.Space(24f);
+
+				if (GUILayout.Button(CheckForConflictsContent, EditorStyles.toolbarButton, GUILayout.ExpandWidth(false))) {
+					// TODO: ... start procedure...
 				}
 			}
 
@@ -182,20 +190,24 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 
 				if (GUILayout.Button(RefreshBranchesContent, EditorStyles.toolbarButton, GUILayout.ExpandWidth(false))) {
-					SVNBranchesDatabase.Instance.InvalidateDatabase();
+					Database.InvalidateDatabase();
 				}
 			}
 
 
 			using (new EditorGUILayout.VerticalScope()) {
 
-				if (SVNBranchesDatabase.Instance.IsUpdating) {
+				if (Database.IsUpdating) {
 					EditorGUILayout.LabelField("Scanning branches for Unity projects...", GUILayout.ExpandHeight(true));
 				} else if (m_TargetAsset == null) {
 					EditorGUILayout.LabelField("Please select target asset....", GUILayout.ExpandHeight(true));
 				} else {
 					DrawBranchesList();
 				}
+			}
+
+			using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar, GUILayout.ExpandWidth(true))) {
+				DrawStatusBar();
 			}
 		}
 
@@ -211,7 +223,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				// TODO: Sort list by folder depths: compare by lastIndexOf('/'). If equal, by string.
 
-				foreach (var branchProject in SVNBranchesDatabase.Instance.BranchProjects) {
+				foreach (var branchProject in Database.BranchProjects) {
 					if (!string.IsNullOrEmpty(m_BranchFilter) && branchProject.BranchName.IndexOf(m_BranchFilter, System.StringComparison.OrdinalIgnoreCase) == -1)
 						continue;
 
@@ -265,6 +277,23 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 
 			}
+		}
+
+		private void DrawStatusBar()
+		{
+			if (Database.LastError != ListOperationResult.Success) {
+				GUILayout.Label($"Error scanning branches: {ObjectNames.NicifyVariableName(Database.LastError.ToString())}", ToolbarLabelStyle, GUILayout.ExpandWidth(false));
+				return;
+			}
+
+			if (Database.IsUpdating) {
+				int dots = ((int)EditorApplication.timeSinceStartup) % 3;
+				GUILayout.Label($"Scanning{LoadingDots[dots]}", ToolbarLabelStyle, GUILayout.ExpandWidth(false));
+				Repaint();
+				return;
+			}
+
+			GUILayout.Label($"Branches: {Database.BranchProjects.Count}", ToolbarLabelStyle, GUILayout.ExpandWidth(false));
 		}
 	}
 }

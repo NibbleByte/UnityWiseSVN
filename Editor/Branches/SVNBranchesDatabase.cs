@@ -24,6 +24,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		// Is the database currently being populated?
 		public bool IsUpdating => m_PendingUpdate;
 
+		public ListOperationResult LastError => m_LastError;
+
 		// Used to recognize if folder is actually an Unity project.
 		private static readonly HashSet<string> m_UnityProjectEntries = new HashSet<string>() { "Assets", "ProjectSettings", "Packages" };
 
@@ -36,6 +38,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		[SerializeField] private bool m_IsReady;
 		[SerializeField] private List<BranchProject> m_BranchProjects = new List<BranchProject>();
+		[SerializeField] private ListOperationResult m_LastError;
 		private double m_LastRefreshTime;   // TODO: Maybe serialize this?
 
 		private List<BranchScanParameters> m_PendingScanParameters;
@@ -165,6 +168,8 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			m_PendingUpdate = true;
 
+			m_LastError = ListOperationResult.Success;
+
 			// Duplicate this to be thread-safe.
 			m_PendingScanParameters = new List<BranchScanParameters>(m_ProjectPrefs.BranchesDatabaseScanParameters);
 
@@ -265,6 +270,10 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				listEntries.Clear();
 				var opResult = WiseSVNIntegration.ListURL(url, false, listEntries);
+
+				if (opResult != ListOperationResult.Success) {
+					m_LastError = opResult;
+				}
 
 				switch (opResult) {
 					case ListOperationResult.URLNotFound:
