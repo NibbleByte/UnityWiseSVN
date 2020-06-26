@@ -17,6 +17,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		private string m_BranchFilter;
 		private Vector2 m_BranchesScroll;
 
+		private const string WindowSizePrefsKey = "SVNBranchSelectorWindow";
+
 		private GUIStyle BorderStyle;
 
 		private GUIContent RefreshBranchesContent;
@@ -105,12 +107,20 @@ namespace DevLocker.VersionControl.WiseSVN
 		// This is initialized on first OnGUI rather upon creation because it gets overriden.
 		private void InitializePositionAndSize()
 		{
+			Vector2 size = new Vector2(350f, 300);
+			minSize = size;
+
+			var sizeData = EditorPrefs.GetString(WindowSizePrefsKey);
+			if (!string.IsNullOrEmpty(sizeData)) {
+				var sizeArr = sizeData.Split(';');
+				size.x = float.Parse(sizeArr[0]);
+				size.y = float.Parse(sizeArr[1]);
+			}
+
 			// TODO: How will this behave with two monitors?
 			var center = new Vector2(Screen.currentResolution.width, Screen.currentResolution.height) / 2f;
-			Vector2 size = new Vector2(350f, 300);
 			Rect popupRect = new Rect(center - size / 2, size);
 
-			minSize = size;
 			position = popupRect;
 		}
 
@@ -123,6 +133,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		private void OnDisable()
 		{
 			SVNBranchesDatabase.Instance.DatabaseChanged -= Repaint;
+			EditorPrefs.SetString(WindowSizePrefsKey, $"{position.width};{position.height}");
 		}
 
 		void OnGUI()
