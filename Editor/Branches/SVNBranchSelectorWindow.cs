@@ -17,9 +17,44 @@ namespace DevLocker.VersionControl.WiseSVN
 		private string m_BranchFilter;
 		private Vector2 m_BranchesScroll;
 
-		private const string WindowSizePrefsKey = "SVNBranchSelectorWindow";
+		private const string WindowSizePrefsKey = "SVNBranchSelectorWindow-Size";
 
 		private SVNBranchesDatabase Database => SVNBranchesDatabase.Instance;
+
+		#region Conflicts Scans
+
+		private enum ConflictsScanState
+		{
+			None,
+			WaitingForBranchesDatabase,
+			Scanning,
+			Scanned,
+			Error,
+		}
+
+		private enum ConflictState
+		{
+			None,
+			Pending,
+			Normal,
+			Conflicted,
+			Missing,
+		}
+
+		[System.Serializable]
+		private struct ConflictsScanResult
+		{
+			public string UnityURL;
+			public ConflictState State;
+		}
+
+		private ConflictsScanState m_ConflictsScanState = ConflictsScanState.None;
+
+		private ConflictsScanResult[] m_ConflictsScanResults = new ConflictsScanResult[0];
+		private System.Threading.Thread m_ConflictsScanThread;
+
+		#endregion
+
 
 		private GUIStyle BorderStyle;
 
@@ -34,10 +69,16 @@ namespace DevLocker.VersionControl.WiseSVN
 		private GUIStyle SearchFieldCancelStyle;
 		private GUIStyle SearchFieldCancelEmptyStyle;
 
+		// Branch buttons
 		private GUIContent RepoBrowserContent;
 		private GUIContent ShowLogContent;
 		private GUIContent SwitchBranchContent;
-		private GUIContent CheckForConflictsContent;
+		private GUIContent ScanForConflictsContent;
+
+		private GUIContent ConflictsPendingContent;
+		private GUIContent ConflictsFoundContent;
+		private GUIContent ConflictsNormalContent;
+		private GUIContent ConflictsMissingContent;
 
 		private GUIStyle MiniIconButtonlessStyle;
 
@@ -85,22 +126,32 @@ namespace DevLocker.VersionControl.WiseSVN
 			SearchFieldCancelStyle = GUI.skin.GetStyle("ToolbarSeachCancelButton");
 			SearchFieldCancelEmptyStyle = GUI.skin.GetStyle("ToolbarSeachCancelButtonEmpty");
 
+			const string showLogTooltip = "Show Log in this branch at the target asset.";
 			RepoBrowserContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-RepoBrowser"), "Repo-Browser in this branch at the target asset.");
-			ShowLogContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ShowLog"), "Show Log in this branch at the target asset.");
+			ShowLogContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ShowLog"), showLogTooltip);
 			SwitchBranchContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-Switch"), "Switch working copy to another branch.\nOpens TortoiseSVN dialog.");
-			CheckForConflictsContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-CheckForConflicts"), "Scan all branches for potential conflicts.\nThis will look for any changes made to the target asset in the branches.");
+			ScanForConflictsContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ScanForConflicts"), "Scan all branches for potential conflicts.\nThis will look for any changes made to the target asset in the branches.");
+
+			ConflictsPendingContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ConflictsScan-Pending"), "Pending - waiting to be scanned for conflicts.\n\n" + showLogTooltip);
+			ConflictsFoundContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-Conflicts-Found"), "Conflicts found by the scan.\n\n" + showLogTooltip);
+			ConflictsNormalContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ConflictsScan-Normal"), "No conflicts were found by the scan.\n\n" + showLogTooltip);
+			ConflictsMissingContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ConflictsScan-Missing"), "Asset was missing. It may have been deleted or never existed in this branch.\n\n" + showLogTooltip);
 
 			if (RepoBrowserContent.image == null) RepoBrowserContent.text = "R";
 			if (ShowLogContent.image == null) ShowLogContent.text = "L";
 			if (SwitchBranchContent.image == null) SwitchBranchContent.text = "S";
-			if (CheckForConflictsContent.image == null) CheckForConflictsContent.text = "C";
+			if (ScanForConflictsContent.image == null) ScanForConflictsContent.text = "C";
+
+			if (ConflictsPendingContent.image == null) ScanForConflictsContent.text = "P";
+			if (ConflictsFoundContent.image == null) ScanForConflictsContent.text = "C";
+			if (ConflictsNormalContent.image == null) ScanForConflictsContent.text = "N";
+			if (ConflictsMissingContent.image == null) ScanForConflictsContent.text = "M";
 
 			MiniIconButtonlessStyle = new GUIStyle(GUI.skin.button);
 			MiniIconButtonlessStyle.hover.background = MiniIconButtonlessStyle.normal.background;
 			MiniIconButtonlessStyle.normal.background = null;
 			MiniIconButtonlessStyle.padding = new RectOffset();
 			MiniIconButtonlessStyle.margin = new RectOffset();
-			wantsMouseMove = true;	// Needed for the hover effects.
 
 			BranchLabelStyle = new GUIStyle(GUI.skin.label);
 			BranchLabelStyle.alignment = TextAnchor.MiddleLeft;
@@ -131,14 +182,23 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		void OnEnable()
 		{
-			Database.DatabaseChanged -= Repaint;
-			Database.DatabaseChanged += Repaint;
+			wantsMouseMove = true;  // Needed for the hover effects.
+
+			Database.DatabaseChanged -= OnDatabaseChanged;
+			Database.DatabaseChanged += OnDatabaseChanged;
+			AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
 		}
 
 		private void OnDisable()
 		{
-			Database.DatabaseChanged -= Repaint;
+			Database.DatabaseChanged -= OnDatabaseChanged;
+			AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
+
 			EditorPrefs.SetString(WindowSizePrefsKey, $"{position.width};{position.height}");
+
+			if (m_ConflictsScanState != ConflictsScanState.Scanned) {
+				InvaldateConflictsScan();
+			}
 		}
 
 		void OnGUI()
@@ -154,7 +214,20 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			DrawContent();
 
+			using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar, GUILayout.ExpandWidth(true))) {
+				DrawStatusBar();
+			}
+
 			EditorGUILayout.EndVertical();
+
+			if (m_ConflictsScanState == ConflictsScanState.Scanning && Event.current.type == EventType.Repaint) {
+
+				if (!m_ConflictsScanThread.IsAlive) {
+					m_ConflictsScanState = ConflictsScanState.Scanned;
+				}
+
+				Repaint();
+			}
 		}
 
 		private void DrawContent()
@@ -166,14 +239,18 @@ namespace DevLocker.VersionControl.WiseSVN
 				var prevColor = GUI.backgroundColor;
 				GUI.backgroundColor = m_TargetAsset == null ? new Color(0.93f, 0.40f, 0.40f) : prevColor;
 
-				m_TargetAsset = EditorGUILayout.ObjectField(m_TargetAsset, m_TargetAsset ? m_TargetAsset.GetType() : typeof(Object), false, GUILayout.ExpandWidth(true));
+				var targetAsset = EditorGUILayout.ObjectField(m_TargetAsset, m_TargetAsset ? m_TargetAsset.GetType() : typeof(Object), false, GUILayout.ExpandWidth(true));
+				if (targetAsset != m_TargetAsset) {
+					InvaldateConflictsScan();
+					m_TargetAsset = targetAsset;
+				}
 
 				GUI.backgroundColor = prevColor;
 
 				GUILayout.Space(24f);
 
-				if (GUILayout.Button(CheckForConflictsContent, EditorStyles.toolbarButton, GUILayout.ExpandWidth(false))) {
-					// TODO: ... start procedure...
+				if (GUILayout.Button(ScanForConflictsContent, EditorStyles.toolbarButton, GUILayout.ExpandWidth(false))) {
+					StartConflictsScan();
 				}
 			}
 
@@ -191,23 +268,20 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				if (GUILayout.Button(RefreshBranchesContent, EditorStyles.toolbarButton, GUILayout.ExpandWidth(false))) {
 					Database.InvalidateDatabase();
+					InvaldateConflictsScan();
 				}
 			}
 
 
 			using (new EditorGUILayout.VerticalScope()) {
 
-				if (Database.IsUpdating) {
+				if (!Database.IsReady) {
 					EditorGUILayout.LabelField("Scanning branches for Unity projects...", GUILayout.ExpandHeight(true));
 				} else if (m_TargetAsset == null) {
 					EditorGUILayout.LabelField("Please select target asset....", GUILayout.ExpandHeight(true));
 				} else {
 					DrawBranchesList();
 				}
-			}
-
-			using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar, GUILayout.ExpandWidth(true))) {
-				DrawStatusBar();
 			}
 		}
 
@@ -231,7 +305,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 						float buttonSize = 24f;
 						bool repoBrowser = GUILayout.Button(RepoBrowserContent, MiniIconButtonlessStyle, GUILayout.Height(buttonSize), GUILayout.Width(buttonSize));
-						bool showLog = GUILayout.Button(ShowLogContent, MiniIconButtonlessStyle, GUILayout.Height(buttonSize), GUILayout.Width(buttonSize));
+						bool showLog = GUILayout.Button(SelectShowLogContent(branchProject), MiniIconButtonlessStyle, GUILayout.Height(buttonSize), GUILayout.Width(buttonSize));
 						bool switchBranch = GUILayout.Button(SwitchBranchContent, MiniIconButtonlessStyle, GUILayout.Height(buttonSize), GUILayout.Width(buttonSize));
 
 						GUILayout.Label(new GUIContent(branchProject.BranchRelativePath, branchProject.BranchURL), BranchLabelStyle);
@@ -279,6 +353,31 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 		}
 
+		private GUIContent SelectShowLogContent(BranchProject branchProject)
+		{
+			if (m_ConflictsScanState != ConflictsScanState.Scanning && m_ConflictsScanState != ConflictsScanState.Scanned)
+				return ShowLogContent;
+
+			var conflictResult = m_ConflictsScanResults.First(r => r.UnityURL == branchProject.UnityProjectURL);
+			switch(conflictResult.State) {
+
+				case ConflictState.Pending:
+					return ConflictsPendingContent;
+
+				case ConflictState.Normal:
+					return ConflictsNormalContent;
+
+				case ConflictState.Conflicted:
+					return ConflictsFoundContent;
+
+				case ConflictState.Missing:
+					return ConflictsMissingContent;
+
+				default:
+					throw new System.NotSupportedException($"Conflict for {branchProject.UnityProjectURL} - {conflictResult.State}");
+			}
+		}
+
 		private void DrawStatusBar()
 		{
 			if (Database.LastError != ListOperationResult.Success) {
@@ -289,11 +388,104 @@ namespace DevLocker.VersionControl.WiseSVN
 			if (Database.IsUpdating) {
 				int dots = ((int)EditorApplication.timeSinceStartup) % 3;
 				GUILayout.Label($"Scanning{LoadingDots[dots]}", ToolbarLabelStyle, GUILayout.ExpandWidth(false));
+
+				GUILayout.FlexibleSpace();
+
+				GUILayout.Label(Database.LastProcessedEntry, ToolbarLabelStyle, GUILayout.ExpandWidth(false));
 				Repaint();
 				return;
 			}
 
+
 			GUILayout.Label($"Branches: {Database.BranchProjects.Count}", ToolbarLabelStyle, GUILayout.ExpandWidth(false));
+
+			if (m_ConflictsScanState != ConflictsScanState.None) {
+				GUILayout.FlexibleSpace();
+
+				GUILayout.Label($"Conflicts: {ObjectNames.NicifyVariableName(m_ConflictsScanState.ToString())}", ToolbarLabelStyle, GUILayout.ExpandWidth(false));
+			}
+		}
+
+		private void OnDatabaseChanged()
+		{
+			if (m_ConflictsScanState != ConflictsScanState.None) {
+				StartConflictsScan();
+			}
+
+			Repaint();
+		}
+
+		private void StartConflictsScan()
+		{
+			if (Database.IsUpdating || !Database.IsReady) {
+				m_ConflictsScanState = ConflictsScanState.WaitingForBranchesDatabase;
+				return;
+			}
+
+			if (Database.LastError != ListOperationResult.Success) {
+				m_ConflictsScanState = ConflictsScanState.Error;
+				return;
+			}
+
+			if (m_TargetAsset == null || Database.BranchProjects.Count == 0) {
+				m_ConflictsScanState = ConflictsScanState.Error;
+				return;
+			}
+
+			if (m_ConflictsScanState == ConflictsScanState.Scanning)
+				return;
+
+			if (m_ConflictsScanThread != null && m_ConflictsScanThread.IsAlive) {
+				throw new System.Exception("Starting conflicts scan while another one is pending?");
+			}
+
+			m_ConflictsScanState = ConflictsScanState.Scanning;
+
+			m_ConflictsScanResults = Database.BranchProjects
+				.Select(bp => new ConflictsScanResult() { UnityURL = bp.UnityProjectURL, State = ConflictState.Pending })
+				.ToArray();
+
+			// Thread will update the array by ref.
+			var jobData = new KeyValuePair<string, ConflictsScanResult[]>(AssetDatabase.GetAssetPath(m_TargetAsset), m_ConflictsScanResults);
+
+			m_ConflictsScanThread = new System.Threading.Thread(GatherConflicts);
+			m_ConflictsScanThread.Start(jobData);
+		}
+
+		private void InvaldateConflictsScan()
+		{
+			m_ConflictsScanState = ConflictsScanState.None;
+
+			m_ConflictsScanResults = new ConflictsScanResult[0];
+
+			if (m_ConflictsScanThread != null && m_ConflictsScanThread.IsAlive) {
+				m_ConflictsScanThread.Abort();
+				m_ConflictsScanThread = null;
+			}
+		}
+
+		private void OnBeforeAssemblyReload()
+		{
+			// Do it before Unity does it. Cause Unity aborts the thread badly sometimes :(
+			if (m_ConflictsScanState != ConflictsScanState.Scanned) {
+				InvaldateConflictsScan();
+			}
+		}
+
+		private static void GatherConflicts(object param)
+		{
+			var jobData = (KeyValuePair<string, ConflictsScanResult[]>)param;
+			var targetAssetPath = jobData.Key;
+			var results = jobData.Value;
+
+			for(int i = 0; i < results.Length; ++i) {
+				var result = results[i];
+
+				System.Threading.Thread.Sleep(5000);
+				result.State = i == 1 ? ConflictState.Normal : ConflictState.Conflicted;
+				if (i == 2) result.State = ConflictState.Missing;
+				results[i] = result;
+			}
 		}
 	}
 }

@@ -24,7 +24,11 @@ namespace DevLocker.VersionControl.WiseSVN
 		// Is the database currently being populated?
 		public bool IsUpdating => m_PendingUpdate;
 
+		// Last error that occured.
 		public ListOperationResult LastError => m_LastError;
+
+		// Which was the last processed entry by the worker thread. Kind of like progress.
+		public string LastProcessedEntry { get; private set; }
 
 		// Used to recognize if folder is actually an Unity project.
 		private static readonly HashSet<string> m_UnityProjectEntries = new HashSet<string>() { "Assets", "ProjectSettings", "Packages" };
@@ -267,6 +271,10 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			while (urls.Count > 0) {
 				var url = urls.Dequeue();
+
+				LastProcessedEntry = url.Length == scanParams.EntryPointURL.Length
+					? scanParams.EntryPointURL
+					: url.Remove(0, scanParams.EntryPointURL.Length + 1);
 
 				listEntries.Clear();
 				var opResult = WiseSVNIntegration.ListURL(url, false, listEntries);
