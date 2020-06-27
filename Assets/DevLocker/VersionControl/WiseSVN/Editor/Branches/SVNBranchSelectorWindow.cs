@@ -38,7 +38,9 @@ namespace DevLocker.VersionControl.WiseSVN
 			Pending,
 			Normal,
 			Conflicted,
+			Added,
 			Missing,
+			Error,
 		}
 
 		[System.Serializable]
@@ -78,7 +80,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		private GUIContent ConflictsPendingContent;
 		private GUIContent ConflictsFoundContent;
 		private GUIContent ConflictsNormalContent;
+		private GUIContent ConflictsAddedContent;
 		private GUIContent ConflictsMissingContent;
+		private GUIContent ConflictsErrorContent;
 
 		private GUIStyle MiniIconButtonlessStyle;
 
@@ -135,7 +139,9 @@ namespace DevLocker.VersionControl.WiseSVN
 			ConflictsPendingContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ConflictsScan-Pending"), "Pending - waiting to be scanned for conflicts.\n\n" + showLogTooltip);
 			ConflictsFoundContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-Conflicts-Found"), "Conflicts found by the scan.\n\n" + showLogTooltip);
 			ConflictsNormalContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ConflictsScan-Normal"), "No conflicts were found by the scan.\n\n" + showLogTooltip);
+			ConflictsAddedContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ConflictsScan-Added"), "Asset was added in this branch.\n\n" + showLogTooltip);
 			ConflictsMissingContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ConflictsScan-Missing"), "Asset was missing. It may have been deleted or never existed in this branch.\n\n" + showLogTooltip);
+			ConflictsErrorContent = new GUIContent(EditorGUIUtility.FindTexture("console.erroricon.sml"), "Error while scanning this branch. Check the console logs for more info.\n\n" + showLogTooltip);
 
 			if (RepoBrowserContent.image == null) RepoBrowserContent.text = "R";
 			if (ShowLogContent.image == null) ShowLogContent.text = "L";
@@ -145,7 +151,9 @@ namespace DevLocker.VersionControl.WiseSVN
 			if (ConflictsPendingContent.image == null) ScanForConflictsContent.text = "P";
 			if (ConflictsFoundContent.image == null) ScanForConflictsContent.text = "C";
 			if (ConflictsNormalContent.image == null) ScanForConflictsContent.text = "N";
+			if (ConflictsAddedContent.image == null) ScanForConflictsContent.text = "A";
 			if (ConflictsMissingContent.image == null) ScanForConflictsContent.text = "M";
+			if (ConflictsErrorContent.image == null) ScanForConflictsContent.text = "E";
 
 			MiniIconButtonlessStyle = new GUIStyle(GUI.skin.button);
 			MiniIconButtonlessStyle.hover.background = MiniIconButtonlessStyle.normal.background;
@@ -370,8 +378,14 @@ namespace DevLocker.VersionControl.WiseSVN
 				case ConflictState.Conflicted:
 					return ConflictsFoundContent;
 
+				case ConflictState.Added:
+					return ConflictsAddedContent;
+
 				case ConflictState.Missing:
 					return ConflictsMissingContent;
+
+				case ConflictState.Error:
+					return ConflictsErrorContent;
 
 				default:
 					throw new System.NotSupportedException($"Conflict for {branchProject.UnityProjectURL} - {conflictResult.State}");
