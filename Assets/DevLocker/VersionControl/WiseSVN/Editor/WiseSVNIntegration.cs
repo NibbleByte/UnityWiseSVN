@@ -1015,6 +1015,8 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"log {args} \"{SVNFormatPath(assetPathOrUrl)}\"", timeout, shellMonitor);
 
+			var relativeURL = AssetPathToRelativeURL(assetPathOrUrl);
+
 			if (!string.IsNullOrEmpty(result.Error)) {
 
 				// Unable to connect to repository indicating some network or server problems.
@@ -1108,7 +1110,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 						logEntry.AllPaths = logPaths.ToArray();
 						logEntry.AffectedPaths = logPaths
-							.Where(lp => lp.Path.Contains(assetPathOrUrl) || lp.CopiedFrom.Contains(assetPathOrUrl))
+							.Where(lp => lp.Path.Contains(relativeURL) || lp.CopiedFrom.Contains(relativeURL))
 							.ToArray()
 							;
 
@@ -1159,12 +1161,24 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		/// <summary>
 		/// Convert Unity asset path to svn URL. Works with files and folders.
+		/// Example: https://yourcompany.com/svn/trunk/YourProject/Assets/Foo.cs
 		/// </summary>
 		public static string AssetPathToURL(string assetPath)
 		{
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(assetPath)}\"", COMMAND_TIMEOUT);
 
 			return ExtractLineValue("URL:", result.Output);
+		}
+
+		/// <summary>
+		/// Convert Unity asset path to relative repo URL. Works with files and folders.
+		/// Example: ^/trunk/YourProject/Assets/Foo.cs
+		/// </summary>
+		public static string AssetPathToRelativeURL(string assetPathOrUrl)
+		{
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(assetPathOrUrl)}\"", COMMAND_TIMEOUT);
+
+			return ExtractLineValue("Relative URL:", result.Output).TrimStart('^');
 		}
 
 		/// <summary>
