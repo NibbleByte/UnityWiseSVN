@@ -84,6 +84,14 @@ namespace DevLocker.VersionControl.WiseSVN
 			{UpdateResolveConflicts.Launch, "launch"},
 		};
 
+		private static readonly Dictionary<char, LogPathChange> m_LogPathChangesMap = new Dictionary<char, LogPathChange>
+		{
+			{'A', LogPathChange.Added},
+			{'D', LogPathChange.Deleted},
+			{'R', LogPathChange.Replaced},
+			{'M', LogPathChange.Modified},
+		};
+
 		#endregion
 
 		public static readonly string ProjectRoot;
@@ -986,6 +994,168 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			return operation;
 		}
+
+		/// <summary>
+		/// Performs show log operation based on the provided parameters. The less data it needs to fetch the faster it will go.
+		/// Returned paths are absolute: /trunk/YourProject/Foo.cs
+		/// "StopOnCopy = false" may result in entries that do not match requested path (since they were moved but are part of its history).
+		/// In that case you may end up with empty AffectedPaths array.
+		/// Search query may have additional "--search" or "--search-and" options. Check the SVN documentation.
+		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// </summary>
+		public static LogOperationResult Log(string assetPathOrUrl, LogParams logParams, List<LogEntry> resultEntries, int timeout = ONLINE_COMMAND_TIMEOUT, IShellMonitor shellMonitor = null)
+		{
+			var fetchAffectedPathsStr = logParams.FetchAffectedPaths ? "-v" : "";
+			var fetchCommitMessagesStr = logParams.FetchCommitMessages ? "" : "-q";
+			var stopOnCopyStr = logParams.StopOnCopy ? "--stop-on-copy" : "";
+			var limitStr = logParams.Limit > 0 ? "-l " + logParams.Limit : "";
+			var searchStr = string.IsNullOrEmpty(logParams.SearchQuery) ? "" : "--search " + logParams.SearchQuery;
+
+			var args = $"{fetchAffectedPathsStr} {fetchCommitMessagesStr} {stopOnCopyStr} {limitStr} {searchStr}";
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"log {args} \"{SVNFormatPath(assetPathOrUrl)}\"", timeout, shellMonitor);
+
+			if (!string.IsNullOrEmpty(result.Error)) {
+
+				// Unable to connect to repository indicating some network or server problems.
+				// svn: E170013: Unable to connect to a repository at URL '...'
+				// svn: E731001: No such host is known.
+				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
+					return LogOperationResult.UnableToConnectError;
+
+				// URL target not found.
+				// svn: E200009: Could not list all targets because some targets don't exist
+				if (result.Error.Contains("E200009"))
+					return LogOperationResult.URLNotFound;
+
+				// URL is local path that is not a proper SVN working copy.
+				// svn: E155007: '...' is not a working copy
+				if (result.Error.Contains("E155007"))
+					return LogOperationResult.InvalidWorkingCopy;
+
+				return LogOperationResult.UnknownError;
+			}
+
+			try {
+
+				// Each entry is separated by that many dashes.
+				const string entriesSeparator = "------------------------------------------------------------------------";
+				var outputEntries = result.Output
+					.Replace("\r", "")
+					.Split(new string[] { entriesSeparator }, StringSplitOptions.RemoveEmptyEntries)
+					.Select(line => line.Trim())
+					;
+
+				foreach (var outputEntry in outputEntries) {
+
+					// Last line is empty.
+					if (string.IsNullOrEmpty(outputEntry))
+						break;
+
+					var lines = outputEntry.Split('\n');    // Empty lines are valid
+					int lineIndex = 0;
+
+					var logEntry = new LogEntry();
+
+					// First line always exists and contains basic info (last one is the commit message number of lines, optional):
+					// r59162 | nikola | 2020-06-24 14:21:35 +0300 (ср, 24 юни 2020)
+					// r59162 | nikola | 2020-06-24 14:21:35 +0300 (ср, 24 юни 2020) | 2 lines
+					var basicInfos = lines[lineIndex].Split('|');
+
+					logEntry.Revision = int.Parse(basicInfos[0].TrimStart('r'));
+					logEntry.Author = basicInfos[1].Trim();
+					logEntry.Date = basicInfos[2].Trim();
+					lineIndex++;
+
+					if (logParams.FetchAffectedPaths) {
+						// Skip this line.
+						Debug.Assert(lines[lineIndex] == "Changed paths:", "Invalid log format!");
+						lineIndex++;
+
+						var logPaths = new List<LogPath>(lines.Length);
+
+						// Affected paths are printed ending with an empty line (or run out of lines).
+						for(; lineIndex < lines.Length && !string.IsNullOrWhiteSpace(lines[lineIndex]); ++lineIndex) {
+							var line = lines[lineIndex];
+							var logPath = new LogPath();
+
+							// Example paths:
+							//    M /branches/YourBranch/SomeFolder
+							//    A /branches/YourBranch/SomeFile.cs (from /branches/YourBranch/OldFileName.cs:58540)
+
+							const string changeOpening = "   A ";
+
+							logPath.Change = m_LogPathChangesMap[line[changeOpening.Length - 2]];
+
+							if (line[line.Length - 1] == ')') {
+								const string copyFromOpening = "(from ";
+								var openBracketIndex = line.IndexOf(copyFromOpening);
+
+								var from = line.Substring(openBracketIndex + copyFromOpening.Length, line.Length - 1 - openBracketIndex - copyFromOpening.Length);
+
+								logPath.CopiedFrom = from.Substring(0, from.LastIndexOf(':'));
+								logPath.CopiedFromRevision = int.Parse(from.Substring(from.LastIndexOf(':') + 1));
+
+								logPath.Path = line.Substring(changeOpening.Length, openBracketIndex - changeOpening.Length - 1); // -1 is for the space before the braket
+
+							} else {
+								logPath.CopiedFrom = string.Empty;
+								logPath.Path = line.Substring(changeOpening.Length);
+							}
+
+							logPaths.Add(logPath);
+						}
+
+						logEntry.AllPaths = logPaths.ToArray();
+						logEntry.AffectedPaths = logPaths
+							.Where(lp => lp.Path.Contains(assetPathOrUrl) || lp.CopiedFrom.Contains(assetPathOrUrl))
+							.ToArray()
+							;
+
+					} else {
+						logEntry.AffectedPaths = new LogPath[0];
+						logEntry.AllPaths = new LogPath[0];
+					}
+
+
+					logEntry.Message = logParams.FetchCommitMessages
+						? string.Join("\n", lines.Skip(lineIndex)).Trim()
+						: ""
+						;
+
+					resultEntries.Add(logEntry);
+				}
+
+			} catch (Exception ex) {
+				// Parsing failed... unsupported format?
+				Debug.LogException(ex);
+				resultEntries.Clear();
+				return LogOperationResult.UnknownError;
+			}
+
+			return LogOperationResult.Success;
+		}
+
+		/// <summary>
+		/// Performs show log operation based on the provided parameters. The less data it needs to fetch the faster it will go.
+		/// Returned paths are absolute: /trunk/YourProject/Foo.cs
+		/// "StopOnCopy = false" may result in entries that do not match requested path (since they were moved but are part of its history).
+		/// In that case you may end up with empty AffectedPaths array.
+		/// Search query may have additional "--search" or "--search-and" options. Check the SVN documentation.
+		/// NOTE: If assembly reload happens, task will be lost, complete handler won't be called.
+		/// </summary>
+		public static SVNAsyncOperation<LogOperationResult> LogAsync(string assetPathOrUrl, LogParams logParams, List<LogEntry> resultEntries, int timeout = -1)
+		{
+			var threadResults = new List<LogEntry>();
+			var operation = SVNAsyncOperation<LogOperationResult>.Start(op => Log(assetPathOrUrl, logParams, resultEntries, timeout, op));
+			operation.Completed += (op) => {
+				resultEntries.AddRange(threadResults);
+			};
+
+			return operation;
+		}
+
+
 
 		/// <summary>
 		/// Convert Unity asset path to svn URL. Works with files and folders.
