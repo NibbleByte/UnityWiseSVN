@@ -217,6 +217,11 @@ namespace DevLocker.VersionControl.WiseSVN
 		public string Message;
 		public LogPath[] AffectedPaths;		// Paths matching the initially requested path.
 		public LogPath[] AllPaths;			// All paths in the log entry.
+
+		public override string ToString()
+		{
+			return $"Log: {Revision} | {Author} | {AllPaths?.Length ?? 0} Files | {Message?.Count(c => c == '\n') ?? 0} Lines";
+		}
 	}
 
 	public enum LogPathChange
