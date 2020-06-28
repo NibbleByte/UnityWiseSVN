@@ -77,6 +77,15 @@ namespace DevLocker.VersionControl.WiseSVN
 		UnknownError,			// Failed for some reason.
 	}
 
+	public enum LogOperationResult
+	{
+		Success,                // Operation succeeded.
+		URLNotFound,            // URL target was not found.
+		InvalidWorkingCopy,     // URL is local path that is not a proper SVN working copy.
+		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
+		UnknownError,			// Failed for some reason.
+	}
+
 	public enum CommitOperationResult
 	{
 		Success,				// Operation succeeded.
@@ -180,6 +189,61 @@ namespace DevLocker.VersionControl.WiseSVN
 		public bool FetchLockOwner;	// If file is locked and this is true, another query (per locked file) will be made
 									// to the repository to find out the owner's user name. I.e. will execute "svn info [url]"
 									// Works only in online mode.
+	}
+
+	/// <summary>
+	/// Parameters to be used for Log operation.
+	/// </summary>
+	[Serializable]
+	public struct LogParams
+	{
+		public bool FetchAffectedPaths;
+		public bool FetchCommitMessages;
+		public bool StopOnCopy;		// NOTE: "StopOnCopy = false" may result in entries that do not match requested path (since they were moved).
+		public int Limit;
+		public string SearchQuery;  // Search query may have additional "--search" or "--search-and" options. Check the SVN documentation.
+	}
+
+	/// <summary>
+	/// Data containing results for single entry of SVN log operation.
+	/// </summary>
+	[Serializable]
+	public struct LogEntry
+	{
+		public int Revision;
+		public string Author;
+		public string Date;
+
+		public string Message;
+		public LogPath[] AffectedPaths;		// Paths matching the initially requested path.
+		public LogPath[] AllPaths;			// All paths in the log entry.
+	}
+
+	public enum LogPathChange
+	{
+		Added,
+		Deleted,
+		Replaced,
+		Modified,
+	}
+
+	[Serializable]
+	public struct LogPath
+	{
+		public string Path;
+		public string CopiedFrom;
+		public int CopiedFromRevision;
+		public LogPathChange Change;
+
+		public bool Added => Change == LogPathChange.Added;
+		public bool Deleted => Change == LogPathChange.Deleted;
+		public bool Replaced => Change == LogPathChange.Replaced;
+		public bool Modified => Change == LogPathChange.Modified;
+
+		public override string ToString()
+		{
+			return $"{Change.ToString()[0]} {Path}";
+		}
 	}
 
 
