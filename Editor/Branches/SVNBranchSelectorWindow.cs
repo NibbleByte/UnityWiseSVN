@@ -492,12 +492,64 @@ namespace DevLocker.VersionControl.WiseSVN
 			var targetAssetPath = jobData.Key;
 			var results = jobData.Value;
 
-			for(int i = 0; i < results.Length; ++i) {
+			var logParams = new LogParams() {
+				FetchAffectedPaths = true,
+				FetchCommitMessages = false,
+				StopOnCopy = true,
+				Limit = 10,
+			};
+
+			List<LogEntry> logEntries = new List<LogEntry>();
+
+			for (int i = 0; i < results.Length; ++i) {
 				var result = results[i];
 
-				System.Threading.Thread.Sleep(5000);
-				result.State = i == 1 ? ConflictState.Normal : ConflictState.Conflicted;
-				if (i == 2) result.State = ConflictState.Missing;
+				logEntries.Clear();
+
+				var targetURL = result.UnityURL + "/" + targetAssetPath;
+				var targetRelativeURL = WiseSVNIntegration.AssetPathToRelativeURL(targetURL);
+				var opResult = WiseSVNIntegration.Log(targetURL, logParams, logEntries, 60000 * 2);
+
+				// Either it doesn't exist in this branch or it was moved / deleted. Can't know for sure without some deep digging.
+				if (opResult == LogOperationResult.NotFound) {
+					result.State = ConflictState.Missing;
+					results[i] = result;
+					continue;
+				}
+
+				if (opResult != LogOperationResult.Success) {
+					result.State = ConflictState.Error;
+					results[i] = result;
+					continue;
+				}
+
+				result.State = ConflictState.Normal;
+
+				foreach(var logEntry in logEntries) {
+					var logPath = logEntry.AffectedPaths.FirstOrDefault(ap => ap.Path.StartsWith(targetRelativeURL));
+
+					// If not found in the affected paths -> this is the log entry of the branch copy.
+					if (string.IsNullOrEmpty(logPath.Path))
+						continue;
+
+					result.State = ConflictState.Conflicted;
+
+					// Don't consider folder children for "Added" and "Deleted". Folders are just modified by their children.
+					if (logPath.Path != targetRelativeURL)
+						continue;
+
+					if (logPath.Added || logPath.Replaced) {
+						result.State = ConflictState.Added;
+						break;
+					}
+
+					if (logPath.Deleted) {
+						result.State = ConflictState.Missing;
+						break;
+					}
+				}
+
+
 				results[i] = result;
 			}
 		}

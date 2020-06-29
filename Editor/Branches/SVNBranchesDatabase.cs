@@ -279,17 +279,13 @@ namespace DevLocker.VersionControl.WiseSVN
 				listEntries.Clear();
 				var opResult = WiseSVNIntegration.ListURL(url, false, listEntries);
 
-				if (opResult != ListOperationResult.Success) {
-					m_LastError = opResult;
+				if (opResult == ListOperationResult.NotFound) {
+					Debug.LogError($"{GetType().Name} failed to find url: \"{url}\".");
 				}
 
-				switch (opResult) {
-					case ListOperationResult.URLNotFound:
-						Debug.LogError($"{GetType().Name} failed to find url: \"{url}\".");
-						return;
-					case ListOperationResult.InvalidWorkingCopy:
-						Debug.LogError($"{GetType().Name} invalid url: \"{url}\". Please enter url to repository server folder.");
-						return;
+				if (opResult != ListOperationResult.Success) {
+					m_LastError = opResult;
+					continue;
 				}
 
 				// Folders have '/' at the end but the user shouldn't define them this way.

@@ -71,8 +71,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	public enum ListOperationResult
 	{
 		Success,				// Operation succeeded.
-		URLNotFound,			// URL target was not found.
-		InvalidWorkingCopy,		// URL is local path that is not a proper SVN working copy.
+		NotFound,				// URL target was not found.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
 		UnknownError,			// Failed for some reason.
 	}
@@ -80,8 +79,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	public enum LogOperationResult
 	{
 		Success,                // Operation succeeded.
-		URLNotFound,            // URL target was not found.
-		InvalidWorkingCopy,     // URL is local path that is not a proper SVN working copy.
+		NotFound,				// URL target was not found.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
 		UnknownError,			// Failed for some reason.
 	}
