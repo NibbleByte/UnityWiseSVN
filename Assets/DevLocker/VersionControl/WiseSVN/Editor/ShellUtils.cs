@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using System.Threading;
 
 namespace DevLocker.VersionControl.WiseSVN.Shell
@@ -156,13 +157,15 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 				shellArgs.Monitor.RequestAbort += abortHandler;
 			}
 
+			
 			//
 			// Subscribe for standard output.
 			//
+			StringBuilder outputBuilder = new StringBuilder();
 			DataReceivedEventHandler outputReadLineHandler = null;
 			outputReadLineHandler = (sender, args) => {
 				if (args.Data != null) {
-					result.Output += args.Data + "\n";
+					outputBuilder.AppendLine(args.Data);
 					if (shellArgs.Monitor != null) {
 						shellArgs.Monitor.AppendOutputLine(args.Data);
 					}
@@ -174,10 +177,11 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 			//
 			// Subscribe for error output.
 			//
+			StringBuilder errorBuilder = new StringBuilder();
 			DataReceivedEventHandler errorReadLineHandler = null;
 			errorReadLineHandler = (sender, args) => {
 				if (args.Data != null) {
-					result.Error += args.Data + "\n";
+					errorBuilder.AppendLine(args.Data);
 					if (shellArgs.Monitor != null) {
 						shellArgs.Monitor.AppendErrorLine(args.Data);
 					}
@@ -205,7 +209,11 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 			}
 
 			process.OutputDataReceived -= outputReadLineHandler;
+			result.Output = outputBuilder.ToString();
+			
 			process.ErrorDataReceived -= errorReadLineHandler;
+			result.Error = errorBuilder.ToString();
+			
 			if (shellArgs.Monitor != null) {
 				shellArgs.Monitor.RequestAbort -= abortHandler;
 			}

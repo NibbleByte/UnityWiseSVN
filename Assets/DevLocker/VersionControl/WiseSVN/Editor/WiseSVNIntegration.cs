@@ -959,15 +959,13 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
 					return ListOperationResult.UnableToConnectError;
 
-				// URL target not found.
-				// svn: E200009: Could not list all targets because some targets don't exist
-				if (result.Error.Contains("E200009"))
-					return ListOperationResult.URLNotFound;
-
-				// URL is local path that is not a proper SVN working copy.
+				// URL or local path not found (or invalid working copy path).
+				// svn: warning: W155010: The node '...' was not found.
 				// svn: E155007: '...' is not a working copy
-				if (result.Error.Contains("E155007"))
-					return ListOperationResult.InvalidWorkingCopy;
+				// svn: warning: W160013: URL 'https://...' non-existent in revision 59280
+				// svn: E200009: Could not list all targets because some targets don't exist
+				if (result.Error.Contains("W155010") || result.Error.Contains("E155007") || result.Error.Contains("W160013") || result.Error.Contains("E200009"))
+					return ListOperationResult.NotFound;
 
 				return ListOperationResult.UnknownError;
 			}
@@ -1025,15 +1023,13 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
 					return LogOperationResult.UnableToConnectError;
 
-				// URL target not found.
-				// svn: E200009: Could not list all targets because some targets don't exist
-				if (result.Error.Contains("E200009"))
-					return LogOperationResult.URLNotFound;
-
 				// URL is local path that is not a proper SVN working copy.
+				// svn: E155010: The node '...' was not found.
 				// svn: E155007: '...' is not a working copy
-				if (result.Error.Contains("E155007"))
-					return LogOperationResult.InvalidWorkingCopy;
+				// svn: E160013: '...' path not found
+				// svn: E200009: Could not list all targets because some targets don't exist
+				if (result.Error.Contains("E155010") || result.Error.Contains("E155007") || result.Error.Contains("E160013") || result.Error.Contains("E200009"))
+					return LogOperationResult.NotFound;
 
 				return LogOperationResult.UnknownError;
 			}
