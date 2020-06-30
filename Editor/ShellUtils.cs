@@ -157,17 +157,20 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 				shellArgs.Monitor.RequestAbort += abortHandler;
 			}
 
-			
+
 			//
 			// Subscribe for standard output.
 			//
 			StringBuilder outputBuilder = new StringBuilder();
 			DataReceivedEventHandler outputReadLineHandler = null;
 			outputReadLineHandler = (sender, args) => {
-				if (args.Data != null) {
-					outputBuilder.AppendLine(args.Data);
-					if (shellArgs.Monitor != null) {
-						shellArgs.Monitor.AppendOutputLine(args.Data);
+				// Lock - check the Builder usage at the end.
+				lock (outputBuilder) {
+					if (args.Data != null) {
+						outputBuilder.AppendLine(args.Data);
+						if (shellArgs.Monitor != null) {
+							shellArgs.Monitor.AppendOutputLine(args.Data);
+						}
 					}
 				}
 			};
@@ -180,10 +183,13 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 			StringBuilder errorBuilder = new StringBuilder();
 			DataReceivedEventHandler errorReadLineHandler = null;
 			errorReadLineHandler = (sender, args) => {
-				if (args.Data != null) {
-					errorBuilder.AppendLine(args.Data);
-					if (shellArgs.Monitor != null) {
-						shellArgs.Monitor.AppendErrorLine(args.Data);
+				// Lock - check the Builder usage at the end.
+				lock (errorBuilder) {
+					if (args.Data != null) {
+						errorBuilder.AppendLine(args.Data);
+						if (shellArgs.Monitor != null) {
+							shellArgs.Monitor.AppendErrorLine(args.Data);
+						}
 					}
 				}
 			};
@@ -209,11 +215,18 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 			}
 
 			process.OutputDataReceived -= outputReadLineHandler;
-			result.Output = outputBuilder.ToString();
-			
+			lock (outputBuilder) {
+				// When the main thread gets here, the process will not be running (unless it timed out),
+				// but the OutputDataReceived thread might still be appending the final strings. Lock it!
+				result.Output = outputBuilder.ToString();
+			}
+
 			process.ErrorDataReceived -= errorReadLineHandler;
-			result.Error = errorBuilder.ToString();
-			
+			lock (errorBuilder) {
+				// Same as above.
+				result.Error = errorBuilder.ToString();
+			}
+
 			if (shellArgs.Monitor != null) {
 				shellArgs.Monitor.RequestAbort -= abortHandler;
 			}
