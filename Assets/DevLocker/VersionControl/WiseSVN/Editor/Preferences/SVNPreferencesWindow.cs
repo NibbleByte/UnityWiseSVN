@@ -9,7 +9,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 {
 	internal class WiseSVNProjectPreferencesWindow : EditorWindow
 	{
-		private enum PreferencesTab
+		public enum PreferencesTab
 		{
 			Personal = 0,
 			Project = 1,
@@ -20,12 +20,18 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		[MenuItem(PROJECT_PREFERENCES_MENU, false, 200)]
 		public static void ShowProjectPreferences()
 		{
+			ShowProjectPreferences(PreferencesTab.Personal);
+		}
+
+		public static void ShowProjectPreferences(PreferencesTab tab)
+		{
 			var window = GetWindow<WiseSVNProjectPreferencesWindow>(true, "Wise SVN Preferences");
 			window.m_PersonalPrefs = SVNPreferencesManager.Instance.PersonalPrefs.Clone();
 			window.m_ProjectPrefs = SVNPreferencesManager.Instance.ProjectPrefs.Clone();
 			window.ShowUtility();
 			window.position = new Rect(500f, 250f, 520f, 400f);
 			window.minSize = new Vector2(520f, 400f);
+			window.m_SelectedTab = tab;
 		}
 
 		// So SerializedObject() can work with it.

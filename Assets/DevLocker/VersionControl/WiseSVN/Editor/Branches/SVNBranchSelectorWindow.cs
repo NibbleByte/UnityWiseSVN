@@ -328,8 +328,14 @@ namespace DevLocker.VersionControl.WiseSVN
 
 
 			using (new EditorGUILayout.VerticalScope()) {
+				if (!Database.IsActive) {
+					EditorGUILayout.LabelField("To use Branch Selector, you must enable and setup\n\"Branches Database\" in the Project preferences...", GUILayout.Height(40f));
+					if (GUILayout.Button("Open Project Preferences")) {
+						Preferences.WiseSVNProjectPreferencesWindow.ShowProjectPreferences(Preferences.WiseSVNProjectPreferencesWindow.PreferencesTab.Project);
+					}
+					GUILayout.FlexibleSpace();
 
-				if (!Database.IsReady) {
+				} else if (!Database.IsReady) {
 					EditorGUILayout.LabelField("Scanning branches for Unity projects...", GUILayout.ExpandHeight(true));
 				} else if (m_TargetAsset == null) {
 					EditorGUILayout.LabelField("Please select target asset....", GUILayout.ExpandHeight(true));
