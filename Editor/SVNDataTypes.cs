@@ -200,6 +200,10 @@ namespace DevLocker.VersionControl.WiseSVN
 		public bool StopOnCopy;		// NOTE: "StopOnCopy = false" may result in entries that do not match requested path (since they were moved).
 		public int Limit;
 		public string SearchQuery;  // Search query may have additional "--search" or "--search-and" options. Check the SVN documentation.
+
+		// REVISION or {DATE}. Leave empty for no range limitation.
+		public string RangeStart;
+		public string RangeEnd;
 	}
 
 	/// <summary>

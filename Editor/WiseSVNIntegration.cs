@@ -1009,7 +1009,18 @@ namespace DevLocker.VersionControl.WiseSVN
 			var limitStr = logParams.Limit > 0 ? "-l " + logParams.Limit : "";
 			var searchStr = string.IsNullOrEmpty(logParams.SearchQuery) ? "" : "--search " + logParams.SearchQuery;
 
-			var args = $"{fetchAffectedPathsStr} {fetchCommitMessagesStr} {stopOnCopyStr} {limitStr} {searchStr}";
+			var rangeStr = logParams.RangeEnd;
+			bool hasRangeStart = !string.IsNullOrWhiteSpace(logParams.RangeStart);
+			bool hasRangeEnd = !string.IsNullOrWhiteSpace(logParams.RangeEnd);
+			if (hasRangeStart) {
+				rangeStr = logParams.RangeStart + (hasRangeEnd ? $":{logParams.RangeEnd}" : "");
+			}
+
+			if (!string.IsNullOrWhiteSpace(rangeStr)) {
+				rangeStr = "-r " + rangeStr;
+			}
+
+			var args = $"{fetchAffectedPathsStr} {fetchCommitMessagesStr} {stopOnCopyStr} {limitStr} {searchStr} {rangeStr}";
 
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"log {args} \"{SVNFormatPath(assetPathOrUrl)}\"", timeout, shellMonitor);
 
@@ -1124,6 +1135,10 @@ namespace DevLocker.VersionControl.WiseSVN
 					resultEntries.Add(logEntry);
 				}
 
+			} catch (System.Threading.ThreadAbortException) {
+				// Thread was aborted.
+				resultEntries.Clear();
+				return LogOperationResult.UnknownError;
 			} catch (Exception ex) {
 				// Parsing failed... unsupported format?
 				Debug.LogException(ex);
@@ -1163,6 +1178,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(assetPath)}\"", COMMAND_TIMEOUT);
 
+			if (result.HasErrors)
+				return string.Empty;
+
 			return ExtractLineValue("URL:", result.Output);
 		}
 
@@ -1174,6 +1192,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(assetPathOrUrl)}\"", COMMAND_TIMEOUT);
 
+			if (result.HasErrors)
+				return string.Empty;
+
 			return ExtractLineValue("Relative URL:", result.Output).TrimStart('^');
 		}
 
@@ -1183,6 +1204,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		public static string WorkingCopyRootPath()
 		{
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(ProjectRoot)}\"", COMMAND_TIMEOUT);
+
+			if (result.HasErrors)
+				return string.Empty;
 
 			return ExtractLineValue("Working Copy Root Path:", result.Output);
 		}
@@ -1194,7 +1218,28 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(WorkingCopyRootPath())}\"", COMMAND_TIMEOUT);
 
+			if (result.HasErrors)
+				return string.Empty;
+
 			return ExtractLineValue("URL:", result.Output);
+		}
+
+		/// <summary>
+		/// Get the revision number of the last change at specified location.
+		/// Returns -1 if failed.
+		/// </summary>
+		public static int LastChangedRevision(string assetPathOrUrl)
+		{
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(assetPathOrUrl)}\"", COMMAND_TIMEOUT);
+
+			if (result.HasErrors)
+				return -1;
+
+			var revisionStr = ExtractLineValue("Last Changed Rev:", result.Output);
+			if (string.IsNullOrEmpty(revisionStr))
+				return -1;
+
+			return int.Parse(revisionStr);
 		}
 
 		/// <summary>
