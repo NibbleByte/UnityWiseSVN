@@ -84,6 +84,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		private ConflictsScanLimitType m_ConflictsScanLimitType;
 		private int m_ConflictsScanLimitParam = 1;
 
+		private bool m_ConflictsShowNormal = true;
+
 		private ConflictsScanState m_ConflictsScanState = ConflictsScanState.None;
 
 		private ConflictsScanResult[] m_ConflictsScanResults = new ConflictsScanResult[0];
@@ -212,10 +214,10 @@ namespace DevLocker.VersionControl.WiseSVN
 			RevisionsHintContent = new GUIContent(EditorGUIUtility.FindTexture("console.infoicon.sml"), "Scan number of revisions back from the last changed one in the checked branch.");
 		}
 
-		// This is initialized on first OnGUI rather upon creation because it gets overriden.
+		// This is initialized on first OnGUI rather upon creation because it gets overridden.
 		private void InitializePositionAndSize()
 		{
-			Vector2 size = new Vector2(350f, 300);
+			Vector2 size = new Vector2(550f, 400);
 			minSize = size;
 
 			var sizeData = EditorPrefs.GetString(WindowSizePrefsKey);
@@ -349,19 +351,24 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar)) {
 
-				GUILayout.Label("Conflicts:", ToolbarTitleStyle, GUILayout.Width(ToolbarsTitleWidth));
+				using (new EditorGUI.DisabledGroupScope(m_ConflictsScanState == ConflictsScanState.Scanning)) {
+					GUILayout.Label("Conflicts:", ToolbarTitleStyle, GUILayout.Width(ToolbarsTitleWidth));
 
-				var prevWidth = EditorGUIUtility.labelWidth;
-				EditorGUIUtility.labelWidth = 55f;
-				m_ConflictsScanLimitType = (ConflictsScanLimitType) EditorGUILayout.EnumPopup("Limit by: ", m_ConflictsScanLimitType, GUILayout.Width(140f));
-				EditorGUIUtility.labelWidth = prevWidth;
+					GUILayout.Label("Show Non-Conflicts:");
+					m_ConflictsShowNormal = EditorGUILayout.Toggle(m_ConflictsShowNormal, GUILayout.Width(28f));
 
-				if (m_ConflictsScanLimitType != ConflictsScanLimitType.Unlimited) {
-					m_ConflictsScanLimitParam = Mathf.Max(1, EditorGUILayout.IntField(m_ConflictsScanLimitParam, GUILayout.Width(50f)));
-				}
+					var prevWidth = EditorGUIUtility.labelWidth;
+					EditorGUIUtility.labelWidth = 55f;
+					m_ConflictsScanLimitType = (ConflictsScanLimitType)EditorGUILayout.EnumPopup("Limit by: ", m_ConflictsScanLimitType, GUILayout.Width(140f));
+					EditorGUIUtility.labelWidth = prevWidth;
 
-				if (m_ConflictsScanLimitType == ConflictsScanLimitType.Revisions) {
-					GUILayout.Label(RevisionsHintContent);
+					if (m_ConflictsScanLimitType != ConflictsScanLimitType.Unlimited) {
+						m_ConflictsScanLimitParam = Mathf.Max(1, EditorGUILayout.IntField(m_ConflictsScanLimitParam, GUILayout.Width(50f)));
+					}
+
+					if (m_ConflictsScanLimitType == ConflictsScanLimitType.Revisions) {
+						GUILayout.Label(RevisionsHintContent);
+					}
 				}
 
 				GUILayout.FlexibleSpace();
@@ -397,6 +404,14 @@ namespace DevLocker.VersionControl.WiseSVN
 				foreach (var branchProject in Database.BranchProjects) {
 					if (!string.IsNullOrEmpty(m_BranchFilter) && branchProject.BranchName.IndexOf(m_BranchFilter, System.StringComparison.OrdinalIgnoreCase) == -1)
 						continue;
+
+					// Apply setting only in Scanned mode since the thread will still be working otherwise and
+					// cause inconsistent GUILayout structure.
+					if (m_ConflictsScanState == ConflictsScanState.Scanned && !m_ConflictsShowNormal) {
+						var conflictResult = m_ConflictsScanResults.First(r => r.UnityURL == branchProject.UnityProjectURL);
+						if (conflictResult.State == ConflictState.Normal)
+							continue;
+					}
 
 					using (new EditorGUILayout.HorizontalScope(/*BranchRowStyle*/)) {
 
