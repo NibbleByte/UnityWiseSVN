@@ -43,12 +43,34 @@ namespace DevLocker.VersionControl.WiseSVN
 			Error,
 		}
 
+		private enum ConflictsScanLimitType
+		{
+			Unlimited,
+			Revisions,
+			Days,
+			Weeks,
+			Months,
+		}
+
+		[System.Serializable]
+		private struct ConflictsScanJobData
+		{
+			public string TargetAssetPath;
+			public ConflictsScanLimitType LimitType;
+			public int LimitParam;
+			public ConflictsScanResult[] Reults;
+		}
+
 		[System.Serializable]
 		private struct ConflictsScanResult
 		{
 			public string UnityURL;
 			public ConflictState State;
 		}
+
+		private bool m_ShowConflictsMenu = false;
+		private ConflictsScanLimitType m_ConflictsScanLimitType;
+		private int m_ConflictsScanLimitParam = 1;
 
 		private ConflictsScanState m_ConflictsScanState = ConflictsScanState.None;
 
@@ -88,7 +110,11 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private GUIStyle BranchLabelStyle;
 
+		private GUIContent RevisionsHintContent;
+
 		private readonly string[] LoadingDots = new[] { ".  ", ".. ", "..." };
+
+		private const float ToolbarsTitleWidth = 70f;
 
 		[MenuItem("Assets/SVN/Branch Selector", false, -490)]
 		private static void OpenBranchesSelector()
@@ -137,7 +163,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			ScanForConflictsContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ScanForConflicts"), "Scan all branches for potential conflicts.\nThis will look for any changes made to the target asset in the branches.");
 
 			ConflictsPendingContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ConflictsScan-Pending"), "Pending - waiting to be scanned for conflicts.\n\n" + showLogTooltip);
-			ConflictsFoundContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-Conflicts-Found"), "Conflicts found by the scan.\n\n" + showLogTooltip);
+			ConflictsFoundContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-Conflicts-Found"), "The target asset was modified in this branch - potential conflicts.\n\n" + showLogTooltip);
 			ConflictsNormalContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ConflictsScan-Normal"), "No conflicts were found by the scan.\n\n" + showLogTooltip);
 			ConflictsAddedContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ConflictsScan-Added"), "Asset was added in this branch.\n\n" + showLogTooltip);
 			ConflictsMissingContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ConflictsScan-Missing"), "Asset was missing. It may have been deleted or never existed in this branch.\n\n" + showLogTooltip);
@@ -146,14 +172,15 @@ namespace DevLocker.VersionControl.WiseSVN
 			if (RepoBrowserContent.image == null) RepoBrowserContent.text = "R";
 			if (ShowLogContent.image == null) ShowLogContent.text = "L";
 			if (SwitchBranchContent.image == null) SwitchBranchContent.text = "S";
+
 			if (ScanForConflictsContent.image == null) ScanForConflictsContent.text = "C";
 
-			if (ConflictsPendingContent.image == null) ScanForConflictsContent.text = "P";
-			if (ConflictsFoundContent.image == null) ScanForConflictsContent.text = "C";
-			if (ConflictsNormalContent.image == null) ScanForConflictsContent.text = "N";
-			if (ConflictsAddedContent.image == null) ScanForConflictsContent.text = "A";
-			if (ConflictsMissingContent.image == null) ScanForConflictsContent.text = "M";
-			if (ConflictsErrorContent.image == null) ScanForConflictsContent.text = "E";
+			if (ConflictsPendingContent.image == null) ConflictsPendingContent.text = "P";
+			if (ConflictsFoundContent.image == null) ConflictsFoundContent.text = "C";
+			if (ConflictsNormalContent.image == null) ConflictsNormalContent.text = "N";
+			if (ConflictsAddedContent.image == null) ConflictsAddedContent.text = "A";
+			if (ConflictsMissingContent.image == null) ConflictsMissingContent.text = "M";
+			if (ConflictsErrorContent.image == null) ConflictsErrorContent.text = "E";
 
 			MiniIconButtonlessStyle = new GUIStyle(GUI.skin.button);
 			MiniIconButtonlessStyle.hover.background = MiniIconButtonlessStyle.normal.background;
@@ -166,6 +193,9 @@ namespace DevLocker.VersionControl.WiseSVN
 			var margin = BranchLabelStyle.margin;
 			margin.top += 2;
 			BranchLabelStyle.margin = margin;
+
+
+			RevisionsHintContent = new GUIContent(EditorGUIUtility.FindTexture("console.infoicon.sml"), "Scan number of revisions back from the last changed one in the checked branch.");
 		}
 
 		// This is initialized on first OnGUI rather upon creation because it gets overriden.
@@ -242,7 +272,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar)) {
 
-				GUILayout.Label("Asset:", ToolbarTitleStyle, GUILayout.Width(60f));
+				GUILayout.Label("Asset:", ToolbarTitleStyle, GUILayout.Width(ToolbarsTitleWidth));
 
 				var prevColor = GUI.backgroundColor;
 				GUI.backgroundColor = m_TargetAsset == null ? new Color(0.93f, 0.40f, 0.40f) : prevColor;
@@ -257,14 +287,16 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				GUILayout.Space(24f);
 
-				if (GUILayout.Button(ScanForConflictsContent, EditorStyles.toolbarButton, GUILayout.ExpandWidth(false))) {
-					StartConflictsScan();
-				}
+				m_ShowConflictsMenu = GUILayout.Toggle(m_ShowConflictsMenu, ScanForConflictsContent, EditorStyles.toolbarButton, GUILayout.ExpandWidth(false));
+			}
+
+			if (m_ShowConflictsMenu) {
+				DrawConflictsMenu();
 			}
 
 			using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar)) {
 
-				GUILayout.Label("Search:", ToolbarTitleStyle, GUILayout.Width(60f));
+				GUILayout.Label("Search:", ToolbarTitleStyle, GUILayout.Width(ToolbarsTitleWidth));
 
 				m_BranchFilter = EditorGUILayout.TextField(m_BranchFilter, SearchFieldStyle);
 
@@ -290,6 +322,43 @@ namespace DevLocker.VersionControl.WiseSVN
 				} else {
 					DrawBranchesList();
 				}
+			}
+		}
+
+		private void DrawConflictsMenu()
+		{
+			using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar)) {
+
+				GUILayout.Label("Conflicts:", ToolbarTitleStyle, GUILayout.Width(ToolbarsTitleWidth));
+
+				var prevWidth = EditorGUIUtility.labelWidth;
+				EditorGUIUtility.labelWidth = 55f;
+				m_ConflictsScanLimitType = (ConflictsScanLimitType) EditorGUILayout.EnumPopup("Limit by: ", m_ConflictsScanLimitType, GUILayout.Width(140f));
+				EditorGUIUtility.labelWidth = prevWidth;
+
+				if (m_ConflictsScanLimitType != ConflictsScanLimitType.Unlimited) {
+					m_ConflictsScanLimitParam = Mathf.Max(1, EditorGUILayout.IntField(m_ConflictsScanLimitParam, GUILayout.Width(50f)));
+				}
+
+				if (m_ConflictsScanLimitType == ConflictsScanLimitType.Revisions) {
+					GUILayout.Label(RevisionsHintContent);
+				}
+
+				GUILayout.FlexibleSpace();
+
+				var showStartScan = m_ConflictsScanState == ConflictsScanState.None || m_ConflictsScanState == ConflictsScanState.Scanned;
+				var scanButtonContent = showStartScan ? "Start Scan" : "Stop Scan";
+				var prevColor = GUI.backgroundColor;
+				GUI.backgroundColor = showStartScan ? Color.green : Color.red;
+				if (GUILayout.Button( scanButtonContent, EditorStyles.toolbarButton, GUILayout.ExpandWidth(false))) {
+					if (showStartScan) {
+						StartConflictsScan();
+					} else {
+						InvaldateConflictsScan();
+					}
+				}
+
+				GUI.backgroundColor = prevColor;
 			}
 		}
 
@@ -463,7 +532,15 @@ namespace DevLocker.VersionControl.WiseSVN
 			var jobData = new KeyValuePair<string, ConflictsScanResult[]>(AssetDatabase.GetAssetPath(m_TargetAsset), m_ConflictsScanResults);
 
 			m_ConflictsScanThread = new System.Threading.Thread(GatherConflicts);
-			m_ConflictsScanThread.Start(jobData);
+
+			m_ConflictsScanThread.Start(new ConflictsScanJobData() {
+
+				TargetAssetPath = AssetDatabase.GetAssetPath(m_TargetAsset),
+				LimitType = m_ConflictsScanLimitType,
+				LimitParam = m_ConflictsScanLimitParam,
+				Reults = m_ConflictsScanResults,
+
+			});
 		}
 
 		private void InvaldateConflictsScan()
@@ -488,9 +565,8 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private static void GatherConflicts(object param)
 		{
-			var jobData = (KeyValuePair<string, ConflictsScanResult[]>)param;
-			var targetAssetPath = jobData.Key;
-			var results = jobData.Value;
+			var jobData = (ConflictsScanJobData)param;
+			var results = jobData.Reults;
 
 			var logParams = new LogParams() {
 				FetchAffectedPaths = true,
@@ -499,6 +575,36 @@ namespace DevLocker.VersionControl.WiseSVN
 				Limit = 10,
 			};
 
+			const string svnDateFormat = "yyyy-MM-dd";
+			switch (jobData.LimitType) {
+				case ConflictsScanLimitType.Days:
+					logParams.RangeStart = "{" + System.DateTime.Now.AddDays(-1 * jobData.LimitParam).ToString(svnDateFormat) + "}";
+					logParams.RangeEnd = "HEAD";
+					break;
+
+				case ConflictsScanLimitType.Weeks:
+					logParams.RangeStart = "{" + System.DateTime.Now.AddDays(-1 * 7 * jobData.LimitParam).ToString(svnDateFormat) + "}";
+					logParams.RangeEnd = "HEAD";
+					break;
+
+				case ConflictsScanLimitType.Months:
+					logParams.RangeStart = "{" + System.DateTime.Now.AddMonths(-1 * jobData.LimitParam).ToString(svnDateFormat) + "}";
+					logParams.RangeEnd = "HEAD";
+					break;
+
+				case ConflictsScanLimitType.Revisions:
+					// Revisions are calculated per branch. Do nothing here.
+					break;
+
+				case ConflictsScanLimitType.Unlimited:
+					logParams.RangeStart = "";
+					break;
+
+				default:
+					Debug.LogError($"Unsupported ConflictsScanLimitType {jobData.LimitType} with param {jobData.LimitParam}");
+					break;
+			}
+
 			List<LogEntry> logEntries = new List<LogEntry>();
 
 			for (int i = 0; i < results.Length; ++i) {
@@ -506,9 +612,29 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				logEntries.Clear();
 
-				var targetURL = result.UnityURL + "/" + targetAssetPath;
+				var targetURL = result.UnityURL + "/" + jobData.TargetAssetPath;
 				var targetRelativeURL = WiseSVNIntegration.AssetPathToRelativeURL(targetURL);
-				var opResult = WiseSVNIntegration.Log(targetURL, logParams, logEntries, 60000 * 2);
+
+				// Either it doesn't exist in this branch or it was moved / deleted. Can't know for sure without some deep digging.
+				if (string.IsNullOrEmpty(targetRelativeURL)) {
+					result.State = ConflictState.Missing;
+					results[i] = result;
+					continue;
+				}
+
+				if (jobData.LimitType == ConflictsScanLimitType.Revisions) {
+					var lastChangedRevision = WiseSVNIntegration.LastChangedRevision(targetURL);
+					if (lastChangedRevision < 0) {
+						// Probably doesn't exist in this branch.
+						logParams.RangeStart = "";
+						logParams.RangeEnd = "";
+					} else {
+						logParams.RangeStart = (lastChangedRevision - jobData.LimitParam).ToString();
+						logParams.RangeEnd = lastChangedRevision.ToString();
+					}
+				}
+
+				var opResult = WiseSVNIntegration.Log(targetURL, logParams, logEntries, 60000 * 5);
 
 				// Either it doesn't exist in this branch or it was moved / deleted. Can't know for sure without some deep digging.
 				if (opResult == LogOperationResult.NotFound) {
