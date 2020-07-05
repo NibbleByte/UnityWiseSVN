@@ -61,9 +61,12 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 			// Enable svn branches database.
 			public bool EnableBranchesDatabase;
-			
+
 			// SVN parameters used for scanning branches in the SVN repo.
 			public List<BranchScanParameters> BranchesDatabaseScanParameters = new List<BranchScanParameters>();
+
+			// Show these branches on top.
+			public List<string> PinnedBranches = new List<string>();
 
 			public List<string> Exclude = new List<string>();
 
@@ -72,7 +75,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				var clone = (ProjectPreferences) MemberwiseClone();
 
 				clone.BranchesDatabaseScanParameters = new List<BranchScanParameters>(BranchesDatabaseScanParameters);
-				clone.Exclude = new List<string>(this.Exclude);
+				clone.PinnedBranches = new List<string>(PinnedBranches);
+				clone.Exclude = new List<string>(Exclude);
 
 				return clone;
 			}
