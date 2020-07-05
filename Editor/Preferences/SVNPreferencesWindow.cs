@@ -1,5 +1,6 @@
 using DevLocker.VersionControl.WiseSVN.ContextMenus;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -106,7 +107,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		{
 			m_ProjectPrefs.SvnCLIPath = m_ProjectPrefs.SvnCLIPath.Trim();
 			m_ProjectPrefs.SvnCLIPathMacOS = m_ProjectPrefs.SvnCLIPathMacOS.Trim();
-			m_ProjectPrefs.Exclude.RemoveAll(p => string.IsNullOrWhiteSpace(p));
+			m_ProjectPrefs.Exclude = SanitizeStringsList(m_ProjectPrefs.Exclude);
 
 			if (m_ProjectPrefs.EnableBranchesDatabase) {
 
@@ -119,11 +120,21 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 					.Select(sp => sp.Sanitized())
 					.ToList();
 
+				m_ProjectPrefs.PinnedBranches = SanitizeStringsList(m_ProjectPrefs.PinnedBranches);
+
 				if (m_ProjectPrefs.BranchesDatabaseScanParameters.Any(sp => !sp.IsValid)) {
 					EditorUtility.DisplayDialog("Branches Database", "Some of the branches scan parameters have invalid data. Please fix it.\n\nBranches Database will be disabled.", "Ok");
 					m_ProjectPrefs.EnableBranchesDatabase = false;
 				}
 			}
+		}
+
+		private static List<string> SanitizeStringsList(List<string> list)
+		{
+			return list
+				.Select(str => str.Trim())
+				.Where(str => !string.IsNullOrEmpty(str))
+				.ToList();
 		}
 
 		private void DrawPersonalPreferences()
@@ -200,6 +211,9 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				}
 
 				EditorGUILayout.PropertyField(sp.FindPropertyRelative("BranchesDatabaseScanParameters"), new GUIContent("Branches Scan Parameters", "Must have at least one entry to work properly."), true);
+
+				EditorGUILayout.PropertyField(sp.FindPropertyRelative("PinnedBranches"), new GUIContent("Pinned Branches", "Pin these branches at the top."), true);
+
 				EditorGUI.indentLevel--;
 			}
 

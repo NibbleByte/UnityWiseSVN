@@ -200,6 +200,31 @@ namespace DevLocker.VersionControl.WiseSVN
 					throw new Exception("SVN thread finished work but the update is over?");
 				}
 
+
+				// Preferences may get changed in the main thread, but the whole ProjectPreferences object is replaced.
+				// List shouldn't be modified in another thread, I think. So just keep reference to the original list.
+				var pinnedBranches = m_ProjectPrefs.PinnedBranches;
+
+				foundProjects.Sort((left, right) => {
+
+					var leftPinnedIndex = pinnedBranches.FindIndex(s => left.BranchURL.Contains(s));
+					var rightPinnedIndex = pinnedBranches.FindIndex(s => right.BranchURL.Contains(s));
+
+					// Same match or both are -1
+					if (leftPinnedIndex == rightPinnedIndex)
+						return left.BranchURL.CompareTo(right.BranchURL);
+
+					if (leftPinnedIndex == -1)
+						return 1;
+
+					if (rightPinnedIndex == -1)
+						return -1;
+
+					return leftPinnedIndex.CompareTo(rightPinnedIndex);
+				});
+
+
+
 				m_PendingProjects = foundProjects.ToArray();
 
 			}
