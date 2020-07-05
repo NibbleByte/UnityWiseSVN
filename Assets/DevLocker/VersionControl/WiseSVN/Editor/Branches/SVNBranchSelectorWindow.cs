@@ -293,7 +293,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				var prevColor = GUI.backgroundColor;
 				GUI.backgroundColor = m_TargetAsset == null ? new Color(0.93f, 0.40f, 0.40f) : prevColor;
 
-				var targetAsset = EditorGUILayout.ObjectField(m_TargetAsset, m_TargetAsset ? m_TargetAsset.GetType() : typeof(Object), false, GUILayout.ExpandWidth(true));
+				var targetAsset = EditorGUILayout.ObjectField(m_TargetAsset, typeof(Object), false, GUILayout.ExpandWidth(true));
 				if (targetAsset != m_TargetAsset) {
 					InvaldateConflictsScan();
 					m_TargetAsset = targetAsset;
