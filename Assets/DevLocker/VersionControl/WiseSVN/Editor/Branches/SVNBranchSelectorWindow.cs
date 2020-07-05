@@ -21,6 +21,18 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private SVNBranchesDatabase Database => SVNBranchesDatabase.Instance;
 
+		private enum BranchContextMenu
+		{
+			CopyBranchName = 1,
+			CopyBranchURL = 2,
+			CopyBranchRelativeURL = 3,
+
+			CopyTargetAssetBranchURL = 11,
+			CopyTargetAssetBranchRelativeURL = 12,
+
+			Cancel = 101,
+		}
+
 		#region Conflicts Scans
 
 		private enum ConflictsScanState
@@ -97,6 +109,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		private GUIContent RepoBrowserContent;
 		private GUIContent ShowLogContent;
 		private GUIContent SwitchBranchContent;
+
 		private GUIContent ScanForConflictsContent;
 
 		private GUIContent ConflictsPendingContent;
@@ -160,6 +173,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			RepoBrowserContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-RepoBrowser"), "Repo-Browser in this branch at the target asset.");
 			ShowLogContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ShowLog"), showLogTooltip);
 			SwitchBranchContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-Switch"), "Switch working copy to another branch.\nOpens TortoiseSVN dialog.");
+
 			ScanForConflictsContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ScanForConflicts"), "Scan all branches for potential conflicts.\nThis will look for any changes made to the target asset in the branches.");
 
 			ConflictsPendingContent = new GUIContent(Resources.Load<Texture2D>("Editor/BranchesIcons/SVN-ConflictsScan-Pending"), "Pending - waiting to be scanned for conflicts.\n\n" + showLogTooltip);
@@ -184,15 +198,15 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			MiniIconButtonlessStyle = new GUIStyle(GUI.skin.button);
 			MiniIconButtonlessStyle.hover.background = MiniIconButtonlessStyle.normal.background;
+			MiniIconButtonlessStyle.hover.textColor = GUI.skin.label.hover.textColor;
 			MiniIconButtonlessStyle.normal.background = null;
 			MiniIconButtonlessStyle.padding = new RectOffset();
 			MiniIconButtonlessStyle.margin = new RectOffset();
 
-			BranchLabelStyle = new GUIStyle(GUI.skin.label);
+			BranchLabelStyle = new GUIStyle(MiniIconButtonlessStyle);
 			BranchLabelStyle.alignment = TextAnchor.MiddleLeft;
-			var margin = BranchLabelStyle.margin;
-			margin.top += 2;
-			BranchLabelStyle.margin = margin;
+			BranchLabelStyle.margin = new RectOffset(2, 4, 2, 0);
+			BranchLabelStyle.padding = new RectOffset(4, 4, 3, 3);
 
 
 			RevisionsHintContent = new GUIContent(EditorGUIUtility.FindTexture("console.infoicon.sml"), "Scan number of revisions back from the last changed one in the checked branch.");
@@ -385,7 +399,7 @@ namespace DevLocker.VersionControl.WiseSVN
 						bool showLog = GUILayout.Button(SelectShowLogContent(branchProject), MiniIconButtonlessStyle, GUILayout.Height(buttonSize), GUILayout.Width(buttonSize));
 						bool switchBranch = GUILayout.Button(SwitchBranchContent, MiniIconButtonlessStyle, GUILayout.Height(buttonSize), GUILayout.Width(buttonSize));
 
-						GUILayout.Label(new GUIContent(branchProject.BranchRelativePath, branchProject.BranchURL), BranchLabelStyle);
+						bool branchSelected = GUILayout.Button(new GUIContent(branchProject.BranchRelativePath, branchProject.BranchURL), BranchLabelStyle);
 
 						if (repoBrowser) {
 							SVNContextMenusManager.RepoBrowser(branchProject.UnityProjectURL + "/" + AssetDatabase.GetAssetPath(m_TargetAsset));
@@ -420,6 +434,22 @@ namespace DevLocker.VersionControl.WiseSVN
 								SVNContextMenusManager.Switch(localPath, targetUrl);
 								EditorApplication.Exit(0);
 							}
+						}
+
+						if (branchSelected) {
+							var menu = new GenericMenu();
+
+							var prevValue = BranchContextMenu.CopyBranchName;
+							foreach (var value in System.Enum.GetValues(typeof(BranchContextMenu)).OfType<BranchContextMenu>()) {
+								if ((int)value / 10 != (int)prevValue / 10) {
+									menu.AddSeparator("");
+								}
+
+								menu.AddItem(new GUIContent(ObjectNames.NicifyVariableName(value.ToString())), false, OnSelectBranchOption, new KeyValuePair<BranchContextMenu, BranchProject>(value, branchProject));
+								prevValue = value;
+							}
+
+							menu.ShowAsContext();
 						}
 					}
 
@@ -461,7 +491,52 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 		}
 
-		private void DrawStatusBar()
+		private void OnSelectBranchOption(object data)
+		{
+			var pair = (KeyValuePair<BranchContextMenu, BranchProject>)data;
+			var branchProject = pair.Value;
+
+			if (pair.Key == BranchContextMenu.Cancel)
+				return;
+
+
+			string copyText = null;
+			switch(pair.Key) {
+
+				case BranchContextMenu.CopyBranchName:
+					copyText = branchProject.BranchName;
+					break;
+
+				case BranchContextMenu.CopyBranchURL:
+					copyText = branchProject.BranchURL;
+					break;
+
+				case BranchContextMenu.CopyBranchRelativeURL:
+					copyText = branchProject.BranchRelativePath;
+					break;
+
+				case BranchContextMenu.CopyTargetAssetBranchURL:
+					copyText = branchProject.UnityProjectURL + "/" + AssetDatabase.GetAssetPath(m_TargetAsset);
+					break;
+
+				case BranchContextMenu.CopyTargetAssetBranchRelativeURL:
+					copyText = branchProject.UnityProjectRelativePath + "/" + AssetDatabase.GetAssetPath(m_TargetAsset);
+					break;
+
+				default:
+					throw new System.NotSupportedException(pair.Key.ToString());
+			}
+
+			if (!string.IsNullOrEmpty(copyText)) {
+				var textEditor = new TextEditor();
+				textEditor.text = copyText;
+				textEditor.SelectAll();
+				textEditor.Copy();
+			}
+		}
+
+
+			private void DrawStatusBar()
 		{
 			if (Database.LastError != ListOperationResult.Success) {
 				GUILayout.Label($"Error scanning branches: {ObjectNames.NicifyVariableName(Database.LastError.ToString())}", ToolbarLabelStyle, GUILayout.ExpandWidth(false));
