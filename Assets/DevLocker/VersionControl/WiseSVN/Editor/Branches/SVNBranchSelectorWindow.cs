@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace DevLocker.VersionControl.WiseSVN
+namespace DevLocker.VersionControl.WiseSVN.Branches
 {
 	/// <summary>
 	/// Popup that shows found branches. User can open "Repo Browser" or "Show log" for the selected file.
@@ -16,8 +16,6 @@ namespace DevLocker.VersionControl.WiseSVN
 		private Object m_TargetAsset;
 		private string m_BranchFilter;
 		private Vector2 m_BranchesScroll;
-
-		private const string WindowSizePrefsKey = "SVNBranchSelectorWindow-Size";
 
 		private SVNBranchesDatabase Database => SVNBranchesDatabase.Instance;
 
@@ -99,7 +97,6 @@ namespace DevLocker.VersionControl.WiseSVN
 		private GUIContent RefreshBranchesContent;
 
 
-		private GUIStyle WindowTitleStyle;
 		private GUIStyle ToolbarTitleStyle;
 		private GUIStyle ToolbarLabelStyle;
 
@@ -152,13 +149,9 @@ namespace DevLocker.VersionControl.WiseSVN
 			const string refreshBranchesHint = "Refresh branches cache database.\n\nNOTE: Single scan may take up to a few minutes, depending on your network connection and the complexity of your repository.";
 			RefreshBranchesContent = new GUIContent(EditorGUIUtility.FindTexture("Refresh"), refreshBranchesHint);
 
-			WindowTitleStyle = new GUIStyle(EditorStyles.toolbarButton);
-			WindowTitleStyle.font = EditorStyles.boldFont;
-			WindowTitleStyle.normal.background = null;
-
-
 			ToolbarLabelStyle = new GUIStyle(EditorStyles.toolbarButton);
 			ToolbarLabelStyle.normal.background = null;
+			ToolbarLabelStyle.normal.scaledBackgrounds = null;
 			ToolbarLabelStyle.alignment = TextAnchor.MiddleLeft;
 			var padding = ToolbarLabelStyle.padding;
 			padding.bottom = 2;
@@ -200,8 +193,14 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			MiniIconButtonlessStyle = new GUIStyle(GUI.skin.button);
 			MiniIconButtonlessStyle.hover.background = MiniIconButtonlessStyle.normal.background;
+			MiniIconButtonlessStyle.hover.scaledBackgrounds = MiniIconButtonlessStyle.normal.scaledBackgrounds;
+			MiniIconButtonlessStyle.onHover.background = MiniIconButtonlessStyle.onNormal.background;
+			MiniIconButtonlessStyle.onHover.scaledBackgrounds = MiniIconButtonlessStyle.onNormal.scaledBackgrounds;
 			MiniIconButtonlessStyle.hover.textColor = GUI.skin.label.hover.textColor;
 			MiniIconButtonlessStyle.normal.background = null;
+			MiniIconButtonlessStyle.normal.scaledBackgrounds = null;
+			MiniIconButtonlessStyle.onNormal.background = null;
+			MiniIconButtonlessStyle.onNormal.scaledBackgrounds = null;
 			MiniIconButtonlessStyle.padding = new RectOffset();
 			MiniIconButtonlessStyle.margin = new RectOffset();
 
@@ -220,16 +219,8 @@ namespace DevLocker.VersionControl.WiseSVN
 			Vector2 size = new Vector2(550f, 400);
 			minSize = size;
 
-			var sizeData = EditorPrefs.GetString(WindowSizePrefsKey);
-			if (!string.IsNullOrEmpty(sizeData)) {
-				var sizeArr = sizeData.Split(';');
-				size.x = float.Parse(sizeArr[0]);
-				size.y = float.Parse(sizeArr[1]);
-			}
-
-			// TODO: How will this behave with two monitors?
 			var center = new Vector2(Screen.currentResolution.width, Screen.currentResolution.height) / 2f;
-			Rect popupRect = new Rect(center - size / 2, size);
+			Rect popupRect = new Rect(center - position.size / 2, position.size);
 
 			position = popupRect;
 		}
@@ -248,8 +239,6 @@ namespace DevLocker.VersionControl.WiseSVN
 			Database.DatabaseChanged -= OnDatabaseChanged;
 			AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
 
-			EditorPrefs.SetString(WindowSizePrefsKey, $"{position.width};{position.height}");
-
 			if (m_ConflictsScanState != ConflictsScanState.Scanned) {
 				InvaldateConflictsScan();
 			}
@@ -267,6 +256,8 @@ namespace DevLocker.VersionControl.WiseSVN
 			EditorGUILayout.BeginVertical(BorderStyle);
 
 			DrawContent();
+
+			GUILayout.FlexibleSpace();
 
 			using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar, GUILayout.ExpandWidth(true))) {
 				DrawStatusBar();
@@ -335,12 +326,11 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (GUILayout.Button("Open Project Preferences")) {
 						Preferences.WiseSVNProjectPreferencesWindow.ShowProjectPreferences(Preferences.WiseSVNProjectPreferencesWindow.PreferencesTab.Project);
 					}
-					GUILayout.FlexibleSpace();
 
 				} else if (!Database.IsReady) {
-					EditorGUILayout.LabelField("Scanning branches for Unity projects...", GUILayout.ExpandHeight(true));
+					EditorGUILayout.LabelField("Scanning branches for Unity projects...");
 				} else if (m_TargetAsset == null) {
-					EditorGUILayout.LabelField("Please select target asset....", GUILayout.ExpandHeight(true));
+					EditorGUILayout.LabelField("Please select target asset....");
 				} else {
 					DrawBranchesList();
 				}
