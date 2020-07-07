@@ -1,3 +1,4 @@
+using DevLocker.VersionControl.WiseSVN.Branches;
 using DevLocker.VersionControl.WiseSVN.ContextMenus;
 using System;
 using System.Collections.Generic;

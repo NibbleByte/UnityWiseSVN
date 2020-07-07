@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN.Preferences
 {
-	internal class SVNPreferencesManager : ScriptableObject
+	internal class SVNPreferencesManager : Utils.EditorPersistentSingleton<SVNPreferencesManager>
 	{
 		internal enum BoolPreference
 		{
@@ -93,42 +93,15 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			: PersonalPrefs.DownloadRepositoryChanges == BoolPreference.Enabled;
 
 
-		private static SVNPreferencesManager m_Instance;
-		public static SVNPreferencesManager Instance {
-			get {
-				if (m_Instance == null) {
-					m_Instance = Resources.FindObjectsOfTypeAll<SVNPreferencesManager>().FirstOrDefault();
+		public override void Initialize(bool freshlyCreated)
+		{
+			if (freshlyCreated) {
+				LoadPreferences();
 
-					if (m_Instance == null) {
-
-						m_Instance = ScriptableObject.CreateInstance<SVNPreferencesManager>();
-						m_Instance.name = "SVNPreferencesManager";
-
-						// Setting this flag will tell Unity NOT to destroy this object on assembly reload (as no scene references this object).
-						// We're essentially leaking this object. But we can still find it with Resources.FindObjectsOfTypeAll() after reload.
-						// More info on this: https://blogs.unity3d.com/2012/10/25/unity-serialization/
-						m_Instance.hideFlags = HideFlags.HideAndDontSave;
-
-						m_Instance.LoadPreferences();
-
-						Debug.Log($"Loaded WiseSVN Preferences. WiseSVN is turned {(m_Instance.PersonalPrefs.EnableCoreIntegration ? "on" : "off")}.");
-
-					} else {
-						// Data is already deserialized by Unity onto the scriptable object.
-						// Even though OnEnable is not yet called, data is there after assembly reload.
-						// It is deserialized even before static constructors [InitializeOnLoad] are called. I tested it! :D
-
-						// The idea here is to save some time on assembly reload from deserializing json as the reload is already slow enough for big projects.
-					}
-
-					//
-					// More stuff to refresh on reload.
-					//
-					SVNContextMenusManager.SetupContextType(m_Instance.PersonalPrefs.ContextMenusClient);
-				}
-
-				return m_Instance;
+				Debug.Log($"Loaded WiseSVN Preferences. WiseSVN is turned {(PersonalPrefs.EnableCoreIntegration ? "on" : "off")}.");
 			}
+
+			SVNContextMenusManager.SetupContextType(PersonalPrefs.ContextMenusClient);
 		}
 
 		public GUIContent GetFileStatusIconContent(VCFileStatus status)

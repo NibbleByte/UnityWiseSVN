@@ -8,6 +8,14 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN
 {
+	// HACK: This should be internal, but due to inheritance issues it can't be.
+	[Serializable]
+	public class GuidStatusDataBind
+	{
+		public string Guid;
+		public SVNStatusData Data;
+	}
+
 	/// <summary>
 	/// Caches known statuses for files and folders.
 	/// Refreshes periodically or if file was modified or moved.
@@ -16,17 +24,11 @@ namespace DevLocker.VersionControl.WiseSVN
 	/// NOTE: Keep in mind that this cache can be out of date.
 	///		 If you want up to date information, use the WiseSVNIntegration API for direct SVN queries.
 	/// </summary>
-	public class SVNStatusesDatabase : ScriptableObject
+	public class SVNStatusesDatabase : Utils.DatabasePersistentSingleton<SVNStatusesDatabase, GuidStatusDataBind>
 	{
 		private const string INVALID_GUID = "00000000000000000000000000000000";
 		private const string ASSETS_FOLDER_GUID = "00000000000000001000000000000000";
 
-		[Serializable]
-		private class GuidStatusDataBind
-		{
-			public string Guid;
-			public SVNStatusData Data;
-		}
 
 		// Note: not all of these are rendered. Check the Database icons.
 		private readonly static Dictionary<VCFileStatus, int> m_StatusPriority = new Dictionary<VCFileStatus, int> {
@@ -48,111 +50,26 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// <summary>
 		/// The database update can be enabled, but the SVN integration to be disabled as a whole.
 		/// </summary>
-		public bool IsActive => m_PersonalPrefs.PopulateStatusesDatabase && m_PersonalPrefs.EnableCoreIntegration;
-		private bool DoTraceLogs => (m_PersonalPrefs.TraceLogs & SVNTraceLogs.DatabaseUpdates) != 0;
+		public override bool IsActive => m_PersonalPrefs.PopulateStatusesDatabase && m_PersonalPrefs.EnableCoreIntegration;
+		public override bool TemporaryDisabled => WiseSVNIntegration.TemporaryDisabled;
+		public override bool DoTraceLogs => (m_PersonalPrefs.TraceLogs & SVNTraceLogs.DatabaseUpdates) != 0;
 
-
-		[SerializeField] private List<GuidStatusDataBind> m_StatusDatas = new List<GuidStatusDataBind>();
-		private double m_LastRefreshTime;   // TODO: Maybe serialize this?
-
-		public event Action DatabaseChanged;
-
-
-		#region Thread Work Related Data
-		// Filled in by a worker thread.
-		[NonSerialized] private SVNStatusData[] m_PendingStatuses;
-
-		private System.Threading.Thread m_WorkerThread;
-
-		// Is update pending?
-		// If last update didn't make it, this flag will still be true.
-		// Useful if assembly reload happens and stops the work of the database update.
-		[SerializeField] private bool PendingUpdate = false;
-		#endregion
+		public override double RefreshInterval => m_PersonalPrefs.AutoRefreshDatabaseInterval;
 
 		//
 		//=============================================================================
 		//
-		#region Initialize & Preferences
+		#region Initialize
 
-		private static SVNStatusesDatabase m_Instance;
-		public static SVNStatusesDatabase Instance {
-			get {
-				if (m_Instance == null) {
-					m_Instance = Resources.FindObjectsOfTypeAll<SVNStatusesDatabase>().FirstOrDefault();
-
-					bool freshlyCreated = false;
-					if (m_Instance == null) {
-
-						m_Instance = ScriptableObject.CreateInstance<SVNStatusesDatabase>();
-						m_Instance.name = "SVNStatusesDatabase";
-
-						// Setting this flag will tell Unity NOT to destroy this object on assembly reload (as no scene references this object).
-						// We're essentially leaking this object. But we can still find it with Resources.FindObjectsOfTypeAll() after reload.
-						// More info on this: https://blogs.unity3d.com/2012/10/25/unity-serialization/
-						m_Instance.hideFlags = HideFlags.HideAndDontSave;
-
-						freshlyCreated = true;
-
-						if (m_Instance.DoTraceLogs) {
-							Debug.Log("SVNStatusesDatabase not found. Creating new one.");
-						}
-
-					} else {
-						// Data is already deserialized by Unity onto the scriptable object.
-						// Even though OnEnable is not yet called, data is there after assembly reload.
-						// It is deserialized even before static constructors [InitializeOnLoad] are called. I tested it! :D
-
-						// The idea here is to save some time on assembly reload from deserializing json as the reload is already slow enough for big projects.
-					}
-
-					m_Instance.Initialize(freshlyCreated);
-				}
-
-				return m_Instance;
-			}
-		}
-
-		private void Initialize(bool freshlyCreated)
+		public override void Initialize(bool freshlyCreated)
 		{
-			AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
-
 			// HACK: Force WiseSVN initialize first, so it doesn't happen in the thread.
 			WiseSVNIntegration.ProjectRoot.StartsWith(string.Empty);
 
-			SVNPreferencesManager.Instance.PreferencesChanged += PreferencesChanged;
-			PreferencesChanged();
+			SVNPreferencesManager.Instance.PreferencesChanged += RefreshActive;
+			RefreshActive();
 
-			// Assembly reload might have killed the working thread leaving pending update.
-			// Do it again.
-			if (PendingUpdate) {
-				StartDatabaseUpdate();
-			}
-
-			if (freshlyCreated) {
-				InvalidateDatabase();
-			}
-		}
-
-		private void OnBeforeAssemblyReload()
-		{
-			// Do it before Unity does it. Cause Unity aborts the thread badly sometimes :(
-			if (m_WorkerThread != null && m_WorkerThread.IsAlive) {
-				m_WorkerThread.Abort();
-			}
-		}
-
-		private void PreferencesChanged()
-		{
-			if (IsActive) {
-				EditorApplication.update -= AutoRefresh;
-				EditorApplication.update += AutoRefresh;
-
-				m_LastRefreshTime = EditorApplication.timeSinceStartup;
-
-			} else {
-				EditorApplication.update -= AutoRefresh;
-			}
+			base.Initialize(freshlyCreated);
 		}
 
 		#endregion
@@ -163,113 +80,54 @@ namespace DevLocker.VersionControl.WiseSVN
 		//
 		#region Populate Data
 
-		private void StartDatabaseUpdate()
-		{
-			if (DoTraceLogs) {
-				Debug.Log($"Started Update Database at {EditorApplication.timeSinceStartup:0.00}");
-			}
-
-			if (m_WorkerThread != null) {
-				throw new Exception("SVN starting database update, while another one is pending?");
-			}
-
-			PendingUpdate = true;
-
-			// Listen for the thread result in the main thread.
-			// Just in case, remove previous updates.
-			EditorApplication.update -= WaitAndFinishDatabaseUpdate;
-			EditorApplication.update += WaitAndFinishDatabaseUpdate;
-
-			m_WorkerThread = new System.Threading.Thread(GatherSVNStatuses);
-			m_WorkerThread.Start();
-		}
-
 		// Executed in a worker thread.
-		private void GatherSVNStatuses()
+		protected override GuidStatusDataBind[] GatherDataInThread()
 		{
-			try {
-				var statusOptions = new SVNStatusDataOptions() {
-					Depth = SVNStatusDataOptions.SearchDepth.Infinity,
-					RaiseError = false,
-					Timeout = WiseSVNIntegration.ONLINE_COMMAND_TIMEOUT * 2,
-					Offline = !SVNPreferencesManager.Instance.DownloadRepositoryChanges,
-					FetchLockOwner = true,
-				};
+			var statusOptions = new SVNStatusDataOptions() {
+				Depth = SVNStatusDataOptions.SearchDepth.Infinity,
+				RaiseError = false,
+				Timeout = WiseSVNIntegration.ONLINE_COMMAND_TIMEOUT * 2,
+				Offline = !SVNPreferencesManager.Instance.DownloadRepositoryChanges,
+				FetchLockOwner = true,
+			};
 
-				// Will get statuses of all added / modified / deleted / conflicted / unversioned files. Only normal files won't be listed.
-				var statuses = WiseSVNIntegration.GetStatuses("Assets", statusOptions)
-					// Deleted svn file can still exist for some reason. Need to show it as deleted.
-					// If file doesn't exists, skip it as we can't show it anyway.
-					.Where(s => s.Status != VCFileStatus.Deleted || File.Exists(s.Path))
-					.Where(s => s.Status != VCFileStatus.Missing)
-					.ToList();
+			// Will get statuses of all added / modified / deleted / conflicted / unversioned files. Only normal files won't be listed.
+			var statuses = WiseSVNIntegration.GetStatuses("Assets", statusOptions)
+				// Deleted svn file can still exist for some reason. Need to show it as deleted.
+				// If file doesn't exists, skip it as we can't show it anyway.
+				.Where(s => s.Status != VCFileStatus.Deleted || File.Exists(s.Path))
+				.Where(s => s.Status != VCFileStatus.Missing)
+				.ToList();
 
-				for (int i = 0, count = statuses.Count; i < count; ++i) {
-					var statusData = statuses[i];
+			for (int i = 0, count = statuses.Count; i < count; ++i) {
+				var statusData = statuses[i];
 
-					// Statuses for entries under unversioned directories are not returned. Add them manually.
-					if (statusData.Status == VCFileStatus.Unversioned && Directory.Exists(statusData.Path)) {
-						var paths = Directory.EnumerateFileSystemEntries(statusData.Path, "*", SearchOption.AllDirectories)
-							.Where(path => !WiseSVNIntegration.IsHiddenPath(path))
-							;
+				// Statuses for entries under unversioned directories are not returned. Add them manually.
+				if (statusData.Status == VCFileStatus.Unversioned && Directory.Exists(statusData.Path)) {
+					var paths = Directory.EnumerateFileSystemEntries(statusData.Path, "*", SearchOption.AllDirectories)
+						.Where(path => !WiseSVNIntegration.IsHiddenPath(path))
+						;
 
-						statuses.AddRange(paths
-							.Select(path => path.Replace(WiseSVNIntegration.ProjectRoot, ""))
-							.Select(path => new SVNStatusData() { Status = VCFileStatus.Unversioned, Path = path, LockDetails = LockDetails.Empty })
-							);
-					}
-				}
-
-				if (PendingUpdate == false) {
-					throw new Exception("SVN thread finished work but the update is over?");
-				}
-
-				m_PendingStatuses = statuses.ToArray();
-
-			}
-			// Most probably the assembly got reloaded and the thread was aborted.
-			catch (System.Threading.ThreadAbortException) {
-				System.Threading.Thread.ResetAbort();
-
-				// Should always be true.
-				if (PendingUpdate) {
-					m_PendingStatuses = new SVNStatusData[0];
-				}
-			} catch (Exception ex) {
-				Debug.LogException(ex);
-
-				// Should always be true.
-				if (PendingUpdate) {
-					m_PendingStatuses = new SVNStatusData[0];
+					statuses.AddRange(paths
+						.Select(path => path.Replace(WiseSVNIntegration.ProjectRoot, ""))
+						.Select(path => new SVNStatusData() { Status = VCFileStatus.Unversioned, Path = path, LockDetails = LockDetails.Empty })
+						);
 				}
 			}
+
+			// HACK: the base class works with the DataType for pending data. Guid won't be used.
+			return statuses
+				.Select(s => new GuidStatusDataBind() { Data = s })
+				.ToArray();
 		}
 
-		private void WaitAndFinishDatabaseUpdate()
+		protected override void WaitAndFinishDatabaseUpdate(GuidStatusDataBind[] pendingData)
 		{
-			if (m_PendingStatuses == null)
-				return;
-
-			if (DoTraceLogs) {
-				Debug.Log($"Finished Update Database at {EditorApplication.timeSinceStartup:0.00}");
-			}
-
-			EditorApplication.update -= WaitAndFinishDatabaseUpdate;
-			m_WorkerThread = null;
-
-			var statuses = m_PendingStatuses;
-			m_PendingStatuses = null;
-			m_StatusDatas.Clear();
-
-			// Mark update as finished.
-			PendingUpdate = false;
-
-			// If preferences were changed while waiting.
-			if (!IsActive)
-				return;
-
 			// Process the gathered statuses in the main thread, since Unity API is not thread-safe.
-			foreach (var foundStatusData in statuses) {
+			foreach (var pair in pendingData) {
+
+				// HACK: Guid is not used here.
+				var foundStatusData = pair.Data;
 
 				// Because structs can't be modified in foreach.
 				var statusData = foundStatusData;
@@ -304,8 +162,6 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				AddModifiedFolders(statusData);
 			}
-
-			DatabaseChanged?.Invoke();
 		}
 
 		private void AddModifiedFolders(SVNStatusData statusData)
@@ -349,35 +205,6 @@ namespace DevLocker.VersionControl.WiseSVN
 		//=============================================================================
 		//
 		#region Invalidate Database
-
-		/// <summary>
-		/// Force the database to refresh its statuses cache onto another thread.
-		/// </summary>
-		public void InvalidateDatabase()
-		{
-			if (!IsActive || PendingUpdate || WiseSVNIntegration.TemporaryDisabled)
-				return;
-
-			// Will be done on assembly reload.
-			if (EditorApplication.isCompiling) {
-				PendingUpdate = true;
-				return;
-			}
-
-			StartDatabaseUpdate();
-		}
-
-		private void AutoRefresh()
-		{
-			double refreshInterval = m_PersonalPrefs.AutoRefreshDatabaseInterval;
-
-			if (refreshInterval <= 0 || EditorApplication.timeSinceStartup - m_LastRefreshTime < refreshInterval)
-				return;
-
-			m_LastRefreshTime = EditorApplication.timeSinceStartup;
-
-			InvalidateDatabase();
-		}
 
 		internal void PostProcessAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets)
 		{
@@ -462,7 +289,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				Debug.LogError($"Asking for status with empty guid");
 			}
 
-			foreach (var bind in m_StatusDatas) {
+			foreach (var bind in m_Data) {
 				if (bind.Guid.Equals(guid, StringComparison.Ordinal))
 					return bind.Data;
 			}
@@ -477,7 +304,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				return false;
 			}
 
-			foreach (var bind in m_StatusDatas) {
+			foreach (var bind in m_Data) {
 				if (bind.Guid.Equals(guid, StringComparison.Ordinal)) {
 
 					if (bind.Data.Equals(statusData))
@@ -503,7 +330,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 			}
 
-			m_StatusDatas.Add(new GuidStatusDataBind() { Guid = guid, Data = statusData });
+			m_Data.Add(new GuidStatusDataBind() { Guid = guid, Data = statusData });
 			return true;
 		}
 
@@ -514,9 +341,9 @@ namespace DevLocker.VersionControl.WiseSVN
 				Debug.LogError($"Trying to remove empty guid");
 			}
 
-			for(int i = 0; i < m_StatusDatas.Count; ++i) {
-				if (m_StatusDatas[i].Guid.Equals(guid, StringComparison.Ordinal)) {
-					m_StatusDatas.RemoveAt(i);
+			for(int i = 0; i < m_Data.Count; ++i) {
+				if (m_Data[i].Guid.Equals(guid, StringComparison.Ordinal)) {
+					m_Data.RemoveAt(i);
 					return true;
 				}
 			}
