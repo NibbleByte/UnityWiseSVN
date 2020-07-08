@@ -85,6 +85,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		public PersonalPreferences PersonalPrefs;
 		public ProjectPreferences ProjectPrefs;
 
+		[SerializeField] private long m_ProjectPrefsLastModifiedTime = 0;
+
 		public event Action PreferencesChanged;
 
 		public bool DownloadRepositoryChanges =>
@@ -95,8 +97,30 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 		public override void Initialize(bool freshlyCreated)
 		{
-			if (freshlyCreated) {
+			var lastModifiedDate = File.Exists(PROJECT_PREFERENCES_PATH)
+				? File.GetLastWriteTime(PROJECT_PREFERENCES_PATH).Ticks
+				: 0
+				;
+
+			if (freshlyCreated || m_ProjectPrefsLastModifiedTime != lastModifiedDate) {
 				LoadPreferences();
+			}
+
+			if (freshlyCreated) {
+
+				LoadTextures();
+
+				// If WiseSVN was just added to the project, Unity won't manage to load the textures the first time. Try again next frame.
+				if (FileStatusIcons[(int)VCFileStatus.Added].image == null) {
+
+					EditorApplication.CallbackFunction reloadTextures = null;
+					reloadTextures = () => {
+						EditorApplication.update -= reloadTextures;
+						LoadTextures();
+					};
+
+					EditorApplication.update += reloadTextures;
+				}
 
 				Debug.Log($"Loaded WiseSVN Preferences. WiseSVN is turned {(PersonalPrefs.EnableCoreIntegration ? "on" : "off")}.");
 			}
@@ -142,22 +166,9 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 			if (File.Exists(PROJECT_PREFERENCES_PATH)) {
 				ProjectPrefs = JsonUtility.FromJson<ProjectPreferences>(File.ReadAllText(PROJECT_PREFERENCES_PATH));
+				m_ProjectPrefsLastModifiedTime = File.GetLastWriteTime(PROJECT_PREFERENCES_PATH).Ticks;
 			} else {
 				ProjectPrefs = new ProjectPreferences();
-			}
-
-			LoadTextures();
-
-			// If WiseSVN was just added to the project, Unity won't manage to load the textures the first time. Try again next frame.
-			if (FileStatusIcons[(int)VCFileStatus.Added].image == null) {
-
-				EditorApplication.CallbackFunction reloadTextures = null;
-				reloadTextures = () => {
-					EditorApplication.update -= reloadTextures;
-					LoadTextures();
-				};
-
-				EditorApplication.update += reloadTextures;
 			}
 		}
 
