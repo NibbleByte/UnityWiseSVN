@@ -169,6 +169,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				m_ProjectPrefsLastModifiedTime = File.GetLastWriteTime(PROJECT_PREFERENCES_PATH).Ticks;
 			} else {
 				ProjectPrefs = new ProjectPreferences();
+				m_ProjectPrefsLastModifiedTime = 0;
 			}
 		}
 
