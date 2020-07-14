@@ -172,14 +172,21 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 
 		public override void RepoBrowser(string url, bool wait = false)
 		{
-			// TODO: Implement
-			throw new System.NotSupportedException();
+			// SnailSVN Repo-Browser doesn't accept URLs, only working copy paths which is no good for us.
+			Debug.LogError($"SnailSVN doesn't support Repo-Browser very well. Opening Repo-Browser for the current working copy.");
+
+			var result = ExecuteCommand("repo-browser", string.Empty, WiseSVNIntegration.ProjectRoot, wait);
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
 		}
 
 		public override void Switch(string localPath, string url, bool wait = false)
 		{
-			// TODO: Implement
-			throw new System.NotSupportedException();
+			var result = ExecuteCommand("switch", string.Empty, WiseSVNIntegration.ProjectRoot, wait);
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
 		}
 	}
 }
