@@ -1096,18 +1096,39 @@ namespace DevLocker.VersionControl.WiseSVN
 
 							logPath.Change = m_LogPathChangesMap[line[changeOpening.Length - 2]];
 
-							if (line[line.Length - 1] == ')') {
+							bool wasMoved = logPath.Added && line[line.Length - 1] == ')';
+
+							if (wasMoved) { // Maybe was moved
+
 								const string copyFromOpening = "(from ";
 								var openBracketIndex = line.IndexOf(copyFromOpening);
 
-								var from = line.Substring(openBracketIndex + copyFromOpening.Length, line.Length - 1 - openBracketIndex - copyFromOpening.Length);
+								if (openBracketIndex != -1) {
+									var from = line.Substring(openBracketIndex + copyFromOpening.Length, line.Length - 1 - openBracketIndex - copyFromOpening.Length);
 
-								logPath.CopiedFrom = from.Substring(0, from.LastIndexOf(':'));
-								logPath.CopiedFromRevision = int.Parse(from.Substring(from.LastIndexOf(':') + 1));
+									var revisionColon = from.LastIndexOf(':');
 
-								logPath.Path = line.Substring(changeOpening.Length, openBracketIndex - changeOpening.Length - 1); // -1 is for the space before the braket
+									if (revisionColon != -1) {
+										logPath.CopiedFrom = from.Substring(0, revisionColon);
+										bool success = int.TryParse(from.Substring(revisionColon + 1), out logPath.CopiedFromRevision);
 
-							} else {
+										if (success) {
+											logPath.Path = line.Substring(changeOpening.Length, openBracketIndex - changeOpening.Length - 1); // -1 is for the space before the bracket
+										} else {
+											wasMoved = false;	// Oh well...
+										}
+									} else {
+										// Probably folder that contains special elements: "Memories (from my childhood)".
+										wasMoved = false;
+									}
+
+								} else {
+									// Probably a folder ending with ')'
+									wasMoved = false;
+								}
+							}
+
+							if (!wasMoved) {
 								logPath.CopiedFrom = string.Empty;
 								logPath.Path = line.Substring(changeOpening.Length);
 							}
