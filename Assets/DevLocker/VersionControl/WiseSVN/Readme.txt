@@ -27,6 +27,13 @@ For up to date documentation, check: https://github.com/NibbleByte/UnityWiseSVN
 * Show overlay svn status icons
   * Show server changes that you need to update.
   * Show locked files by you and your colleges. 
+* Branch Selector
+  * Scans for Unity projects in your SVN repository's branches.
+  * Lists all available branches.
+  * Opens Repo-Browser showing target asset in selected branch.
+  * Opens "Show Log" on target asset in selected branch.
+  * Switches to selected branch.
+  * Scans for conflicts (shows which branches have changes to the target asset).
 * Minimal performance impact
 * Survives assembly reloads
 * You don't have to leave Unity to do SVN chores.
