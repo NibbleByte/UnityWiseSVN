@@ -98,7 +98,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 					DrawProjectPreferences();
 					break;
 				case PreferencesTab.About:
-					DrawAbout();
+					DrawHelpAbout();
 					break;
 			}
 
@@ -229,8 +229,19 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			so.ApplyModifiedProperties();
 		}
 
-		public static void DrawAbout()
+		public static void DrawHelpAbout()
 		{
+			EditorGUILayout.LabelField("Help:", EditorStyles.boldLabel);
+
+			if (GUILayout.Button("Documentation", GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
+				var assets = AssetDatabase.FindAssets("WiseSVN-Documentation");
+				if (assets.Length == 0) {
+					EditorUtility.DisplayDialog("Documentation missing!", "The documentation you requested is missing.", "Ok");
+				} else {
+					Application.OpenURL(Environment.CurrentDirectory + "/" + AssetDatabase.GUIDToAssetPath(assets[0]));
+				}
+			}
+
 			EditorGUILayout.LabelField("About:", EditorStyles.boldLabel);
 			{
 				var urlStyle = new GUIStyle(EditorStyles.label);
@@ -246,39 +257,44 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 				EditorGUILayout.LabelField("In collaboration with Snapshot Games");
 
-				if (GUILayout.Button("Icons taken from TortoiseSVN (created by Lьbbe Onken)", urlStyle, GUILayout.ExpandWidth(true))) {
-					var assetStoreURL = "https://tortoisesvn.net/";
-					Application.OpenURL(assetStoreURL);
-				}
 
 
 				EditorGUILayout.BeginHorizontal();
 
-				if (GUILayout.Button("Plugin at Asset Store", GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
+				if (GUILayout.Button("Asset Store", urlStyle, GUILayout.ExpandWidth(false))) {
 					var assetStoreURL = "https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636";
 					Application.OpenURL(assetStoreURL);
 				}
 
-				if (GUILayout.Button("Source at GitHub", GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
+				GUILayout.Label("|", GUILayout.ExpandWidth(false));
+
+				if (GUILayout.Button("GitHub", urlStyle, GUILayout.ExpandWidth(false))) {
 					var githubURL = "https://github.com/NibbleByte/UnityWiseSVN";
 					Application.OpenURL(githubURL);
 				}
 
-				EditorGUILayout.EndHorizontal();
+				GUILayout.Label("|", GUILayout.ExpandWidth(false));
 
-				EditorGUILayout.BeginHorizontal();
-
-				if (GUILayout.Button("Reddit", GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
-					var redditURL = "https://www.reddit.com/r/Unity3D/comments/fgjovk/finally_a_fully_working_tortoisesvn_snailsvn";
-					Application.OpenURL(redditURL);
-				}
-
-				if (GUILayout.Button("Unity Forum", GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
+				if (GUILayout.Button("Unity Forum", urlStyle, GUILayout.ExpandWidth(false))) {
 					var unityForumURL = "https://forum.unity.com/threads/wise-svn-powerful-tortoisesvn-snailsvn-integration.844168";
 					Application.OpenURL(unityForumURL);
 				}
 
+				GUILayout.Label("|", GUILayout.ExpandWidth(false));
+
+				if (GUILayout.Button("Reddit", urlStyle, GUILayout.ExpandWidth(false))) {
+					var redditURL = "https://www.reddit.com/r/Unity3D/comments/fgjovk/finally_a_fully_working_tortoisesvn_snailsvn";
+					Application.OpenURL(redditURL);
+				}
+
 				EditorGUILayout.EndHorizontal();
+
+				EditorGUILayout.Space();
+
+				if (GUILayout.Button("Icons taken from TortoiseSVN (created by Lьbbe Onken)", urlStyle, GUILayout.ExpandWidth(true))) {
+					var assetStoreURL = "https://tortoisesvn.net/";
+					Application.OpenURL(assetStoreURL);
+				}
 			}
 		}
 	}
