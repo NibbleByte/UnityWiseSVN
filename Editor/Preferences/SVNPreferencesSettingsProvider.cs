@@ -50,7 +50,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			EditorGUILayout.Space();
 			EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
-			WiseSVNProjectPreferencesWindow.DrawAbout();
+			WiseSVNProjectPreferencesWindow.DrawHelpAbout();
 		}
 	}
 #endif
