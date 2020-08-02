@@ -194,15 +194,14 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 			MiniIconButtonlessStyle = new GUIStyle(GUI.skin.button);
 			MiniIconButtonlessStyle.hover.background = MiniIconButtonlessStyle.normal.background;
 			MiniIconButtonlessStyle.hover.scaledBackgrounds = MiniIconButtonlessStyle.normal.scaledBackgrounds;
-			MiniIconButtonlessStyle.onHover.background = MiniIconButtonlessStyle.onNormal.background;
-			MiniIconButtonlessStyle.onHover.scaledBackgrounds = MiniIconButtonlessStyle.onNormal.scaledBackgrounds;
 			MiniIconButtonlessStyle.hover.textColor = GUI.skin.label.hover.textColor;
 			MiniIconButtonlessStyle.normal.background = null;
 			MiniIconButtonlessStyle.normal.scaledBackgrounds = null;
-			MiniIconButtonlessStyle.onNormal.background = null;
-			MiniIconButtonlessStyle.onNormal.scaledBackgrounds = null;
 			MiniIconButtonlessStyle.padding = new RectOffset();
 			MiniIconButtonlessStyle.margin = new RectOffset();
+
+			// Do it before BranchLabelStyle copies the style.
+			MigrateToUIElementsIfNeeded();
 
 			BranchLabelStyle = new GUIStyle(MiniIconButtonlessStyle);
 			BranchLabelStyle.alignment = TextAnchor.MiddleLeft;
@@ -211,7 +210,116 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 
 
 			RevisionsHintContent = new GUIContent(EditorGUIUtility.FindTexture("console.infoicon.sml"), "Scan number of revisions back from the last changed one in the checked branch.");
+
 		}
+
+		#region UIElements Background HACKS!
+
+		private void MigrateToUIElementsIfNeeded()
+		{
+			// As 2019 & 2020 incorporates the UIElements framework, background textures are now null / empty.
+			// Because this was written in the old IMGUI style using 2018, this quick and dirty hack was created.
+			// Manually create background textures imitating the real buttons ones.
+
+			MiniIconButtonlessStyle.name = "";	// UIElements matches button styles by name and overrides everything.
+
+			if (MiniIconButtonlessStyle.hover.background == null) {
+				var hoverColor = EditorGUIUtility.isProSkin ? new Color(0.404f, 0.404f, 0.404f, 1.0f) : new Color(0.925f, 0.925f, 0.925f, 1.0f);
+				MiniIconButtonlessStyle.hover.background = MakeButtonBackgroundTexture(hoverColor);
+			}
+			if (MiniIconButtonlessStyle.active.background == null) {
+				var activeColor = EditorGUIUtility.isProSkin ? new Color(0.455f, 0.455f, 0.455f, 1.0f) : new Color(0.694f, 0.694f, 0.694f, 1.0f);
+				MiniIconButtonlessStyle.active.background = MakeButtonBackgroundTexture(activeColor);
+			}
+
+
+			BorderStyle.name = "";
+			if (BorderStyle.normal.background == null) {
+				var normalColor = EditorGUIUtility.isProSkin ? new Color(0.290f, 0.290f, 0.290f, 1.0f) : new Color(0.740f, 0.740f, 0.740f, 1.0f);
+				BorderStyle.normal.background = MakeBoxBackgroundTexture(normalColor);
+			}
+		}
+
+		private static Texture2D MakeButtonBackgroundTexture(Color color)
+		{
+			const int width = 16;
+			const int height = 16;
+
+			var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+
+			var pixels = new Color[width * height];
+			for (int y = 0; y < height; ++y) {
+				for (int x = 0; x < width; ++x) {
+					var index = x + y * width;
+					pixels[index] = color;
+
+					if (y == 0) {
+						pixels[index] *= 0.7f;
+						pixels[index].a = 1f;
+					}
+
+					if (y == height - 1) {
+						pixels[index] *= 1.02f;
+						pixels[index].a = 1f;
+					}
+
+					if (x == 0 || x == width - 1) {
+						pixels[index] *= 0.95f;
+						pixels[index].a = 1f;
+					}
+				}
+			}
+
+			texture.SetPixels(pixels);
+
+			texture.SetPixel(0, 0, new Color());
+			texture.SetPixel(1, 0, new Color());
+			texture.SetPixel(0, 1, new Color());
+
+
+			texture.SetPixel(width - 1, 0, new Color());
+			texture.SetPixel(width - 2, 0, new Color());
+			texture.SetPixel(width - 1, 1, new Color());
+
+			texture.SetPixel(0, height - 1, new Color());
+			texture.SetPixel(0, height - 2, new Color());
+			texture.SetPixel(1, height - 1, new Color());
+
+			texture.SetPixel(width - 1, height - 1, new Color());
+			texture.SetPixel(width - 2, height - 1, new Color());
+			texture.SetPixel(width - 1, height - 2, new Color());
+
+			texture.Apply();
+
+			return texture;
+		}
+
+		private static Texture2D MakeBoxBackgroundTexture(Color color)
+		{
+			const int width = 16;
+			const int height = 16;
+
+			var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+
+			var pixels = new Color[width * height];
+			for (int y = 0; y < height; ++y) {
+				for (int x = 0; x < width; ++x) {
+					var index = x + y * width;
+					pixels[index] = color;
+
+					if (y == 0 || y == height - 1 || x == 0 || x == width - 1) {
+						pixels[index] *= 0.5f;
+						pixels[index].a = 1f;
+					}
+				}
+			}
+
+			texture.SetPixels(pixels);
+			texture.Apply();
+
+			return texture;
+		}
+		#endregion
 
 		// This is initialized on first OnGUI rather upon creation because it gets overridden.
 		private void InitializePositionAndSize()
