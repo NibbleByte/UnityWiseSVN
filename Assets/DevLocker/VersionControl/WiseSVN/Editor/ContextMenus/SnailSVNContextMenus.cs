@@ -50,6 +50,11 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			Application.OpenURL($"snailsvnfree://check-for-modifications{WiseSVNIntegration.ProjectRoot}/{path}");
 		}
 
+		public override void DiffChanges(string assetPath, bool wait = false)
+		{
+			CheckChanges(new string[] { assetPath }, false, wait);
+		}
+
 		public override void Update(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
 			if (!assetPaths.Any())
@@ -111,6 +116,12 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			// Doesn't support resolve command (doesn't seem to have such a window?)
 			UnityEditor.EditorUtility.DisplayDialog("Not supported", "Sorry, resolve all functionality is currently not supported by SnailSVN.", "Sad");
+		}
+
+		public override void Resolve(string assetPath, bool wait = false)
+		{
+			// Doesn't support resolve command (doesn't seem to have such a window?)
+			UnityEditor.EditorUtility.DisplayDialog("Not supported", "Sorry, resolve functionality is currently not supported by SnailSVN.", "Sad");
 		}
 
 

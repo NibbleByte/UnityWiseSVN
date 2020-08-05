@@ -94,16 +94,63 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			return Selection.assetGUIDs.Select(AssetDatabase.GUIDToAssetPath);
 		}
 
-		[MenuItem("Assets/SVN/Check Changes All", false, -1000)]
+		[MenuItem("Assets/SVN/Diff \u2044 Resolve", true, -1000)]
+		public static bool DiffResolveValidate()
+		{
+			// Might be cool to return false if SVN status is normal or unversioned, but that might slow down the context menu.
+			return Selection.assetGUIDs.Length == 1;
+		}
+
+		[MenuItem("Assets/SVN/Diff \u2044 Resolve", false, -1000)]
+		public static void DiffResolve()
+		{
+			CheckChangesSelected();
+		}
+
+		[MenuItem("Assets/SVN/Check Changes All", false, -990)]
 		public static void CheckChangesAll()
 		{
 			m_Integration?.CheckChanges(GetRootAssetPath(), false);
 		}
 
-		[MenuItem("Assets/SVN/Check Changes", false, -1000)]
+		[MenuItem("Assets/SVN/Check Changes", false, -990)]
 		public static void CheckChangesSelected()
 		{
-			m_Integration?.CheckChanges(GetSelectedAssetPaths(), true);
+			if (Selection.assetGUIDs.Length > 1) {
+				m_Integration?.CheckChanges(GetSelectedAssetPaths(), true);
+
+			} else if (Selection.assetGUIDs.Length == 1) {
+				var assetPath = AssetDatabase.GUIDToAssetPath(Selection.assetGUIDs[0]);
+
+				var isFolder = System.IO.Directory.Exists(assetPath);
+
+				if (isFolder || (!DiffAsset(assetPath) && !DiffAsset(assetPath + ".meta"))) {
+					m_Integration?.CheckChanges(GetSelectedAssetPaths(), true);
+				}
+			}
+		}
+
+		private static bool DiffAsset(string assetPath)
+		{
+			var statusData = WiseSVNIntegration.GetStatus(assetPath);
+
+			var isModified = statusData.Status != VCFileStatus.Normal
+				&& statusData.Status != VCFileStatus.Unversioned
+				&& statusData.Status != VCFileStatus.Conflicted
+				;
+			isModified |= statusData.PropertiesStatus == VCPropertiesStatus.Modified;
+
+			if (isModified) {
+				m_Integration?.DiffChanges(assetPath, false);
+				return true;
+			}
+
+			if (statusData.Status == VCFileStatus.Conflicted || statusData.PropertiesStatus == VCPropertiesStatus.Conflicted) {
+				m_Integration?.Resolve(assetPath, false);
+				return true;
+			}
+
+			return false;
 		}
 
 		public static void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
