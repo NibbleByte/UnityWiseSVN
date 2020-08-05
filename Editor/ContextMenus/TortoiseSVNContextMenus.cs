@@ -25,6 +25,14 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			}
 		}
 
+		public override void DiffChanges(string assetPath, bool wait = false)
+		{
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:diff /path:\"{AssetPathToContextPaths(assetPath, false)}\"", wait);
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
+		}
+
 		public override void Update(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
 			if (!assetPaths.Any())
@@ -89,6 +97,23 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		public override void ResolveAll(bool wait = false)
 		{
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:resolve /path:\"{WiseSVNIntegration.ProjectRoot}\"", wait);
+			if (!string.IsNullOrEmpty(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
+		}
+
+		public override void Resolve(string assetPath, bool wait = false)
+		{
+			if (System.IO.Directory.Exists(assetPath)) {
+				var resolveResult = ShellUtils.ExecuteCommand(ClientCommand, $"/command:resolve /path:\"{AssetPathToContextPaths(assetPath, false)}\"", wait);
+				if (!string.IsNullOrEmpty(resolveResult.Error)) {
+					Debug.LogError($"SVN Error: {resolveResult.Error}");
+				}
+
+				return;
+			}
+
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:conflicteditor /path:\"{AssetPathToContextPaths(assetPath, false)}\"", wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}

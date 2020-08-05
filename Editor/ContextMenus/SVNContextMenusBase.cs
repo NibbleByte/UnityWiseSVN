@@ -14,6 +14,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 
 		// Most methods ask for list of asset paths, should the method add meta files and should it wait for the SVN client window to close.
 		public abstract void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false);
+		public abstract void DiffChanges(string assetPath, bool wait = false);
 		public abstract void Update(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false);
 		public abstract void Commit(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false);
 		public abstract void Add(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false);
@@ -29,6 +30,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		public abstract void Switch(string localPath, string url, bool wait = false);
 
 		public abstract void ResolveAll(bool wait = false);
+		public abstract void Resolve(string assetPath, bool wait = false);
+
 		public abstract void Blame(string assetPath, bool wait = false);
 
 		public abstract void Cleanup(bool wait = false);
