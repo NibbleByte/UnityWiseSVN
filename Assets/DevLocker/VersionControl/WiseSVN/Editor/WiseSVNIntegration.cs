@@ -1299,6 +1299,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				using (var reporter = CreateReporter()) {
 					// File isn't still created, so we need to improvise.
 					var result = ShellUtils.ExecuteCommand(SVN_Command, $"revert \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT, reporter);
+					Debug.Assert(!result.HasErrors, "Revert of deleted file failed.");
 					File.Delete(path);
 				}
 			}
