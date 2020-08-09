@@ -93,6 +93,9 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			// Will get statuses of all added / modified / deleted / conflicted / unversioned files. Only normal files won't be listed.
 			var statuses = WiseSVNIntegration.GetStatuses("Assets", statusOptions)
+#if UNITY_2018_4_OR_NEWER
+				.Concat(WiseSVNIntegration.GetStatuses("Packages", statusOptions))
+#endif
 				// Deleted svn file can still exist for some reason. Need to show it as deleted.
 				// If file doesn't exists, skip it as we can't show it anyway.
 				.Where(s => s.Status != VCFileStatus.Deleted || File.Exists(s.Path))
@@ -182,6 +185,10 @@ namespace DevLocker.VersionControl.WiseSVN
 			statusData.Path = Path.GetDirectoryName(statusData.Path);
 
 			while (!string.IsNullOrEmpty(statusData.Path)) {
+				// "Packages" folder doesn't have valid guid. "Assets" do have a special guid.
+				if (statusData.Path == "Packages")
+					break;
+
 				var guid = AssetDatabase.AssetPathToGUID(statusData.Path);
 
 				// Added folders should not be shown as modified.

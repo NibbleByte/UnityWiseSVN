@@ -25,11 +25,14 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		[SerializeField] private GUIContent[] LockStatusIcons = new GUIContent[0];
 		[SerializeField] private GUIContent RemoteStatusIcons = null;
 
+		[SerializeField] private bool m_RetryTextures = false;
+
 		[Serializable]
 		internal class PersonalPreferences
 		{
 			public bool EnableCoreIntegration = true;		// Sync file operations with SVN
 			public bool PopulateStatusesDatabase = true;    // For overlay icons etc.
+			public bool ShowNormalStatusOverlayIcon = false;
 
 			// When populating the database, should it check for server changes as well (locks & modified files).
 			public BoolPreference DownloadRepositoryChanges = BoolPreference.SameAsProjectPreference;
@@ -106,17 +109,23 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				LoadPreferences();
 			}
 
-			if (freshlyCreated) {
+			if (freshlyCreated || m_RetryTextures) {
 
 				LoadTextures();
+
+				m_RetryTextures = false;
 
 				// If WiseSVN was just added to the project, Unity won't manage to load the textures the first time. Try again next frame.
 				if (FileStatusIcons[(int)VCFileStatus.Added].image == null) {
 
+					// We're using a flag as assembly reload may happen and update callback will be lost.
+					m_RetryTextures = true;
+
 					EditorApplication.CallbackFunction reloadTextures = null;
 					reloadTextures = () => {
-						EditorApplication.update -= reloadTextures;
 						LoadTextures();
+						m_RetryTextures = false;
+						EditorApplication.update -= reloadTextures;
 					};
 
 					EditorApplication.update += reloadTextures;
@@ -176,6 +185,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		private void LoadTextures()
 		{
 			FileStatusIcons = new GUIContent[Enum.GetValues(typeof(VCFileStatus)).Length];
+			FileStatusIcons[(int)VCFileStatus.Normal] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNNormalIcon"));
 			FileStatusIcons[(int)VCFileStatus.Added] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNAddedIcon"));
 			FileStatusIcons[(int)VCFileStatus.Modified] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNModifiedIcon"));
 			FileStatusIcons[(int)VCFileStatus.Deleted] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNDeletedIcon"));

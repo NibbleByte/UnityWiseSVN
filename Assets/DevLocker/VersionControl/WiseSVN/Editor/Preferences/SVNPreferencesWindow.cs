@@ -155,6 +155,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			m_PersonalPrefs.PopulateStatusesDatabase = EditorGUILayout.Toggle(new GUIContent("Enable overlay icons", "Enables overlay icons in the project windows.\nPopulates internal cache with statuses of changed entities.\nFile changes may trigger repopulation of the cache."), m_PersonalPrefs.PopulateStatusesDatabase);
 			EditorGUI.BeginDisabledGroup(!m_PersonalPrefs.PopulateStatusesDatabase);
 
+			m_PersonalPrefs.ShowNormalStatusOverlayIcon = EditorGUILayout.Toggle(new GUIContent("Show Normal Status Green Icon", "Normal status is versioned asset that doesn't have any changes."), m_PersonalPrefs.ShowNormalStatusOverlayIcon);
 			m_PersonalPrefs.AutoRefreshDatabaseInterval = EditorGUILayout.IntField(new GUIContent("Overlay icons refresh interval", "How much seconds to wait for the next overlay icons refresh.\nNOTE: -1 will deactivate it - only file changes will trigger refresh."), m_PersonalPrefs.AutoRefreshDatabaseInterval);
 
 			m_PersonalPrefs.DownloadRepositoryChanges =
