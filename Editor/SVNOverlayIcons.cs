@@ -16,6 +16,8 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private static bool IsActive => m_PersonalPrefs.EnableCoreIntegration && m_PersonalPrefs.PopulateStatusesDatabase;
 
+		private static bool m_ShowNormalStatusIcons = false;
+
 		static SVNOverlayIcons()
 		{
 			SVNPreferencesManager.Instance.PreferencesChanged += PreferencesChanged;
@@ -29,6 +31,8 @@ namespace DevLocker.VersionControl.WiseSVN
 			if (IsActive) {
 				EditorApplication.projectWindowItemOnGUI -= ItemOnGUI;
 				EditorApplication.projectWindowItemOnGUI += ItemOnGUI;
+
+				m_ShowNormalStatusIcons = SVNPreferencesManager.Instance.PersonalPrefs.ShowNormalStatusOverlayIcon;
 			} else {
 				EditorApplication.projectWindowItemOnGUI -= ItemOnGUI;
 			}
@@ -121,6 +125,11 @@ namespace DevLocker.VersionControl.WiseSVN
 					fileStatus = (fileStatus != VCFileStatus.Conflicted) ? VCFileStatus.Modified : VCFileStatus.Conflicted;
 					break;
 			}
+
+			if (m_ShowNormalStatusIcons && !statusData.IsValid) {
+				fileStatus = VCFileStatus.Normal;
+			}
+
 			GUIContent fileStatusIcon = SVNPreferencesManager.Instance.GetFileStatusIconContent(fileStatus);
 
 			if (fileStatusIcon != null && fileStatusIcon.image != null) {
