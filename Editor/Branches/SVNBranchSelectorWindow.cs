@@ -722,11 +722,9 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 				.Select(bp => new ConflictsScanResult() { UnityURL = bp.UnityProjectURL, State = ConflictState.Pending })
 				.ToArray();
 
-			// Thread will update the array by ref.
-			var jobData = new KeyValuePair<string, ConflictsScanResult[]>(AssetDatabase.GetAssetPath(m_TargetAsset), m_ConflictsScanResults);
-
 			m_ConflictsScanThread = new System.Threading.Thread(GatherConflicts);
 
+			// Thread will update the array by ref.
 			m_ConflictsScanThread.Start(new ConflictsScanJobData() {
 
 				TargetAssetPath = AssetDatabase.GetAssetPath(m_TargetAsset),
