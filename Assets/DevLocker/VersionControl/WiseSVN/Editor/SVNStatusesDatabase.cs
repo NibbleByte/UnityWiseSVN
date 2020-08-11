@@ -365,7 +365,9 @@ namespace DevLocker.VersionControl.WiseSVN
 	{
 		private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths)
 		{
-			SVNStatusesDatabase.Instance.PostProcessAssets(importedAssets, deletedAssets, movedAssets);
+			if (!WiseSVNIntegration.TemporaryDisabled) {
+				SVNStatusesDatabase.Instance.PostProcessAssets(importedAssets, deletedAssets, movedAssets);
+			}
 		}
 	}
 }
