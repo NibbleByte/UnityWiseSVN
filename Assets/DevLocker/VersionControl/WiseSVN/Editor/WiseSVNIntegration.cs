@@ -1264,6 +1264,17 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 		/// <summary>
+		/// Checks if SVN CLI is setup and working properly.
+		/// Returns string containing the SVN errors if any.
+		/// </summary>
+		public static string CheckForSVNErrors()
+		{
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth=empty \"{SVNFormatPath(ProjectRoot)}\"", COMMAND_TIMEOUT);
+
+			return result.Error;
+		}
+
+		/// <summary>
 		/// Search for hidden files and folders starting with .
 		/// Basically search for any "/." or "\."
 		/// </summary>

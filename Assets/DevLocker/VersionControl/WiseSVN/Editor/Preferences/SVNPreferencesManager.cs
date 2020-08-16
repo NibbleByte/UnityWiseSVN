@@ -2,7 +2,6 @@ using DevLocker.VersionControl.WiseSVN.ContextMenus;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -132,6 +131,26 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				}
 
 				Debug.Log($"Loaded WiseSVN Preferences. WiseSVN is turned {(PersonalPrefs.EnableCoreIntegration ? "on" : "off")}.");
+
+				if (PersonalPrefs.EnableCoreIntegration) {
+					var svnError = WiseSVNIntegration.CheckForSVNErrors();
+
+					// svn: warning: W155007: '...' is not a working copy!
+					// This can be returned when project is not a valid svn checkout. (Probably)
+					if (svnError.Contains("W155007")) {
+						Debug.LogError("This project is NOT under version control (not a proper SVN checkout).");
+
+					// System.ComponentModel.Win32Exception (0x80004005): ApplicationName='...', CommandLine='...', Native error= The system cannot find the file specified.
+					// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
+					// This is allowed only if there isn't ProjectPreference specified CLI path.
+					} else if (svnError.Contains("0x80004005")) {
+						Debug.LogError("SVN CLI (Command Line Interface) not found. You need to install it in order for the SVN integration to work properly.");
+
+					// Any other error.
+					} else if (!string.IsNullOrEmpty(svnError)) {
+						Debug.LogError($"SVN command line interface returned this error:\n{svnError}");
+					}
+				}
 			}
 
 			SVNContextMenusManager.SetupContextType(PersonalPrefs.ContextMenusClient);
