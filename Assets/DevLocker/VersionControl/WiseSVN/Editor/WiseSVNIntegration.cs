@@ -513,15 +513,39 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		/// <summary>
 		/// Lock a file on the repository server.
+		/// Use force to steal a lock from another user or working copy.
 		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
 		/// </summary>
 		public static LockOperationResult LockFile(string path, bool force, string message = "", string encoding = "", int timeout = ONLINE_COMMAND_TIMEOUT, IShellMonitor shellMonitor = null)
+		{
+			return LockFiles(Enumerate(path), force, message, encoding, timeout, shellMonitor);
+		}
+
+		/// <summary>
+		/// Lock a file on the repository server.
+		/// Use force to steal a lock from another user or working copy.
+		/// NOTE: If assembly reload happens, task will be lost, complete handler won't be called.
+		/// </summary>
+		public static SVNAsyncOperation<LockOperationResult> LockFileAsync(string path, bool force, string message = "", string encoding = "", int timeout = -1)
+		{
+			return SVNAsyncOperation<LockOperationResult>.Start(op => LockFile(path, force, message, encoding, timeout, op));
+		}
+
+		/// <summary>
+		/// Lock files on the repository server.
+		/// Use force to steal a lock from another user or working copy.
+		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// </summary>
+		public static LockOperationResult LockFiles(IEnumerable<string> paths, bool force, string message = "", string encoding = "", int timeout = ONLINE_COMMAND_TIMEOUT, IShellMonitor shellMonitor = null)
 		{
 			var messageArg = string.IsNullOrEmpty(message) ? string.Empty : $"--message \"{message}\"";
 			var encodingArg = string.IsNullOrEmpty(encoding) ? string.Empty : $"--encoding \"{encoding}\"";
 			var forceArg = force ? "--force" : string.Empty;
 
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"lock {forceArg} {messageArg} {encodingArg} \"{SVNFormatPath(path)}\"", timeout, shellMonitor);
+			var targetsFile = FileUtil.GetUniqueTempPathInProject();
+			File.WriteAllLines(targetsFile, paths.Select(SVNFormatPath));
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"lock {forceArg} {messageArg} {encodingArg} --targets \"{targetsFile}\"", timeout, shellMonitor);
 
 			// svn: warning: W160035: Path '...' is already locked by user '...'
 			// File is already locked by another working copy (can be the same user). Use force to re-lock it.
@@ -549,22 +573,47 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		/// <summary>
 		/// Lock a file on the repository server.
+		/// Use force to steal a lock from another user or working copy.
 		/// NOTE: If assembly reload happens, task will be lost, complete handler won't be called.
 		/// </summary>
-		public static SVNAsyncOperation<LockOperationResult> LockFileAsync(string path, bool force, string message = "", string encoding = "", int timeout = -1)
+		public static SVNAsyncOperation<LockOperationResult> LockFilesAsync(IEnumerable<string> paths, bool force, string message = "", string encoding = "", int timeout = -1)
 		{
-			return SVNAsyncOperation<LockOperationResult>.Start(op => LockFile(path, force, message, encoding, timeout, op));
+			return SVNAsyncOperation<LockOperationResult>.Start(op => LockFiles(paths, force, message, encoding, timeout, op));
 		}
 
 		/// <summary>
 		/// Unlock a file on the repository server.
+		/// Use force to break a lock held by another user or working copy.
 		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
 		/// </summary>
 		public static LockOperationResult UnlockFile(string path, bool force, int timeout = ONLINE_COMMAND_TIMEOUT, IShellMonitor shellMonitor = null)
 		{
+			return UnlockFiles(Enumerate(path), force, timeout, shellMonitor);
+		}
+
+		/// <summary>
+		/// Unlock a file on the repository server.
+		/// Use force to break a lock held by another user or working copy.
+		/// NOTE: If assembly reload happens, task will be lost, complete handler won't be called.
+		/// </summary>
+		public static SVNAsyncOperation<LockOperationResult> UnlockFileAsync(string path, bool force, int timeout = -1)
+		{
+			return SVNAsyncOperation<LockOperationResult>.Start(op => UnlockFile(path, force, timeout, op));
+		}
+
+		/// <summary>
+		/// Unlock a file on the repository server.
+		/// Use force to break a lock held by another user or working copy.
+		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// </summary>
+		public static LockOperationResult UnlockFiles(IEnumerable<string> paths, bool force, int timeout = ONLINE_COMMAND_TIMEOUT, IShellMonitor shellMonitor = null)
+		{
 			var forceArg = force ? "--force" : string.Empty;
 
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"unlock {forceArg} \"{SVNFormatPath(path)}\"", timeout, shellMonitor);
+			var targetsFile = FileUtil.GetUniqueTempPathInProject();
+			File.WriteAllLines(targetsFile, paths.Select(SVNFormatPath));
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"unlock {forceArg} --targets \"{targetsFile}\"", timeout, shellMonitor);
 
 			// svn: E195013: '...' is not locked in this working copy
 			// This working copy doesn't own a lock to this file (when used without force flag, offline check).
@@ -598,7 +647,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				return LockOperationResult.Success;
 
 			if (!Silent) {
-				Debug.LogError($"Failed to lock \"{path}\".\n\n{result.Output} ");
+				Debug.LogError($"Failed to lock \"{string.Join(",", paths)}\".\n\n{result.Output} ");
 			}
 
 			return LockOperationResult.UnknownError;
@@ -606,11 +655,12 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		/// <summary>
 		/// Unlock a file on the repository server.
+		/// Use force to break a lock held by another user or working copy.
 		/// NOTE: If assembly reload happens, task will be lost, complete handler won't be called.
 		/// </summary>
-		public static SVNAsyncOperation<LockOperationResult> UnlockFileAsync(string path, bool force, int timeout = -1)
+		public static SVNAsyncOperation<LockOperationResult> UnlockFilesAsync(IEnumerable<string> paths, bool force, int timeout = -1)
 		{
-			return SVNAsyncOperation<LockOperationResult>.Start(op => UnlockFile(path, force, timeout, op));
+			return SVNAsyncOperation<LockOperationResult>.Start(op => UnlockFiles(paths, force, timeout, op));
 		}
 
 		/// <summary>
@@ -1564,6 +1614,11 @@ namespace DevLocker.VersionControl.WiseSVN
 			// NOTE: @ is added at the end of path, to avoid problems when file name contains @, and SVN mistakes that as "At revision" syntax".
 			//		https://stackoverflow.com/questions/757435/how-to-escape-characters-in-subversion-managed-file-names
 			return path + "@";
+		}
+
+		private static IEnumerable<string> Enumerate(string str)
+		{
+			yield return str;
 		}
 
 		// Use for debug.
