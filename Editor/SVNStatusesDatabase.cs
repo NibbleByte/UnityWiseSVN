@@ -126,6 +126,12 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		protected override void WaitAndFinishDatabaseUpdate(GuidStatusDataBind[] pendingData)
 		{
+			// Sanity check!
+			if (pendingData.Length > 2000) {
+				Debug.LogWarning($"SVNStatusDatabase gathered {pendingData.Length} changes which is waay to much. Ignoring gathered changes to avoid slowing down the editor!");
+				return;
+			}
+
 			// Process the gathered statuses in the main thread, since Unity API is not thread-safe.
 			foreach (var pair in pendingData) {
 

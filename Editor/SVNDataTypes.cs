@@ -36,6 +36,13 @@ namespace DevLocker.VersionControl.WiseSVN
 		TreeConflict
 	}
 
+	public enum VCSwitchedExternal
+	{
+		Normal,
+		Switched,
+		External,
+	}
+	
 	public enum VCLockStatus
 	{
 		NoLock,
@@ -131,6 +138,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		public VCFileStatus Status;
 		public VCPropertiesStatus PropertiesStatus;
 		public VCTreeConflictStatus TreeConflictStatus;
+		public VCSwitchedExternal SwitchedExternalStatus;
 		public VCLockStatus LockStatus;
 		public VCRemoteFileStatus RemoteStatus;
 
