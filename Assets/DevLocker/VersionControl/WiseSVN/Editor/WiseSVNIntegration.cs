@@ -42,6 +42,13 @@ namespace DevLocker.VersionControl.WiseSVN
 			{'~', VCFileStatus.Obstructed},
 		};
 
+		private static readonly Dictionary<char, VCSwitchedExternal> m_SwitchedExternalStatusMap = new Dictionary<char, VCSwitchedExternal>
+		{
+			{' ', VCSwitchedExternal.Normal},
+			{'S', VCSwitchedExternal.Switched},
+			{'X', VCSwitchedExternal.External},
+		};
+		
 		private static readonly Dictionary<char, VCLockStatus> m_LockStatusMap = new Dictionary<char, VCLockStatus>
 		{
 			{' ', VCLockStatus.NoLock},
@@ -1117,8 +1124,8 @@ namespace DevLocker.VersionControl.WiseSVN
 					var logEntry = new LogEntry();
 
 					// First line always exists and contains basic info (last one is the commit message number of lines, optional):
-					// r59162 | nikola | 2020-06-24 14:21:35 +0300 (Ò, 24 ˛ÌË 2020)
-					// r59162 | nikola | 2020-06-24 14:21:35 +0300 (Ò, 24 ˛ÌË 2020) | 2 lines
+					// r59162 | nikola | 2020-06-24 14:21:35 +0300 (—Å—Ä, 24 —é–Ω–∏ 2020)
+					// r59162 | nikola | 2020-06-24 14:21:35 +0300 (—Å—Ä, 24 —é–Ω–∏ 2020) | 2 lines
 					var basicInfos = lines[lineIndex].Split('|');
 
 					logEntry.Revision = int.Parse(basicInfos[0].TrimStart('r'));
@@ -1550,6 +1557,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					var statusData = new SVNStatusData();
 					statusData.Status = m_FileStatusMap[line[0]];
 					statusData.PropertiesStatus = m_PropertyStatusMap[line[1]];
+					statusData.SwitchedExternalStatus = m_SwitchedExternalStatusMap[line[4]];
 					statusData.LockStatus = m_LockStatusMap[line[5]];
 					statusData.TreeConflictStatus = m_ConflictStatusMap[line[6]];
 					statusData.LockDetails = LockDetails.Empty;
