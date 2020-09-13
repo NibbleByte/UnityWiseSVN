@@ -1,7 +1,8 @@
 {
     "name": "DevLocker.VersionControl.WiseSVN",
-    "references": [],
-    "optionalUnityReferences": [],
+    "references": [
+        "GUID:f06555f75b070af458a003d92f9efb00"
+    ],
     "includePlatforms": [
         "Editor"
     ],
@@ -10,5 +11,7 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": []
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }

@@ -1,3 +1,4 @@
+using DevLocker.VersionControl.WiseSVN.AutoLocking;
 using DevLocker.VersionControl.WiseSVN.Branches;
 using DevLocker.VersionControl.WiseSVN.ContextMenus;
 using System;
@@ -45,6 +46,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		private Vector2 m_ProjectPreferencesScroll;
 		private const string m_DownloadRepositoryChangesHint = "Work online - will ask the repository if there are any changes on the server.\nEnabling this will show locks and out of date additional icons.\nRefreshes might be slower due to the network communication, but shouldn't slow down your editor.";
 
+		private bool m_FoldAutoLockHint = true;
 		private bool m_FoldBranchesDatabaseHint = true;
 
 		private void OnGUI()
@@ -78,6 +80,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 					if (m_PersonalPrefs.EnableCoreIntegration) {
 						SVNStatusesDatabase.Instance.InvalidateDatabase();
 						SVNBranchesDatabase.Instance.InvalidateDatabase();
+						SVNAutoLockingDatabaseStarter.TryStartIfNeeded();
 					}
 				}
 				GUI.backgroundColor = prevColor;
@@ -115,6 +118,23 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			m_ProjectPrefs.SvnCLIPath = m_ProjectPrefs.SvnCLIPath.Trim();
 			m_ProjectPrefs.SvnCLIPathMacOS = m_ProjectPrefs.SvnCLIPathMacOS.Trim();
 			m_ProjectPrefs.Exclude = SanitizeStringsList(m_ProjectPrefs.Exclude);
+
+			if (m_ProjectPrefs.EnableAutoLocking) {
+
+				if (m_ProjectPrefs.AutoLockingParameters.Count == 0) {
+					EditorUtility.DisplayDialog("Auto-Locking", "In order to use auto-locking, you must provide at least one auto-locking parameters element.\n\nAuto-Locking will be disabled.", "Ok");
+					m_ProjectPrefs.EnableAutoLocking = false;
+				}
+
+				m_ProjectPrefs.AutoLockingParameters = m_ProjectPrefs.AutoLockingParameters
+					.Select(sp => sp.Sanitized())
+					.ToList();
+
+				if (m_ProjectPrefs.AutoLockingParameters.Any(sp => !sp.IsValid)) {
+					EditorUtility.DisplayDialog("Auto-Locking", "Some of the auto-locking parameters have invalid data. Please fix it.\n\nAuto-Locking will be disabled.", "Ok");
+					m_ProjectPrefs.EnableAutoLocking = false;
+				}
+			}
 
 			if (m_ProjectPrefs.EnableBranchesDatabase) {
 
@@ -190,6 +210,66 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			m_ProjectPrefs.SvnCLIPath = EditorGUILayout.TextField(new GUIContent("SVN CLI Path", "If you desire to use specific SVN CLI (svn.exe) located in the project, write down its path relative to the root folder."), m_ProjectPrefs.SvnCLIPath);
 			m_ProjectPrefs.SvnCLIPathMacOS = EditorGUILayout.TextField(new GUIContent("SVN CLI Path MacOS", "Same as above, but for MacOS."), m_ProjectPrefs.SvnCLIPathMacOS);
 
+
+			if (!m_PersonalPrefs.PopulateStatusesDatabase) {
+				EditorGUILayout.HelpBox("Auto-locking requires enabled overlay icons support from the Personal preferences!", MessageType.Warning);
+			}
+			EditorGUI.BeginDisabledGroup(!m_PersonalPrefs.PopulateStatusesDatabase);
+
+			m_ProjectPrefs.EnableAutoLocking = EditorGUILayout.Toggle(new GUIContent("Enable Auto-Locking", "Automatically svn lock asset when it or its meta file gets modified."), m_ProjectPrefs.EnableAutoLocking);
+			if (m_ProjectPrefs.EnableAutoLocking) {
+				EditorGUI.indentLevel++;
+
+				m_FoldAutoLockHint = EditorGUILayout.Foldout(m_FoldAutoLockHint, "Auto-Locking Hint:");
+				var autolockHint = "Every time the user modifies any asset or its meta, svn lock will be executed (unless already locked).\n" +
+								   "If asset is already locked by others and was NOT modified locally before, warning will be shown to the user.\n" +
+								   "SVN lock will be executed on all matching modified assets on start up as well.\n\n" +
+								   "Describe below what asset folders and asset types should be monitored for auto-locking.\n" +
+								   "To monitor the whole project, type in \"Assets\" for TargetFolder\n" +
+								   "Coordinate this with your team.\n" +
+								   "Must have at least one entry to work properly."
+
+					;
+				if (m_FoldAutoLockHint) {
+					EditorGUILayout.BeginHorizontal();
+					GUILayout.Space((EditorGUI.indentLevel + 1) * 16f);
+					GUILayout.Label(autolockHint, EditorStyles.helpBox);
+					EditorGUILayout.EndHorizontal();
+				}
+
+				EditorGUILayout.PropertyField(sp.FindPropertyRelative("AutoLockMessage"), new GUIContent("Lock Message", SVNPreferencesManager.ProjectPreferences.LockMessageHint));
+
+				//EditorGUILayout.PropertyField(sp.FindPropertyRelative("AutoLockingParameters"));
+
+				// HACK: PropertyDrawers are not drawn in EditorWindow! Draw everything manually to have custom stuff!
+				var alProperty = sp.FindPropertyRelative("AutoLockingParameters").Copy();
+				var alPropertyEnd = alProperty.GetEndProperty();
+
+				var prevIndentLevel = EditorGUI.indentLevel;
+
+				EditorGUILayout.PropertyField(alProperty, false);   // Draw the AutoLockingParameters itself always.
+
+				while (alProperty.NextVisible(alProperty.isExpanded) && !SerializedProperty.EqualContents(alProperty, alPropertyEnd)) {
+					EditorGUI.indentLevel = prevIndentLevel + alProperty.depth - 1;
+
+					var label = new GUIContent(alProperty.displayName);
+					label.tooltip = GetSerializedPropertyTooltip<AutoLockingParameters>(alProperty, false);
+
+					if (alProperty.type == "Enum") {
+						// HACK: If it is enum, it is probably AssetType. No real way to know (unless by field name)!
+						alProperty.intValue = (int) (AssetType)EditorGUILayout.EnumFlagsField(label, (AssetType) alProperty.intValue);
+					} else {
+						EditorGUILayout.PropertyField(alProperty, label, false);
+					}
+				}
+				EditorGUI.indentLevel = prevIndentLevel;
+
+				EditorGUI.indentLevel--;
+				EditorGUILayout.Space();
+			}
+
+			EditorGUI.EndDisabledGroup();
+
 			const string branchesEnableHint = "Scans the SVN repository for Unity projects in branches and keeps them in a simple database.\n\nSingle scan may take up to a few minutes, depending on your network connection and the complexity of your repository.";
 			m_ProjectPrefs.EnableBranchesDatabase = EditorGUILayout.Toggle(new GUIContent("Enable Branches Database", branchesEnableHint), m_ProjectPrefs.EnableBranchesDatabase);
 			if (m_ProjectPrefs.EnableBranchesDatabase) {
@@ -225,7 +305,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				EditorGUI.indentLevel--;
 			}
 
-			EditorGUILayout.PropertyField(sp.FindPropertyRelative("Exclude"), new GUIContent("Exclude Paths", "Asset paths that will be ignored by the SVN integrations. Use with caution."), true);
+			EditorGUILayout.PropertyField(sp.FindPropertyRelative("Exclude"), new GUIContent("Exclude Paths", "Relative path (contains '/') or asset name to be ignored by the SVN integrations. Use with caution."), true);
 
 			so.ApplyModifiedProperties();
 		}
@@ -298,5 +378,22 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				}
 			}
 		}
+
+		private static string GetSerializedPropertyTooltip<Type>(SerializedProperty serializedProperty, bool inherit)
+		{
+			if (null == serializedProperty) {
+				return string.Empty;
+			}
+
+			System.Reflection.FieldInfo field = typeof(Type).GetField(serializedProperty.name);
+			if (null == field) {
+				return string.Empty;
+			}
+
+			TooltipAttribute[] attributes = (TooltipAttribute[]) field.GetCustomAttributes(typeof(TooltipAttribute), inherit);
+
+			return attributes.Length > 0 ? attributes[0].tooltip : string.Empty;
+		}
+
 	}
 }
