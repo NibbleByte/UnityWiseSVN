@@ -54,7 +54,12 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 
 		private void AppendEntriesToLock(IEnumerable<SVNStatusData> lockedByOtherEntries)
 		{
-			m_LockEntries.AddRange(lockedByOtherEntries.Select(sd => new LockEntryData(sd)));
+			var toAdd = lockedByOtherEntries
+				.Where(sd => m_LockEntries.All(e => e.StatusData.Path != sd.Path))
+				.Select(sd => new LockEntryData(sd))
+				;
+
+			m_LockEntries.AddRange(toAdd);
 		}
 
 		void OnGUI()
