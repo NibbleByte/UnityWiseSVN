@@ -40,10 +40,12 @@ namespace DevLocker.VersionControl.WiseSVN
 			OnDatabaseChanged();
 		}
 
-		[MenuItem("Assets/SVN/Refresh Overlay Icons", false, 195)]
+		public const string InvalidateDatabaseMenuText = "Assets/SVN/Refresh Overlay Icons";
+		[MenuItem(InvalidateDatabaseMenuText, false, 195)]
 		private static void InvalidateDatabaseMenu()
 		{
 			SVNStatusesDatabase.Instance.InvalidateDatabase();
+			AutoLocking.SVNAutoLockingDatabase.Instance.ClearKnowledge();
 		}
 
 		private static void OnDatabaseChanged()
@@ -160,7 +162,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			if (!m_ShowNormalStatusIcons && fileStatus == VCFileStatus.Normal) {
 				fileStatusIcon = null;
 			}
-			
+
 			if (fileStatusIcon != null && fileStatusIcon.image != null) {
 				var iconRect = new Rect(selectionRect);
 				if (iconRect.width > iconRect.height) {

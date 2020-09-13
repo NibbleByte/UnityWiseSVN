@@ -32,13 +32,18 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			// Assembly reload just happened in the middle of some operation. Refresh database and redo any operations.
 			if (m_HasPendingOperations) {
 				m_HasPendingOperations = false;
-				m_KnownData.Clear();
+				ClearKnowledge();
 
 				SVNStatusesDatabase.Instance.InvalidateDatabase();
 			}
 		}
 
 		private void OnPreferencesChanged()
+		{
+			ClearKnowledge();
+		}
+
+		public void ClearKnowledge()
 		{
 			m_KnownData.Clear();
 		}
@@ -214,6 +219,28 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			}
 		}
 
+		public void ForceLock(IEnumerable<SVNStatusData> lockedByOtherEntries)
+		{
+			var shouldLog = SVNPreferencesManager.Instance.PersonalPrefs.TraceLogs.HasFlag(SVNTraceLogs.SVNOperations);
+			var lockMessage = SVNPreferencesManager.Instance.ProjectPrefs.AutoLockMessage;
+
+			var targetsFileToUse = FileUtil.GetUniqueTempPathInProject();   // Not thread safe - call in main thread only.
+			EnqueueOperation(op => WiseSVNIntegration.LockFiles(lockedByOtherEntries.Select(sd => sd.Path), true, lockMessage, "", targetsFileToUse))
+			.Completed += (op) => {
+				if (op.Result != LockOperationResult.Success) {
+					Debug.LogError($"Auto-locking by force failed with result {op.Result} for assets:\n{string.Join("\n", lockedByOtherEntries.Select(sd => sd.Path))}.");
+					EditorUtility.DisplayDialog("SVN Auto-Locking", "Stealing lock failed. Check the logs for more info.", "I will!");
+				} else if (shouldLog) {
+					Debug.Log($"Auto-locked assets by force:\n{string.Join("\n", lockedByOtherEntries.Select(sd => sd.Path))}");
+				}
+			};
+
+			if (m_PendingOperations.Count > 0 && m_HasPendingOperations == false) {
+				m_HasPendingOperations = true;
+				m_PendingOperations.Peek().Start();
+			}
+		}
+
 		private void OnStatusDatabaseChanged()
 		{
 			if (!IsActive)
@@ -338,33 +365,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			}
 
 			if (lockedByOtherEntries.Count > 0) {
-
-				var message = new System.Text.StringBuilder(lockedByOtherEntries.Count * 20 + 80);
-
-				message.AppendLine("These modified files are locked by someone else or lock was stolen.");
-				message.AppendLine("Expect potential conflicts.");
-				message.AppendLine();
-
-				foreach(var statusData in lockedByOtherEntries) {
-					message.AppendLine($"\"{Path.GetFileName(statusData.Path)}\" by {statusData.LockDetails.Owner}");
-				}
-
-
-				var choice = EditorUtility.DisplayDialog("SVN Auto-Locking", message.ToString(), "Force Lock", "Skip Lock");
-
-				if (choice) {
-					var targetsFileToUse = FileUtil.GetUniqueTempPathInProject();   // Not thread safe - call in main thread only.
-					EnqueueOperation(op => WiseSVNIntegration.LockFiles(lockedByOtherEntries.Select(sd => sd.Path), true, lockMessage, targetsFileToUse))
-					.Completed += (op) => {
-						if (op.Result != LockOperationResult.Success) {
-							Debug.LogError($"Auto-locking by force failed with result {op.Result} for assets:\n{string.Join("\n", lockedByOtherEntries.Select(sd => sd.Path))}.");
-							EditorUtility.DisplayDialog("SVN Auto-Locking", "Stealing lock failed. Check the logs for more info.", "I will!");
-						} else if (shouldLog) {
-							Debug.Log($"Auto-locked assets by force:\n{string.Join("\n", lockedByOtherEntries.Select(sd => sd.Path))}");
-						}
-					};
-				}
-
+				SVNAutoLockingForceWindow.PromptForceLock(lockedByOtherEntries);
 			}
 
 			if (m_PendingOperations.Count > 0 && m_HasPendingOperations == false) {
