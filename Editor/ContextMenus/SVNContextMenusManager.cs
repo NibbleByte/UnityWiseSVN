@@ -1,6 +1,7 @@
 using DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 
@@ -250,10 +251,58 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
+		private static bool TryShowLockDialog(List<string> selectedPaths, Action<IEnumerable<string>, bool, bool> operationHandler, bool onlyLocked)
+		{
+			if (selectedPaths.Count == 0)
+				return true;
+
+			if (selectedPaths.All(p => Directory.Exists(p))) {
+				operationHandler(selectedPaths, false, false);
+				return true;
+			}
+
+			bool hasModifiedPaths = false;
+			var modifiedPaths = new List<string>();
+			foreach (var path in selectedPaths) {
+				var guid = AssetDatabase.AssetPathToGUID(path);
+
+				var countPrev = modifiedPaths.Count;
+				modifiedPaths.AddRange(SVNStatusesDatabase.Instance
+					.GetAllKnownStatusData(guid, false, true, true)
+					.Where(sd => sd.Status != VCFileStatus.Normal && sd.Status != VCFileStatus.Unversioned)
+					.Where(sd => !onlyLocked || (sd.LockStatus != VCLockStatus.NoLock && sd.LockStatus != VCLockStatus.LockedOther))
+					.Select(sd => sd.Path)
+					);
+
+
+				// No change in asset or meta -> just add the asset as it was selected by the user anyway.
+				if (modifiedPaths.Count == countPrev) {
+					if (!onlyLocked || Directory.Exists(path)) {
+						modifiedPaths.Add(path);
+					}
+				} else {
+					hasModifiedPaths = true;
+				}
+			}
+
+			if (hasModifiedPaths) {
+				operationHandler(modifiedPaths, false, false);
+				return true;
+			}
+
+			return false;
+		}
+
 		[MenuItem("Assets/SVN/Get Locks", false, -700)]
 		public static void GetLocksSelected()
 		{
-			m_Integration?.GetLocks(GetSelectedAssetPaths(), true);
+			if (m_Integration != null) {
+				if (!TryShowLockDialog(GetSelectedAssetPaths().ToList(), m_Integration.GetLocks, false)) {
+
+					// This will include the meta which is rarely what you want.
+					m_Integration.GetLocks(GetSelectedAssetPaths(), true, false);
+				}
+			}
 		}
 
 		public static void GetLocks(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
@@ -266,7 +315,11 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		[MenuItem("Assets/SVN/Release Locks", false, -700)]
 		public static void ReleaseLocksSelected()
 		{
-			m_Integration?.ReleaseLocks(GetSelectedAssetPaths(), true);
+			if (m_Integration != null) {
+				if (!TryShowLockDialog(GetSelectedAssetPaths().ToList(), m_Integration.ReleaseLocks, true)) {
+					// No locked assets, show nothing.
+				}
+			}
 		}
 
 		public static void ReleaseLocks(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
