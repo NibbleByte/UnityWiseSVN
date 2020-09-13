@@ -18,6 +18,25 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			About = 2,
 		}
 
+		private static int m_RandomVideoIndex = -1;
+		private static Dictionary<string, string> m_RandomVideos = new Dictionary<string, string>() {
+			{ "Fire-Arrows!", "https://www.youtube.com/watch?v=zTd_0FRAwOQ" },
+			{ "Climate Change Is An Absolute Nightmare", "https://www.youtube.com/watch?v=uqwvf6R1_QY" },
+			{ "HL Cat", "https://www.youtube.com/watch?v=dGUYJn9kjJ4" },
+			{ "YMS: Kimba the White Lion", "https://www.youtube.com/watch?v=G5B1mIfQuo4" },
+			{ "Wildebeest", "https://www.youtube.com/watch?v=JMJXvsCLu6s" },
+			{ "Carwash", "https://www.youtube.com/watch?v=-sAjrL0fJzw" },
+			{ "How to be a Pirate: Captain Edition", "https://www.youtube.com/watch?v=3YFeE1eDlD0" },
+			{ "A Brief Look at Texting and the Internet in Film", "https://www.youtube.com/watch?v=uFfq2zblGXw" },
+			{ "The Problems with First Past the Post Voting Explained", "https://www.youtube.com/watch?v=s7tWHJfhiyo" },
+			{ "C&C Stupid Zero Hour Facts! [09]: Combat Chinook.", "https://www.youtube.com/watch?v=_hlq8ZJ4tqo" },
+			{ "Broken Kill Counts in Classic Serious Sam (Part 1)", "https://www.youtube.com/watch?v=BF0UFuZsHvo" },
+			{ "The Patient Gamer", "https://www.youtube.com/watch?v=wiMyCzezfTg" },
+			{ "Friendly Shadow | Dystopian Animated Short Film ", "https://www.youtube.com/watch?v=D0sCsXFAdjY" },
+			{ "Soviet Car Gas Cap Lock Decoded ", "https://www.youtube.com/watch?v=NhVR7gOSXPo" },
+			{ "Using Glitches and Tricks to Beat Half-Life 2", "https://www.youtube.com/watch?v=gm9lE97sIJo" },
+		};
+
 		public const string PROJECT_PREFERENCES_MENU = "Assets/SVN/SVN Preferences";
 		[MenuItem(PROJECT_PREFERENCES_MENU, false, 200)]
 		public static void ShowProjectPreferences()
@@ -375,6 +394,22 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				if (GUILayout.Button("Icons taken from TortoiseSVN (created by Lьbbe Onken)", urlStyle, GUILayout.ExpandWidth(true))) {
 					var assetStoreURL = "https://tortoisesvn.net/";
 					Application.OpenURL(assetStoreURL);
+				}
+
+				GUILayout.FlexibleSpace();
+
+				EditorGUILayout.LabelField("Random Video:", EditorStyles.boldLabel);
+				GUILayout.Label("This plugin took a lot of time to make.\nHere are some random videos worth spreading that distracted me along the way. :D");
+
+				if (m_RandomVideoIndex == -1) {
+					m_RandomVideoIndex = UnityEngine.Random.Range(0, m_RandomVideos.Count);
+				}
+
+				if (GUILayout.Button(m_RandomVideos.Keys.ElementAt(m_RandomVideoIndex), urlStyle, GUILayout.ExpandWidth(false))) {
+					Application.OpenURL(m_RandomVideos.Values.ElementAt(m_RandomVideoIndex));
+				}
+				if (GUILayout.Button("Next Video", GUILayout.ExpandWidth(false))) {
+					m_RandomVideoIndex = (m_RandomVideoIndex + 1) % m_RandomVideos.Count;
 				}
 			}
 		}
