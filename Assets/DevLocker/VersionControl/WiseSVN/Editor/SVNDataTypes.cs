@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace DevLocker.VersionControl.WiseSVN
 {
@@ -42,7 +43,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		Switched,
 		External,
 	}
-	
+
 	public enum VCLockStatus
 	{
 		NoLock,
@@ -158,9 +159,15 @@ namespace DevLocker.VersionControl.WiseSVN
 			return Status == other.Status
 				&& PropertiesStatus == other.PropertiesStatus
 				&& TreeConflictStatus == other.TreeConflictStatus
+				&& SwitchedExternalStatus == other.SwitchedExternalStatus
 				&& LockStatus == other.LockStatus
 				&& RemoteStatus == other.RemoteStatus
 				;
+		}
+
+		public override string ToString()
+		{
+			return $"{Status.ToString()[0]} {Path}";
 		}
 	}
 
@@ -261,6 +268,74 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 	}
 
+	[Flags]
+	public enum AssetType
+	{
+		Scene = 1 << 3,				// t:Scene
+		TerrainData = 1 << 4,		// t:TerrainData
+
+		Prefab = 1 << 5,			// t:Prefab
+		Model = 1 << 6,				// t:Model
+		Mesh = 1 << 7,				// t:Mesh
+		Material = 1 << 8,			// t:Material
+		Texture = 1 << 9,			// t:Texture
+
+		Animation = 1 << 12,		// t:AnimationClip
+		Animator = 1 << 13,         // t:AnimatorController, t:AnimatorOverrideController
+
+		Script = 1 << 16,			// t:Script
+		UIElementsAssets = 1 << 17,
+		Shader = 1 << 18,			// t:Shader
+		ScriptableObject = 1 << 19,	// t:ScriptableObject
+
+
+		Audio = 1 << 22,			// t:AudioClip
+		Video = 1 << 24,			// t:VideoClip
+
+		TimeLineAssets = 1 << 28,			// t:TimelineAsset
+
+		// Any type that is not mentioned above.
+		OtherTypes = 1 << 31,
+
+
+		PresetCharacterTypes = Prefab | Model | Mesh | Material | Texture | Animation | Animator,
+		PresetLevelDesignerTypes = Scene | TerrainData | Prefab | Model | Mesh | Material | Texture,
+		PresetUITypes = Scene | Texture | Prefab | Animator | Animation | Script | UIElementsAssets | ScriptableObject,
+		PresetScriptingTypes = Prefab | Script | UIElementsAssets | Shader | ScriptableObject,
+	}
+
+	/// <summary>
+	/// Rules for auto svn locking on asset modification.
+	/// </summary>
+	[Serializable]
+	public struct AutoLockingParameters
+	{
+		[Tooltip("Target folder to monitor for auto-locking, relative to the project.")]
+		public string TargetFolder;
+
+		[Tooltip("Target asset types to monitor for auto-locking")]
+		public AssetType TargetTypes;
+
+		[Tooltip("Relative path (contains '/') or asset name to be ignored in the Target Folder.")]
+		public string[] Exclude;
+
+		public bool IsValid => !string.IsNullOrEmpty(TargetFolder) && TargetTypes != 0;
+
+		public AutoLockingParameters Sanitized()
+		{
+			var clone = (AutoLockingParameters)MemberwiseClone();
+
+			clone.TargetFolder = TargetFolder.Replace("\\", "/").Trim().TrimEnd('/');
+
+			clone.Exclude = Exclude
+					.Select(s => s.Trim().Replace("\\", "/"))
+					.Where(s => !string.IsNullOrEmpty(s))
+					.ToArray()
+				;
+
+			return clone;
+		}
+	}
 
 	/// <summary>
 	/// Describes location of a Unity project in some branch at the SVN repository.

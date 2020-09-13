@@ -10,10 +10,22 @@ namespace DevLocker.VersionControl.WiseSVN
 {
 	// HACK: This should be internal, but due to inheritance issues it can't be.
 	[Serializable]
-	public class GuidStatusDataBind
+	public class GuidStatusDatasBind
 	{
 		public string Guid;
-		public SVNStatusData Data;
+		[UnityEngine.Serialization.FormerlySerializedAs("Data")]
+		public SVNStatusData MergedStatusData;	// Merged data
+
+		public SVNStatusData AssetStatusData;
+		public SVNStatusData MetaStatusData;
+
+		public string AssetPath => MergedStatusData.Path;
+
+		public IEnumerable<SVNStatusData> GetSourceStatusDatas()
+		{
+			yield return AssetStatusData;
+			yield return MetaStatusData;
+		}
 	}
 
 	/// <summary>
@@ -24,7 +36,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	/// NOTE: Keep in mind that this cache can be out of date.
 	///		 If you want up to date information, use the WiseSVNIntegration API for direct SVN queries.
 	/// </summary>
-	public class SVNStatusesDatabase : Utils.DatabasePersistentSingleton<SVNStatusesDatabase, GuidStatusDataBind>
+	public class SVNStatusesDatabase : Utils.DatabasePersistentSingleton<SVNStatusesDatabase, GuidStatusDatasBind>
 	{
 		private const string INVALID_GUID = "00000000000000000000000000000000";
 		private const string ASSETS_FOLDER_GUID = "00000000000000001000000000000000";
@@ -81,13 +93,13 @@ namespace DevLocker.VersionControl.WiseSVN
 		#region Populate Data
 
 		// Executed in a worker thread.
-		protected override GuidStatusDataBind[] GatherDataInThread()
+		protected override GuidStatusDatasBind[] GatherDataInThread()
 		{
 			var statusOptions = new SVNStatusDataOptions() {
 				Depth = SVNStatusDataOptions.SearchDepth.Infinity,
 				RaiseError = false,
 				Timeout = WiseSVNIntegration.ONLINE_COMMAND_TIMEOUT * 2,
-				Offline = !SVNPreferencesManager.Instance.DownloadRepositoryChanges,
+				Offline = !SVNPreferencesManager.Instance.DownloadRepositoryChanges && !SVNPreferencesManager.Instance.ProjectPrefs.EnableAutoLocking,
 				FetchLockOwner = true,
 			};
 
@@ -96,9 +108,6 @@ namespace DevLocker.VersionControl.WiseSVN
 #if UNITY_2018_4_OR_NEWER
 				.Concat(WiseSVNIntegration.GetStatuses("Packages", statusOptions))
 #endif
-				// Deleted svn file can still exist for some reason. Need to show it as deleted.
-				// If file doesn't exists, skip it as we can't show it anyway.
-				.Where(s => s.Status != VCFileStatus.Deleted || File.Exists(s.Path))
 				.Where(s => s.Status != VCFileStatus.Missing)
 				.ToList();
 
@@ -107,24 +116,28 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				// Statuses for entries under unversioned directories are not returned. Add them manually.
 				if (statusData.Status == VCFileStatus.Unversioned && Directory.Exists(statusData.Path)) {
-					var paths = Directory.EnumerateFileSystemEntries(statusData.Path, "*", SearchOption.AllDirectories)
-						.Where(path => !WiseSVNIntegration.IsHiddenPath(path))
-						;
+					try {
+						var paths = Directory.EnumerateFileSystemEntries(statusData.Path, "*", SearchOption.AllDirectories)
+							.Where(path => !WiseSVNIntegration.IsHiddenPath(path))
+							;
 
-					statuses.AddRange(paths
-						.Select(path => path.Replace(WiseSVNIntegration.ProjectRoot, ""))
-						.Select(path => new SVNStatusData() { Status = VCFileStatus.Unversioned, Path = path, LockDetails = LockDetails.Empty })
-						);
+						statuses.AddRange(paths
+							.Select(path => path.Replace(WiseSVNIntegration.ProjectRoot, ""))
+							.Select(path => new SVNStatusData() { Status = VCFileStatus.Unversioned, Path = path, LockDetails = LockDetails.Empty })
+							);
+					} catch(Exception) {
+						// Files must have changed while scanning. Nothing we can do.
+					}
 				}
 			}
 
 			// HACK: the base class works with the DataType for pending data. Guid won't be used.
 			return statuses
-				.Select(s => new GuidStatusDataBind() { Data = s })
+				.Select(s => new GuidStatusDatasBind() { MergedStatusData = s })
 				.ToArray();
 		}
 
-		protected override void WaitAndFinishDatabaseUpdate(GuidStatusDataBind[] pendingData)
+		protected override void WaitAndFinishDatabaseUpdate(GuidStatusDatasBind[] pendingData)
 		{
 			// Sanity check!
 			if (pendingData.Length > 2000) {
@@ -136,14 +149,15 @@ namespace DevLocker.VersionControl.WiseSVN
 			foreach (var pair in pendingData) {
 
 				// HACK: Guid is not used here.
-				var foundStatusData = pair.Data;
+				var statusData = pair.MergedStatusData;
 
-				// Because structs can't be modified in foreach.
-				var statusData = foundStatusData;
+				var assetPath = statusData.Path;
+				bool isMeta = false;
 
 				// Meta statuses are also considered. They are shown as the asset status.
 				if (statusData.Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase)) {
-					statusData.Path = statusData.Path.Substring(0, statusData.Path.LastIndexOf(".meta"));
+					assetPath = statusData.Path.Substring(0, statusData.Path.LastIndexOf(".meta"));
+					isMeta = true;
 				}
 
 				// Conflicted is with priority.
@@ -151,8 +165,8 @@ namespace DevLocker.VersionControl.WiseSVN
 					statusData.Status = VCFileStatus.Conflicted;
 				}
 
-				var guid = AssetDatabase.AssetPathToGUID(statusData.Path);
-				if (string.IsNullOrEmpty(guid)) {
+				var guid = AssetDatabase.AssetPathToGUID(assetPath);
+				if (string.IsNullOrEmpty(guid) && statusData.Status != VCFileStatus.Deleted) {
 					// Files were added in the background without Unity noticing.
 					// When the user focuses on Unity, it will refresh them as well.
 					continue;
@@ -166,8 +180,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					)
 					continue;
 
-				// TODO: Test tree conflicts.
-				SetStatusData(guid, statusData, false);
+				SetStatusData(guid, statusData, false, isMeta);
 
 				AddModifiedFolders(statusData);
 			}
@@ -201,7 +214,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (GetKnownStatusData(guid).Status == VCFileStatus.Added)
 					return;
 
-				bool moveToNext = SetStatusData(guid, statusData, false);
+				bool moveToNext = SetStatusData(guid, statusData, false, false);
 
 				// If already exists, upper folders should be added as well.
 				if (!moveToNext)
@@ -242,18 +255,19 @@ namespace DevLocker.VersionControl.WiseSVN
 					continue;
 
 				var statusData = WiseSVNIntegration.GetStatus(path);
+				bool isMeta = false;
 
 				// If status is normal but asset was imported, maybe the meta changed. Use that status instead.
 				if (statusData.Status == VCFileStatus.Normal && !statusData.IsConflicted) {
 					statusData = WiseSVNIntegration.GetStatus(path + ".meta");
-					statusData.Path = path;
+					isMeta = true;
 				}
 
 				var guid = AssetDatabase.AssetPathToGUID(path);
 
 				// Conflicted file got reimported? Fuck this, just refresh.
 				if (statusData.IsConflicted) {
-					SetStatusData(guid, statusData, true);
+					SetStatusData(guid, statusData, true, isMeta);
 					InvalidateDatabase();
 					return;
 				}
@@ -274,7 +288,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 
 				// Every time the user saves a file it will get reimported. If we already know it is modified, don't refresh every time.
-				bool changed = SetStatusData(guid, statusData, true);
+				bool changed = SetStatusData(guid, statusData, true, isMeta);
 
 				if (changed) {
 					InvalidateDatabase();
@@ -304,13 +318,35 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			foreach (var bind in m_Data) {
 				if (bind.Guid.Equals(guid, StringComparison.Ordinal))
-					return bind.Data;
+					return bind.MergedStatusData;
 			}
 
 			return new SVNStatusData() { Status = VCFileStatus.None };
 		}
 
-		private bool SetStatusData(string guid, SVNStatusData statusData, bool skipPriorityCheck)
+		public IEnumerable<SVNStatusData> GetAllKnownStatusData(string guid, bool mergedData, bool assetData, bool metaData)
+		{
+			foreach(var pair in m_Data) {
+				if (pair.Guid.Equals(guid, StringComparison.Ordinal)) {
+					if (mergedData && pair.MergedStatusData.IsValid) yield return pair.MergedStatusData;
+					if (assetData && pair.AssetStatusData.IsValid) yield return pair.AssetStatusData;
+					if (metaData && pair.MetaStatusData.IsValid) yield return pair.MetaStatusData;
+					
+					break;
+				}
+			}
+		}
+
+		public IEnumerable<SVNStatusData> GetAllKnownStatusData(bool mergedData, bool assetData, bool metaData)
+		{
+			foreach(var pair in m_Data) {
+				if (mergedData && pair.MergedStatusData.IsValid) yield return pair.MergedStatusData;
+				if (assetData && pair.AssetStatusData.IsValid) yield return pair.AssetStatusData;
+				if (metaData && pair.MetaStatusData.IsValid) yield return pair.MetaStatusData;
+			}
+		}
+
+		private bool SetStatusData(string guid, SVNStatusData statusData, bool skipPriorityCheck, bool isMeta)
 		{
 			if (string.IsNullOrEmpty(guid)) {
 				Debug.LogError($"SVN: Trying to add empty guid for \"{statusData.Path}\" with status {statusData.Status}");
@@ -320,30 +356,63 @@ namespace DevLocker.VersionControl.WiseSVN
 			foreach (var bind in m_Data) {
 				if (bind.Guid.Equals(guid, StringComparison.Ordinal)) {
 
-					if (bind.Data.Equals(statusData))
+					if (!isMeta && bind.AssetStatusData.Equals(statusData))
 						return false;
+
+					if (isMeta && bind.MetaStatusData.Equals(statusData))
+						return false;
+
+					if (!isMeta) {
+						bind.AssetStatusData = statusData;
+					} else {
+						bind.MetaStatusData = statusData;
+					}
 
 					// This is needed because the status of the meta might differ. In that case take the stronger status.
 					if (!skipPriorityCheck) {
-						if (m_StatusPriority[bind.Data.Status] > m_StatusPriority[statusData.Status]) {
+						if (m_StatusPriority[bind.MergedStatusData.Status] > m_StatusPriority[statusData.Status]) {
 							// Merge any other data.
-							if (bind.Data.LockStatus == VCLockStatus.NoLock) {
-								bind.Data.LockStatus = statusData.LockStatus;
+							if (bind.MergedStatusData.PropertiesStatus == VCPropertiesStatus.Normal) {
+								bind.MergedStatusData.PropertiesStatus = statusData.PropertiesStatus;
 							}
-							if (bind.Data.RemoteStatus == VCRemoteFileStatus.None) {
-								bind.Data.RemoteStatus= statusData.RemoteStatus;
+							if (bind.MergedStatusData.TreeConflictStatus == VCTreeConflictStatus.Normal) {
+								bind.MergedStatusData.TreeConflictStatus = statusData.TreeConflictStatus;
+							}
+							if (bind.MergedStatusData.SwitchedExternalStatus == VCSwitchedExternal.Normal) {
+								bind.MergedStatusData.SwitchedExternalStatus = statusData.SwitchedExternalStatus;
+							}
+							if (bind.MergedStatusData.LockStatus == VCLockStatus.NoLock) {
+								bind.MergedStatusData.LockStatus = statusData.LockStatus;
+								bind.MergedStatusData.LockDetails = statusData.LockDetails;
+							}
+							if (bind.MergedStatusData.RemoteStatus == VCRemoteFileStatus.None) {
+								bind.MergedStatusData.RemoteStatus= statusData.RemoteStatus;
 							}
 
 							return false;
 						}
 					}
 
-					bind.Data = statusData;
+					bind.MergedStatusData = statusData;
+					if (isMeta) {
+						bind.MergedStatusData.Path = statusData.Path.Substring(0, statusData.Path.LastIndexOf(".meta"));
+					}
 					return true;
 				}
 			}
 
-			m_Data.Add(new GuidStatusDataBind() { Guid = guid, Data = statusData });
+			m_Data.Add(new GuidStatusDatasBind() {
+				Guid = guid,
+				MergedStatusData = statusData,
+
+				AssetStatusData = isMeta ? new SVNStatusData() : statusData,
+				MetaStatusData = isMeta ? statusData : new SVNStatusData(),
+			});
+
+			if (isMeta) {
+				m_Data.Last().MergedStatusData.Path = statusData.Path.Substring(0, statusData.Path.LastIndexOf(".meta"));
+			}
+
 			return true;
 		}
 

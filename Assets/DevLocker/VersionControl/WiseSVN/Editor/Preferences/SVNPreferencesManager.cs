@@ -60,6 +60,16 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 #else
 			public string PlatformSvnCLIPath => SvnCLIPathMacOS;
 #endif
+			// Enable auto svn locking on asset modify.
+			public bool EnableAutoLocking = false;
+
+			public const string LockMessageHint = "Message used when auto-locking.";
+			[Tooltip(LockMessageHint)]
+			public string AutoLockMessage = "Auto-locked.";
+
+			// Auto-locking parameters for when asset is modified.
+			public List<AutoLockingParameters> AutoLockingParameters = new List<AutoLockingParameters>();
+
 
 			// Enable svn branches database.
 			public bool EnableBranchesDatabase;
@@ -76,6 +86,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			{
 				var clone = (ProjectPreferences) MemberwiseClone();
 
+				clone.AutoLockingParameters = new List<AutoLockingParameters>(AutoLockingParameters);
 				clone.BranchesDatabaseScanParameters = new List<BranchScanParameters>(BranchesDatabaseScanParameters);
 				clone.PinnedBranches = new List<string>(PinnedBranches);
 				clone.Exclude = new List<string>(Exclude);
@@ -212,10 +223,10 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			FileStatusIcons[(int)VCFileStatus.Unversioned] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNUnversionedIcon"));
 
 			LockStatusIcons = new GUIContent[Enum.GetValues(typeof(VCLockStatus)).Length];
-			LockStatusIcons[(int)VCLockStatus.LockedHere] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon"), "You have locked this file.");
-			LockStatusIcons[(int)VCLockStatus.BrokenLock] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon"), "You have a lock that is no longer valid (someone else stole it and released it).");
-			LockStatusIcons[(int)VCLockStatus.LockedOther] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Someone else locked this file.");
-			LockStatusIcons[(int)VCLockStatus.LockedButStolen] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Your lock was stolen by someone else.");
+			LockStatusIcons[(int)VCLockStatus.LockedHere] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon"), "You have locked this file.\nClick for more details.");
+			LockStatusIcons[(int)VCLockStatus.BrokenLock] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "You have a lock that is no longer valid (someone else stole it and released it).\nClick for more details.");
+			LockStatusIcons[(int)VCLockStatus.LockedOther] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Someone else locked this file.\nClick for more details.");
+			LockStatusIcons[(int)VCLockStatus.LockedButStolen] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Your lock was stolen by someone else.\nClick for more details.");
 
 			RemoteStatusIcons = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Others/SVNRemoteChangesIcon"));
 		}
@@ -233,6 +244,28 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			SVNContextMenusManager.SetupContextType(PersonalPrefs.ContextMenusClient);
 
 			PreferencesChanged?.Invoke();
+		}
+
+		// NOTE: Copy pasted from SearchAssetsFilter.
+		public static bool ShouldExclude(IEnumerable<string> excludes, string path)
+		{
+			foreach(var exclude in excludes) {
+
+				bool isExcludePath = exclude.Contains("/");    // Check if this is a path or just a filename
+
+				if (isExcludePath) {
+					if (path.StartsWith(exclude, StringComparison.OrdinalIgnoreCase))
+						return true;
+
+				} else {
+
+					var filename = Path.GetFileName(path);
+					if (filename.IndexOf(exclude, StringComparison.OrdinalIgnoreCase) != -1)
+						return true;
+				}
+			}
+
+			return false;
 		}
 	}
 }

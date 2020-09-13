@@ -14,7 +14,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	{
 		private static SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
 
-		private static bool IsActive => m_PersonalPrefs.EnableCoreIntegration && m_PersonalPrefs.PopulateStatusesDatabase;
+		private static bool IsActive => m_PersonalPrefs.EnableCoreIntegration && m_PersonalPrefs.PopulateStatusesDatabase && SVNPreferencesManager.Instance.ProjectPrefs.EnableAutoLocking;
 
 		private static bool m_ShowNormalStatusIcons = false;
 
@@ -61,10 +61,13 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			var statusData = SVNStatusesDatabase.Instance.GetKnownStatusData(guid);
 
+			var downloadRepositoryChanges = SVNPreferencesManager.Instance.DownloadRepositoryChanges;
+			var autoLocking = SVNPreferencesManager.Instance.ProjectPrefs.EnableAutoLocking;
+
 			//
 			// Remote Status
 			//
-			if (SVNPreferencesManager.Instance.DownloadRepositoryChanges && statusData.RemoteStatus != VCRemoteFileStatus.None) {
+			if (downloadRepositoryChanges && statusData.RemoteStatus != VCRemoteFileStatus.None) {
 				var remoteStatusIcon = SVNPreferencesManager.Instance.GetRemoteStatusIconContent(statusData.RemoteStatus);
 
 				if (remoteStatusIcon != null) {
@@ -89,7 +92,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			//
 			// Lock Status
 			//
-			if (SVNPreferencesManager.Instance.DownloadRepositoryChanges && statusData.LockStatus != VCLockStatus.NoLock) {
+			if ((downloadRepositoryChanges || autoLocking) && statusData.LockStatus != VCLockStatus.NoLock) {
 				var lockStatusIcon = SVNPreferencesManager.Instance.GetLockStatusIconContent(statusData.LockStatus);
 
 				if (lockStatusIcon != null) {
@@ -108,7 +111,28 @@ namespace DevLocker.VersionControl.WiseSVN
 						iconRect.y += 2;
 					}
 
-					GUI.Label(iconRect, lockStatusIcon);
+					if (GUI.Button(iconRect, lockStatusIcon, EditorStyles.label)) {
+						var details = string.Empty;
+
+						foreach (var knownStatusData in SVNStatusesDatabase.Instance.GetAllKnownStatusData(guid, false, true, true)) {
+							DateTime date;
+							string dateStr = knownStatusData.LockDetails.Date;
+							if (!string.IsNullOrEmpty(dateStr)) {
+								if (DateTime.TryParse(dateStr, out date) ||
+								    // This covers failing to parse weird culture date formats like: 2020-09-08 23:32:13 +0300 (??, 08 ??? 2020)
+									DateTime.TryParse(dateStr.Substring(0, dateStr.IndexOf("(", StringComparison.OrdinalIgnoreCase)), out date)
+								) {
+									dateStr = date.ToString("yyyy-MM-dd hh:mm:ss");
+								}
+							}
+							details += $"File: {System.IO.Path.GetFileName(knownStatusData.Path)}\n" +
+							          $"Lock Status: {ObjectNames.NicifyVariableName(knownStatusData.LockStatus.ToString())}\n" +
+							          $"Owner: {knownStatusData.LockDetails.Owner}\n" +
+							          $"Date: {dateStr}\n" +
+							          $"Message:\n{knownStatusData.LockDetails.Message}";
+						}
+						EditorUtility.DisplayDialog("SVN Lock Details", details, "Ok");
+					}
 				}
 			}
 
@@ -132,6 +156,11 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			GUIContent fileStatusIcon = SVNPreferencesManager.Instance.GetFileStatusIconContent(fileStatus);
 
+			// Entries with normal status are present when there is other data to show. Skip the icon if disabled.
+			if (!m_ShowNormalStatusIcons && fileStatus == VCFileStatus.Normal) {
+				fileStatusIcon = null;
+			}
+			
 			if (fileStatusIcon != null && fileStatusIcon.image != null) {
 				var iconRect = new Rect(selectionRect);
 				if (iconRect.width > iconRect.height) {
