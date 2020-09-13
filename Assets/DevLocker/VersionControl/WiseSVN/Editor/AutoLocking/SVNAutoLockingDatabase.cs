@@ -17,6 +17,10 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 
 		private List<SVNStatusData> m_KnownData = new List<SVNStatusData>();
 
+		// bool will be persisted on assembly reload, the collection will not.
+		private bool m_HasPendingOperations = false;
+		private Queue<SVNAsyncOperation<LockOperationResult>> m_PendingOperations = new Queue<SVNAsyncOperation<LockOperationResult>>();
+
 		private SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
 		private SVNPreferencesManager.ProjectPreferences m_ProjectPrefs => SVNPreferencesManager.Instance.ProjectPrefs;
 
@@ -24,6 +28,14 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 		{
 			SVNPreferencesManager.Instance.PreferencesChanged += OnPreferencesChanged;
 			SVNStatusesDatabase.Instance.DatabaseChanged += OnStatusDatabaseChanged;
+
+			// Assembly reload just happened in the middle of some operation. Refresh database and redo any operations.
+			if (m_HasPendingOperations) {
+				m_HasPendingOperations = false;
+				m_KnownData.Clear();
+
+				SVNStatusesDatabase.Instance.InvalidateDatabase();
+			}
 		}
 
 		private void OnPreferencesChanged()
@@ -117,12 +129,12 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 					assetPath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
 
 					|| assetPath.EndsWith(".c", StringComparison.OrdinalIgnoreCase)		// For hard-core players
-					|| assetPath.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase)		// For hard-core players
+					|| assetPath.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase)	// For hard-core players
 					|| assetPath.EndsWith(".h", StringComparison.OrdinalIgnoreCase)		// For hard-core players
-					|| assetPath.EndsWith(".hpp", StringComparison.OrdinalIgnoreCase)		// For hard-core players
+					|| assetPath.EndsWith(".hpp", StringComparison.OrdinalIgnoreCase)	// For hard-core players
 
-					|| assetPath.EndsWith(".js", StringComparison.OrdinalIgnoreCase)		// No one uses this!
-					|| assetPath.EndsWith(".boo", StringComparison.OrdinalIgnoreCase)		// No one uses this!
+					|| assetPath.EndsWith(".js", StringComparison.OrdinalIgnoreCase)	// No one uses this!
+					|| assetPath.EndsWith(".boo", StringComparison.OrdinalIgnoreCase)	// No one uses this!
 					)
 				)
 				return true;
@@ -179,6 +191,27 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 
 			m_KnownData.Add(statusData);
 			return true;
+		}
+
+		private SVNAsyncOperation<LockOperationResult> EnqueueOperation(SVNAsyncOperation<LockOperationResult>.OperationHandler operationHandler)
+		{
+			var op = new SVNAsyncOperation<LockOperationResult>(operationHandler);
+			op.Completed += OnLockOperationFinished;
+			m_PendingOperations.Enqueue(op);
+			return op;
+		}
+
+		private void OnLockOperationFinished(SVNAsyncOperation<LockOperationResult> op)
+		{
+			Debug.Assert(m_PendingOperations.Peek() == op);
+			m_PendingOperations.Dequeue();
+
+			if (m_PendingOperations.Count > 0) {
+				m_PendingOperations.Peek().Start();
+			} else {
+				m_HasPendingOperations = false;
+				SVNStatusesDatabase.Instance.InvalidateDatabase();
+			}
 		}
 
 		private void OnStatusDatabaseChanged()
@@ -276,41 +309,32 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			var shouldLog = SVNPreferencesManager.Instance.PersonalPrefs.TraceLogs.HasFlag(SVNTraceLogs.SVNOperations);
 			var lockMessage = SVNPreferencesManager.Instance.ProjectPrefs.AutoLockMessage;
 
-			// TODO: What happens on AssemblyReload and thread dies?
-			// TODO: Do SVN support multiple operations at the same time? Should we queue these?
-
-
 			if (shouldLock.Count > 0) {
-				WiseSVNIntegration.LockFilesAsync(shouldLock.Select(sd => sd.Path), false, lockMessage)
-					.Completed += (op) => {
 
-						if (op.Result != LockOperationResult.Success) {
-							Debug.LogError($"Auto-locking failed with result {op.Result} for assets:\n{string.Join("\n", shouldLock.Select(sd => sd.Path))}");
-						} else if (shouldLog) {
-							Debug.Log($"Auto-locked assets:\n{string.Join("\n", shouldLock.Select(sd => sd.Path))}");
-							SVNStatusesDatabase.Instance.InvalidateDatabase();
-						}
-					};
+				var targetsFileToUse = FileUtil.GetUniqueTempPathInProject();   // Not thread safe - call in main thread only.
+				EnqueueOperation(op => WiseSVNIntegration.LockFiles(shouldLock.Select(sd => sd.Path), false, lockMessage, "", targetsFileToUse))
+				.Completed += (op) => {
+					if (op.Result != LockOperationResult.Success) {
+						Debug.LogError($"Auto-locking failed with result {op.Result} for assets:\n{string.Join("\n", shouldLock.Select(sd => sd.Path))}");
+					} else if (shouldLog) {
+						Debug.Log($"Auto-locked assets:\n{string.Join("\n", shouldLock.Select(sd => sd.Path))}");
+					}
+				};
 			}
 
 			if (shouldUnlock.Count > 0) {
-				WiseSVNIntegration.UnlockFilesAsync(shouldUnlock.Select(sd => sd.Path), false)
-					.Completed += (op) => {
+				var targetsFileToUse = FileUtil.GetUniqueTempPathInProject();   // Not thread safe - call in main thread only.
+				EnqueueOperation(op => WiseSVNIntegration.UnlockFiles(shouldUnlock.Select(sd => sd.Path), false, targetsFileToUse))
+				.Completed += (op) => {
 
-						if (op.Result != LockOperationResult.Success) {
-							if (op.Result != LockOperationResult.LockedByOther) {
-								Debug.LogError($"Auto-unlocking failed with result {op.Result} for assets:\n{string.Join("\n", shouldUnlock.Select(sd => sd.Path))}");
-							} else {
-								// If lock was stolen or broken, there is no good way to release it without causing error.
-								// In that case the lock will be cleared from the local cache, so ignore the error.
-								Debug.Log($"Auto-unlocked assets:\n{string.Join("\n", shouldUnlock.Select(sd => sd.Path))}");
-								SVNStatusesDatabase.Instance.InvalidateDatabase();
-							}
-						} else if (shouldLog) {
-							Debug.Log($"Auto-unlocked assets:\n{string.Join("\n", shouldUnlock.Select(sd => sd.Path))}");
-							SVNStatusesDatabase.Instance.InvalidateDatabase();
-						}
-					};
+					// If lock was stolen or broken, there is no good way to release it without causing error.
+					// In that case the lock will be cleared from the local cache, so ignore the error.
+					if (op.Result != LockOperationResult.Success && op.Result != LockOperationResult.LockedByOther) {
+						Debug.LogError($"Auto-unlocking failed with result {op.Result} for assets:\n{string.Join("\n", shouldUnlock.Select(sd => sd.Path))}");
+					} else if (shouldLog) {
+						Debug.Log($"Auto-unlocked assets:\n{string.Join("\n", shouldUnlock.Select(sd => sd.Path))}");
+					}
+				};
 			}
 
 			if (lockedByOtherEntries.Count > 0) {
@@ -329,17 +353,23 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 				var choice = EditorUtility.DisplayDialog("SVN Auto-Locking", message.ToString(), "Force Lock", "Skip Lock");
 
 				if (choice) {
-					WiseSVNIntegration.LockFilesAsync(lockedByOtherEntries.Select(sd => sd.Path), true, lockMessage)
+					var targetsFileToUse = FileUtil.GetUniqueTempPathInProject();   // Not thread safe - call in main thread only.
+					EnqueueOperation(op => WiseSVNIntegration.LockFiles(lockedByOtherEntries.Select(sd => sd.Path), true, lockMessage, targetsFileToUse))
 					.Completed += (op) => {
 						if (op.Result != LockOperationResult.Success) {
 							Debug.LogError($"Auto-locking by force failed with result {op.Result} for assets:\n{string.Join("\n", lockedByOtherEntries.Select(sd => sd.Path))}.");
 							EditorUtility.DisplayDialog("SVN Auto-Locking", "Stealing lock failed. Check the logs for more info.", "I will!");
 						} else if (shouldLog) {
 							Debug.Log($"Auto-locked assets by force:\n{string.Join("\n", lockedByOtherEntries.Select(sd => sd.Path))}");
-							SVNStatusesDatabase.Instance.InvalidateDatabase();
 						}
 					};
 				}
+
+			}
+
+			if (m_PendingOperations.Count > 0 && m_HasPendingOperations == false) {
+				m_HasPendingOperations = true;
+				m_PendingOperations.Peek().Start();
 			}
 		}
 	}
