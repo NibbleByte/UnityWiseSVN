@@ -316,6 +316,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		[Tooltip("Target asset types to monitor for auto-locking")]
 		public AssetType TargetTypes;
 
+		[Tooltip("Target metas of selected asset types as well.")]
+		public bool IncludeTargetMetas;
+
 		[Tooltip("Relative path (contains '/') or asset name to be ignored in the Target Folder.")]
 		public string[] Exclude;
 

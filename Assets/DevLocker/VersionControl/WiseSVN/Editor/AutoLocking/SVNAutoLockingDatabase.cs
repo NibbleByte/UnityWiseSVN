@@ -276,8 +276,10 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 					continue;
 
 				var assetPath = statusData.Path;
+				bool isMeta = false;
 				if (statusData.Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase)) {
 					assetPath = statusData.Path.Substring(0, statusData.Path.LastIndexOf(".meta"));
+					isMeta = true;
 				}
 				assetPath = assetPath.Replace("\\", "/");
 
@@ -285,6 +287,9 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 					.FirstOrDefault(al => assetPath.StartsWith(al.TargetFolder, StringComparison.OrdinalIgnoreCase));
 
 				if (string.IsNullOrEmpty(autoLockingParam.TargetFolder))
+					continue;
+
+				if (isMeta && !autoLockingParam.IncludeTargetMetas)
 					continue;
 
 				if (SVNPreferencesManager.ShouldExclude(autoLockingParam.Exclude, assetPath))
