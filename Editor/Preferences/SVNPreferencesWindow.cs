@@ -35,6 +35,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			{ "Friendly Shadow | Dystopian Animated Short Film ", "https://www.youtube.com/watch?v=D0sCsXFAdjY" },
 			{ "Soviet Car Gas Cap Lock Decoded ", "https://www.youtube.com/watch?v=NhVR7gOSXPo" },
 			{ "Using Glitches and Tricks to Beat Half-Life 2", "https://www.youtube.com/watch?v=gm9lE97sIJo" },
+			{ "OK Go - Upside Down & Inside Out", "https://www.youtube.com/watch?v=LWGJA9i18Co" },
 		};
 
 		public const string PROJECT_PREFERENCES_MENU = "Assets/SVN/SVN Preferences";
