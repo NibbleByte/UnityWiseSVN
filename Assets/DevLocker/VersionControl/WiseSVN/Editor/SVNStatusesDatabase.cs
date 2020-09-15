@@ -140,7 +140,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		protected override void WaitAndFinishDatabaseUpdate(GuidStatusDatasBind[] pendingData)
 		{
 			// Sanity check!
-			if (pendingData.Length > 2000) {
+			if (pendingData.Length > 500) {
 				Debug.LogWarning($"SVNStatusDatabase gathered {pendingData.Length} changes which is waay to much. Ignoring gathered changes to avoid slowing down the editor!");
 				return;
 			}
@@ -331,7 +331,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (mergedData && pair.MergedStatusData.IsValid) yield return pair.MergedStatusData;
 					if (assetData && pair.AssetStatusData.IsValid) yield return pair.AssetStatusData;
 					if (metaData && pair.MetaStatusData.IsValid) yield return pair.MetaStatusData;
-					
+
 					break;
 				}
 			}
