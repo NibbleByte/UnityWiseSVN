@@ -107,6 +107,7 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 			ProcessStartInfo processStartInfo = new ProcessStartInfo(shellArgs.Command, shellArgs.Args);
 			processStartInfo.RedirectStandardOutput = true;
 			processStartInfo.RedirectStandardError = true;
+			processStartInfo.RedirectStandardInput = true;
 			processStartInfo.CreateNoWindow = true;
 			processStartInfo.WindowStyle = ProcessWindowStyle.Hidden;
 			processStartInfo.UseShellExecute = false;
@@ -115,6 +116,8 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 			Process process;
 			try {
 				process = Process.Start(processStartInfo);
+				// Input is not supported so close it directly. Prevents hangs when CLI prompts the user for something (authentication for example).
+				process.StandardInput.Close();
 
 			} catch (System.Exception ex) {
 				// Most probably file not found.
@@ -223,15 +226,20 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 
 			process.ErrorDataReceived -= errorReadLineHandler;
 			lock (errorBuilder) {
-				// Same as above.
-				result.Error = errorBuilder.ToString();
+				// Same as above. Concat if error was present.
+				result.Error += errorBuilder.ToString();
 			}
 
 			if (shellArgs.Monitor != null) {
 				shellArgs.Monitor.RequestAbort -= abortHandler;
 			}
 
-			process.Dispose();
+			// Dispose() (invoking Close()) will wait for the process to finish.
+			// If process is stuck, this will hang Unity on recompile / exit.
+			// Not calling Dispose() in that regard will leak some resources / processes, but that shouldn't be the normal case anyway.
+			if (process.HasExited) {
+				process.Dispose();
+			}
 
 			return result;
 		}
