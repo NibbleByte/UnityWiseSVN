@@ -72,6 +72,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	{
 		Success,				// Operation succeeded.
 		LockedByOther,			// File is locked by another working copy (may be the same user). Use Force to enforce the operation.
+		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
 		UnknownError,			// Failed for some reason.
 	}
@@ -80,6 +81,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	{
 		Success,				// Operation succeeded.
 		NotFound,				// URL target was not found.
+		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
 		UnknownError,			// Failed for some reason.
 	}
@@ -88,6 +90,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	{
 		Success,                // Operation succeeded.
 		NotFound,				// URL target was not found.
+		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
 		UnknownError,			// Failed for some reason.
 	}
@@ -98,6 +101,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		OutOfDateError,			// Some folders/files have pending changes in the repository. Update them before trying to commit.
 		ConflictsError,			// Some folders/files have conflicts. Clear them before trying to commit.
 		UnversionedError,		// Can't commit unversioned files directly. Add them before trying to commit. Recursive skips unversioned files.
+		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
 		PrecommitHookError,		// Precommit hook denied the commit on the server side. Talk with your administrator about your commit company policies. Example: always commit with a valid message.
 		UnknownError,			// Failed for any other reason.
@@ -125,6 +129,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	{
 		Success,				// Operation succeeded.
 		SuccessWithConflicts,   // Update was successful, but some folders/files have conflicts.
+		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
 		UnknownError,			// Failed for any other reason.
 	}
