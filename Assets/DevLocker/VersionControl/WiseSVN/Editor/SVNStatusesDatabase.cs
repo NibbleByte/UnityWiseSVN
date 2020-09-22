@@ -63,7 +63,11 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// The database update can be enabled, but the SVN integration to be disabled as a whole.
 		/// </summary>
 		public override bool IsActive => m_PersonalPrefs.PopulateStatusesDatabase && m_PersonalPrefs.EnableCoreIntegration;
-		public override bool TemporaryDisabled => WiseSVNIntegration.TemporaryDisabled;
+#if UNITY_2018_1_OR_NEWER
+		public override bool TemporaryDisabled => WiseSVNIntegration.TemporaryDisabled || Application.isBatchMode || BuildPipeline.isBuildingPlayer;
+#else
+		public override bool TemporaryDisabled => WiseSVNIntegration.TemporaryDisabled || UnityEditorInternal.InternalEditorUtility.inBatchMode || BuildPipeline.isBuildingPlayer;
+#endif
 		public override bool DoTraceLogs => (m_PersonalPrefs.TraceLogs & SVNTraceLogs.DatabaseUpdates) != 0;
 
 		public override double RefreshInterval => m_PersonalPrefs.AutoRefreshDatabaseInterval;

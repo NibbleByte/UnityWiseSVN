@@ -27,7 +27,11 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 		private SVNPreferencesManager.ProjectPreferences m_ProjectPrefs => SVNPreferencesManager.Instance.ProjectPrefs;
 
 		public override bool IsActive => m_PersonalPrefs.EnableCoreIntegration && m_ProjectPrefs.EnableBranchesDatabase;
-		public override bool TemporaryDisabled => WiseSVNIntegration.TemporaryDisabled;
+#if UNITY_2018_1_OR_NEWER
+		public override bool TemporaryDisabled => WiseSVNIntegration.TemporaryDisabled || Application.isBatchMode || UnityEditor.BuildPipeline.isBuildingPlayer;
+#else
+		public override bool TemporaryDisabled => WiseSVNIntegration.TemporaryDisabled || UnityEditorInternal.InternalEditorUtility.inBatchMode || UnityEditor.BuildPipeline.isBuildingPlayer;
+#endif
 		public override bool DoTraceLogs => (m_PersonalPrefs.TraceLogs & SVNTraceLogs.DatabaseUpdates) != 0;
 
 		// TODO: Have setting for this...
