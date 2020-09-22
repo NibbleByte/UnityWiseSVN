@@ -562,6 +562,14 @@ namespace DevLocker.VersionControl.WiseSVN
 				return LockOperationResult.LockedByOther;
 
 			if (!string.IsNullOrEmpty(result.Error)) {
+				
+				// User needs to log in using normal SVN client and save their authentication.
+				// svn: E170013: Unable to connect to a repository at URL '...'
+				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
+				// svn: E215004: No more credentials or we tried too many times.
+				// Authentication failed
+				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
+					return LockOperationResult.AuthenticationFailed;
 
 				// Unable to connect to repository indicating some network or server problems.
 				// svn: E170013: Unable to connect to a repository at URL '...'
@@ -643,6 +651,14 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			if (!string.IsNullOrEmpty(result.Error)) {
 
+				// User needs to log in using normal SVN client and save their authentication.
+				// svn: E170013: Unable to connect to a repository at URL '...'
+				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
+				// svn: E215004: No more credentials or we tried too many times.
+				// Authentication failed
+				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
+					return LockOperationResult.AuthenticationFailed;
+				
 				// Unable to connect to repository indicating some network or server problems.
 				// svn: E170013: Unable to connect to a repository at URL '...'
 				// svn: E731001: No such host is known.
@@ -715,6 +731,14 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (result.Error.Contains("E155027"))
 					return UpdateOperationResult.SuccessWithConflicts;
 
+				// User needs to log in using normal SVN client and save their authentication.
+				// svn: E170013: Unable to connect to a repository at URL '...'
+				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
+				// svn: E215004: No more credentials or we tried too many times.
+				// Authentication failed
+				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
+					return UpdateOperationResult.AuthenticationFailed;
+				
 				// Unable to connect to repository indicating some network or server problems.
 				// svn: E170013: Unable to connect to a repository at URL '...'
 				// svn: E731001: No such host is known.
@@ -832,6 +856,14 @@ namespace DevLocker.VersionControl.WiseSVN
 				// svn: E165001: Commit blocked by pre-commit hook (exit code 1) with output: ...
 				if (result.Error.Contains("E165001"))
 					return CommitOperationResult.PrecommitHookError;
+				
+				// User needs to log in using normal SVN client and save their authentication.
+				// svn: E170013: Unable to connect to a repository at URL '...'
+				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
+				// svn: E215004: No more credentials or we tried too many times.
+				// Authentication failed
+				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
+					return CommitOperationResult.AuthenticationFailed;
 
 				// Unable to connect to repository indicating some network or server problems.
 				// svn: E170013: Unable to connect to a repository at URL '...'
@@ -1015,6 +1047,14 @@ namespace DevLocker.VersionControl.WiseSVN
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"list --depth {depth} \"{SVNFormatPath(url)}\"", timeout, shellMonitor);
 
 			if (!string.IsNullOrEmpty(result.Error)) {
+				
+				// User needs to log in using normal SVN client and save their authentication.
+				// svn: E170013: Unable to connect to a repository at URL '...'
+				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
+				// svn: E215004: No more credentials or we tried too many times.
+				// Authentication failed
+				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
+					return ListOperationResult.AuthenticationFailed;
 
 				// Unable to connect to repository indicating some network or server problems.
 				// svn: E170013: Unable to connect to a repository at URL '...'
@@ -1090,6 +1130,14 @@ namespace DevLocker.VersionControl.WiseSVN
 			var relativeURL = AssetPathToRelativeURL(assetPathOrUrl);
 
 			if (!string.IsNullOrEmpty(result.Error)) {
+				
+				// User needs to log in using normal SVN client and save their authentication.
+				// svn: E170013: Unable to connect to a repository at URL '...'
+				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
+				// svn: E215004: No more credentials or we tried too many times.
+				// Authentication failed
+				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
+					return LogOperationResult.AuthenticationFailed;
 
 				// Unable to connect to repository indicating some network or server problems.
 				// svn: E170013: Unable to connect to a repository at URL '...'

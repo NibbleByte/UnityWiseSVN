@@ -142,13 +142,15 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 				listEntries.Clear();
 				var opResult = WiseSVNIntegration.ListURL(url, false, listEntries);
 
-				if (opResult == ListOperationResult.NotFound) {
-					Debug.LogError($"{GetType().Name} failed to find url: \"{url}\".");
-				}
-
 				if (opResult != ListOperationResult.Success) {
+					
+					if (opResult == ListOperationResult.NotFound) {
+						Debug.LogError($"{GetType().Name} failed to find url: \"{url}\".");
+					}
+					
 					m_LastError = opResult;
-					continue;
+					results.Clear();
+					return;
 				}
 
 				// Folders have '/' at the end but the user shouldn't define them this way.
