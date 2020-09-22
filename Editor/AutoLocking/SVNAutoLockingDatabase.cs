@@ -63,6 +63,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 				var go = AssetDatabase.LoadMainAssetAtPath(assetPath) as GameObject;
 
 				if (go) {
+#if UNITY_2018_1_OR_NEWER
 					var prefabType = PrefabUtility.GetPrefabAssetType(go);
 
 					if (assetTypeMask.HasFlag(AssetType.Prefab))
@@ -70,6 +71,14 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 
 					if (assetTypeMask.HasFlag(AssetType.Model))
 						return prefabType == PrefabAssetType.Model;
+#else
+					var prefabType = PrefabUtility.GetPrefabType(go);
+					if (assetTypeMask.HasFlag(AssetType.Prefab))
+						return prefabType == PrefabType.Prefab;
+
+					if (assetTypeMask.HasFlag(AssetType.Model))
+						return prefabType == PrefabType.ModelPrefab;
+#endif
 				}
 
 				if (isDeleted) {
