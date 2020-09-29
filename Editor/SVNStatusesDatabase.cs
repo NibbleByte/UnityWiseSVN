@@ -12,7 +12,9 @@ namespace DevLocker.VersionControl.WiseSVN
 	[Serializable]
 	public class GuidStatusDatasBind
 	{
-		public string Guid;
+		[UnityEngine.Serialization.FormerlySerializedAs("Guid")]
+		public string Key;	// Guid or Path (if deleted).
+
 		[UnityEngine.Serialization.FormerlySerializedAs("Data")]
 		public SVNStatusData MergedStatusData;	// Merged data
 
@@ -170,10 +172,15 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 
 				var guid = AssetDatabase.AssetPathToGUID(assetPath);
-				if (string.IsNullOrEmpty(guid) && statusData.Status != VCFileStatus.Deleted) {
+				if (string.IsNullOrEmpty(guid)) {
 					// Files were added in the background without Unity noticing.
 					// When the user focuses on Unity, it will refresh them as well.
-					continue;
+					if (statusData.Status != VCFileStatus.Deleted)
+						continue;
+
+					// HACK: Deleted assets don't have guids, but we still want to keep track of them (Auto-Locking for example).
+					//		 As long as this is unique it will work.
+					guid = assetPath;
 				}
 
 				// File was added to the repository but is missing in the working copy.
@@ -321,7 +328,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			foreach (var bind in m_Data) {
-				if (bind.Guid.Equals(guid, StringComparison.Ordinal))
+				if (bind.Key.Equals(guid, StringComparison.Ordinal))
 					return bind.MergedStatusData;
 			}
 
@@ -331,7 +338,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		public IEnumerable<SVNStatusData> GetAllKnownStatusData(string guid, bool mergedData, bool assetData, bool metaData)
 		{
 			foreach(var pair in m_Data) {
-				if (pair.Guid.Equals(guid, StringComparison.Ordinal)) {
+				if (pair.Key.Equals(guid, StringComparison.Ordinal)) {
 					if (mergedData && pair.MergedStatusData.IsValid) yield return pair.MergedStatusData;
 					if (assetData && pair.AssetStatusData.IsValid) yield return pair.AssetStatusData;
 					if (metaData && pair.MetaStatusData.IsValid) yield return pair.MetaStatusData;
@@ -352,13 +359,13 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private bool SetStatusData(string guid, SVNStatusData statusData, bool skipPriorityCheck, bool isMeta)
 		{
-			if (string.IsNullOrEmpty(guid) && statusData.Status != VCFileStatus.Deleted) {
+			if (string.IsNullOrEmpty(guid)) {
 				Debug.LogError($"SVN: Trying to add empty guid for \"{statusData.Path}\" with status {statusData.Status}");
 				return false;
 			}
 
 			foreach (var bind in m_Data) {
-				if (bind.Guid.Equals(guid, StringComparison.Ordinal)) {
+				if (bind.Key.Equals(guid, StringComparison.Ordinal)) {
 
 					if (!isMeta && bind.AssetStatusData.Equals(statusData))
 						return false;
@@ -406,7 +413,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			m_Data.Add(new GuidStatusDatasBind() {
-				Guid = guid,
+				Key = guid,
 				MergedStatusData = statusData,
 
 				AssetStatusData = isMeta ? new SVNStatusData() : statusData,
@@ -428,7 +435,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			for(int i = 0; i < m_Data.Count; ++i) {
-				if (m_Data[i].Guid.Equals(guid, StringComparison.Ordinal)) {
+				if (m_Data[i].Key.Equals(guid, StringComparison.Ordinal)) {
 					m_Data.RemoveAt(i);
 					return true;
 				}
