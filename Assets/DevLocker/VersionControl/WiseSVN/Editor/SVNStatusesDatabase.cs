@@ -352,7 +352,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private bool SetStatusData(string guid, SVNStatusData statusData, bool skipPriorityCheck, bool isMeta)
 		{
-			if (string.IsNullOrEmpty(guid)) {
+			if (string.IsNullOrEmpty(guid) && statusData.Status != VCFileStatus.Deleted) {
 				Debug.LogError($"SVN: Trying to add empty guid for \"{statusData.Path}\" with status {statusData.Status}");
 				return false;
 			}
