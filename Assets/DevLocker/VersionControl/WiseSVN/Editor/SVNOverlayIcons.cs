@@ -14,7 +14,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	{
 		private static SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
 
-		private static bool IsActive => m_PersonalPrefs.EnableCoreIntegration && m_PersonalPrefs.PopulateStatusesDatabase && SVNPreferencesManager.Instance.ProjectPrefs.EnableAutoLocking;
+		private static bool IsActive => m_PersonalPrefs.EnableCoreIntegration && (m_PersonalPrefs.PopulateStatusesDatabase || SVNPreferencesManager.Instance.ProjectPrefs.EnableAutoLocking);
 
 		private static bool m_ShowNormalStatusIcons = false;
 
