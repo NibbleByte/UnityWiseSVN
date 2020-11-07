@@ -36,6 +36,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			{ "Soviet Car Gas Cap Lock Decoded ", "https://www.youtube.com/watch?v=NhVR7gOSXPo" },
 			{ "Using Glitches and Tricks to Beat Half-Life 2", "https://www.youtube.com/watch?v=gm9lE97sIJo" },
 			{ "OK Go - Upside Down & Inside Out", "https://www.youtube.com/watch?v=LWGJA9i18Co" },
+			{ "The Pythagorean Siphon Inside Your Washing Machine", "https://www.youtube.com/watch?v=Cg8KQfaT9xY" },
 		};
 
 		public const string PROJECT_PREFERENCES_MENU = "Assets/SVN/SVN Preferences";
@@ -135,9 +136,9 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 		private void SanitizeBeforeSave()
 		{
-			m_ProjectPrefs.SvnCLIPath = m_ProjectPrefs.SvnCLIPath.Trim();
-			m_ProjectPrefs.SvnCLIPathMacOS = m_ProjectPrefs.SvnCLIPathMacOS.Trim();
-			m_ProjectPrefs.Exclude = SanitizeStringsList(m_ProjectPrefs.Exclude);
+			m_ProjectPrefs.SvnCLIPath = SVNPreferencesManager.SanitizeUnityPath(m_ProjectPrefs.SvnCLIPath);
+			m_ProjectPrefs.SvnCLIPathMacOS = SVNPreferencesManager.SanitizeUnityPath(m_ProjectPrefs.SvnCLIPathMacOS);
+			m_ProjectPrefs.Exclude = SanitizePathsList(m_ProjectPrefs.Exclude);
 
 			if (m_ProjectPrefs.EnableAutoLocking) {
 
@@ -176,10 +177,18 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			}
 		}
 
-		private static List<string> SanitizeStringsList(List<string> list)
+		private static List<string> SanitizeStringsList(IEnumerable<string> list)
 		{
 			return list
 				.Select(str => str.Trim())
+				.Where(str => !string.IsNullOrEmpty(str))
+				.ToList();
+		}
+
+		private static List<string> SanitizePathsList(IEnumerable<string> list)
+		{
+			return list
+				.Select(SVNPreferencesManager.SanitizeUnityPath)
 				.Where(str => !string.IsNullOrEmpty(str))
 				.ToList();
 		}
@@ -227,7 +236,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 			m_ProjectPrefs.DownloadRepositoryChanges = EditorGUILayout.Toggle(new GUIContent("Check for repository changes", m_DownloadRepositoryChangesHint), m_ProjectPrefs.DownloadRepositoryChanges);
 
-			m_ProjectPrefs.SvnCLIPath = EditorGUILayout.TextField(new GUIContent("SVN CLI Path", "If you desire to use specific SVN CLI (svn.exe) located in the project, write down its path relative to the root folder."), m_ProjectPrefs.SvnCLIPath);
+			m_ProjectPrefs.SvnCLIPath = EditorGUILayout.TextField(new GUIContent("SVN CLI Path", "If you desire to use specific SVN CLI (svn.exe) located in the project, write down its path relative to the project folder."), m_ProjectPrefs.SvnCLIPath);
 			m_ProjectPrefs.SvnCLIPathMacOS = EditorGUILayout.TextField(new GUIContent("SVN CLI Path MacOS", "Same as above, but for MacOS."), m_ProjectPrefs.SvnCLIPathMacOS);
 
 
@@ -325,7 +334,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				EditorGUI.indentLevel--;
 			}
 
-			EditorGUILayout.PropertyField(sp.FindPropertyRelative("Exclude"), new GUIContent("Exclude Paths", "Relative path (contains '/') or asset name to be ignored by the SVN integrations. Use with caution."), true);
+			EditorGUILayout.PropertyField(sp.FindPropertyRelative("Exclude"), new GUIContent("Exclude Paths", "Relative path (contains '/') or asset name to be ignored by the SVN integrations. Use with caution.\n\nExample: \"Assets/Scenes/Baked\" or \"_deprecated\""), true);
 
 			so.ApplyModifiedProperties();
 		}

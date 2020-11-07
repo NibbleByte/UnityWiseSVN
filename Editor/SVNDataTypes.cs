@@ -315,7 +315,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	[Serializable]
 	public struct AutoLockingParameters
 	{
-		[Tooltip("Target folder to monitor for auto-locking, relative to the project.")]
+		[Tooltip("Target folder to monitor for auto-locking, relative to the project.\n\nExample: \"Assets/Scenes\"")]
 		public string TargetFolder;
 
 		[Tooltip("Target asset types to monitor for auto-locking")]
@@ -324,7 +324,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		[Tooltip("Target metas of selected asset types as well.")]
 		public bool IncludeTargetMetas;
 
-		[Tooltip("Relative path (contains '/') or asset name to be ignored in the Target Folder.")]
+		[Tooltip("Relative path (contains '/') or asset name to be ignored in the Target Folder.\n\nExample: \"Assets/Scenes/Baked\" or \"_deprecated\"")]
 		public string[] Exclude;
 
 		public bool IsValid => !string.IsNullOrEmpty(TargetFolder) && TargetTypes != 0;
@@ -333,10 +333,10 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			var clone = (AutoLockingParameters)MemberwiseClone();
 
-			clone.TargetFolder = TargetFolder.Replace("\\", "/").Trim().TrimEnd('/');
+			clone.TargetFolder = Preferences.SVNPreferencesManager.SanitizeUnityPath(TargetFolder);
 
 			clone.Exclude = Exclude
-					.Select(s => s.Trim().Replace("\\", "/"))
+					.Select(Preferences.SVNPreferencesManager.SanitizeUnityPath)
 					.Where(s => !string.IsNullOrEmpty(s))
 					.ToArray()
 				;

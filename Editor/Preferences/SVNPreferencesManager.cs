@@ -268,5 +268,14 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 			return false;
 		}
+
+		public static string SanitizeUnityPath(string path)
+		{
+			return path
+				.Trim()
+				.Trim('\\', '/')
+				.Replace('\\', '/')
+				;
+		}
 	}
 }
