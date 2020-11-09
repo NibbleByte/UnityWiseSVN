@@ -221,6 +221,10 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				var guid = AssetDatabase.AssetPathToGUID(statusData.Path);
 
+				// Folder may be deleted.
+				if (string.IsNullOrWhiteSpace(guid))
+					return;
+
 				// Added folders should not be shown as modified.
 				if (GetKnownStatusData(guid).Status == VCFileStatus.Added)
 					return;
