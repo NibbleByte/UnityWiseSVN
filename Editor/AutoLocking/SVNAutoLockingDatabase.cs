@@ -177,13 +177,14 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			if (assetTypeMask.HasFlag(AssetType.Video) && AssetDatabase.LoadAssetAtPath<UnityEngine.Video.VideoClip>(assetPath))
 				return true;
 
-
+#if UNITY_2018_4 || USE_TIMELINE
 			if (assetTypeMask.HasFlag(AssetType.TimeLineAssets) && AssetDatabase.LoadAssetAtPath<UnityEngine.Timeline.TimelineAsset>(assetPath))
 				return true;
 			if (assetTypeMask.HasFlag(AssetType.TimeLineAssets) && AssetDatabase.LoadAssetAtPath<UnityEngine.Timeline.TrackAsset>(assetPath))
 				return true;
 			if (assetTypeMask.HasFlag(AssetType.TimeLineAssets) && AssetDatabase.LoadAssetAtPath<UnityEngine.Playables.PlayableAsset>(assetPath))
 				return true;
+#endif
 
 			return false;
 		}
