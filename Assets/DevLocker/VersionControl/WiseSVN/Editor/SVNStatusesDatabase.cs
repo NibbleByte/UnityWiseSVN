@@ -98,6 +98,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		//
 		#region Populate Data
 
+		private const int SanityStatusesLimit = 600;
+
 		// Executed in a worker thread.
 		protected override GuidStatusDatasBind[] GatherDataInThread()
 		{
@@ -139,6 +141,11 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			// HACK: the base class works with the DataType for pending data. Guid won't be used.
 			return statuses
+				.Where(s => statuses.Count < SanityStatusesLimit	// Include everything when below the limit
+				|| s.Status == VCFileStatus.Added
+				|| s.Status == VCFileStatus.Modified
+				|| s.Status == VCFileStatus.Conflicted
+				)
 				.Select(s => new GuidStatusDatasBind() { MergedStatusData = s })
 				.ToArray();
 		}
@@ -146,7 +153,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		protected override void WaitAndFinishDatabaseUpdate(GuidStatusDatasBind[] pendingData)
 		{
 			// Sanity check!
-			if (pendingData.Length > 500) {
+			if (pendingData.Length > SanityStatusesLimit) {
 				Debug.LogWarning($"SVNStatusDatabase gathered {pendingData.Length} changes which is waay to much. Ignoring gathered changes to avoid slowing down the editor!");
 				return;
 			}

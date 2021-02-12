@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace DevLocker.VersionControl.WiseSVN
 {
