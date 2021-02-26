@@ -67,6 +67,9 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			[Tooltip(LockMessageHint)]
 			public string AutoLockMessage = "Auto-locked.";
 
+#if UNITY_2020_2_OR_NEWER
+			[NonReorderable]
+#endif
 			// Auto-locking parameters for when asset is modified.
 			public List<AutoLockingParameters> AutoLockingParameters = new List<AutoLockingParameters>();
 
@@ -74,12 +77,22 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			// Enable svn branches database.
 			public bool EnableBranchesDatabase;
 
+#if UNITY_2020_2_OR_NEWER
+			[NonReorderable]
+#endif
 			// SVN parameters used for scanning branches in the SVN repo.
 			public List<BranchScanParameters> BranchesDatabaseScanParameters = new List<BranchScanParameters>();
 
+#if UNITY_2020_2_OR_NEWER
+			[NonReorderable]
+#endif
 			// Show these branches on top.
 			public List<string> PinnedBranches = new List<string>();
 
+
+#if UNITY_2020_2_OR_NEWER
+			[NonReorderable]
+#endif
 			public List<string> Exclude = new List<string>();
 
 			public ProjectPreferences Clone()
