@@ -323,6 +323,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		[Tooltip("Target metas of selected asset types as well.")]
 		public bool IncludeTargetMetas;
 
+#if UNITY_2020_2_OR_NEWER
+		[NonReorderable]
+#endif
 		[Tooltip("Relative path (contains '/') or asset name to be ignored in the Target Folder.\n\nExample: \"Assets/Scenes/Baked\" or \"_deprecated\"")]
 		public string[] Exclude;
 
@@ -367,6 +370,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		[Tooltip("SVN url where scan for branches should start recursively.")]
 		public string EntryPointURL;
 
+#if UNITY_2020_2_OR_NEWER
+		[NonReorderable]
+#endif
 		// Entries that must be found in folders to recognize them as a branch. Used as a branch name.
 		// Example:
 		//	/branches/VariantA/Server			/branches/VariantB/Server
@@ -376,6 +382,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		[Tooltip("Entries to look for in folders to recognize them as branches.")]
 		public string[] BranchSignatureRootEntries;
 
+#if UNITY_2020_2_OR_NEWER
+		[NonReorderable]
+#endif
 		// File or folder names excluded during recursive scan.
 		[Tooltip("Folder names to exclude during the recursive scan.")]
 		public string[] ExcludesFolderNames;
