@@ -562,7 +562,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				return LockOperationResult.LockedByOther;
 
 			if (!string.IsNullOrEmpty(result.Error)) {
-				
+
 				// User needs to log in using normal SVN client and save their authentication.
 				// svn: E170013: Unable to connect to a repository at URL '...'
 				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
@@ -658,7 +658,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				// Authentication failed
 				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
 					return LockOperationResult.AuthenticationFailed;
-				
+
 				// Unable to connect to repository indicating some network or server problems.
 				// svn: E170013: Unable to connect to a repository at URL '...'
 				// svn: E731001: No such host is known.
@@ -738,7 +738,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				// Authentication failed
 				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
 					return UpdateOperationResult.AuthenticationFailed;
-				
+
 				// Unable to connect to repository indicating some network or server problems.
 				// svn: E170013: Unable to connect to a repository at URL '...'
 				// svn: E731001: No such host is known.
@@ -856,7 +856,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				// svn: E165001: Commit blocked by pre-commit hook (exit code 1) with output: ...
 				if (result.Error.Contains("E165001"))
 					return CommitOperationResult.PrecommitHookError;
-				
+
 				// User needs to log in using normal SVN client and save their authentication.
 				// svn: E170013: Unable to connect to a repository at URL '...'
 				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
@@ -1047,7 +1047,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"list --depth {depth} \"{SVNFormatPath(url)}\"", timeout, shellMonitor);
 
 			if (!string.IsNullOrEmpty(result.Error)) {
-				
+
 				// User needs to log in using normal SVN client and save their authentication.
 				// svn: E170013: Unable to connect to a repository at URL '...'
 				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
@@ -1130,7 +1130,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			var relativeURL = AssetPathToRelativeURL(assetPathOrUrl);
 
 			if (!string.IsNullOrEmpty(result.Error)) {
-				
+
 				// User needs to log in using normal SVN client and save their authentication.
 				// svn: E170013: Unable to connect to a repository at URL '...'
 				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
@@ -1414,7 +1414,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (!isMeta && !Silent) {
 					EditorUtility.DisplayDialog(
 						"Deleted file",
-						$"The desired location\n\"{path}\"\nis marked as deleted in SVN. The file will be replaced in SVN with the new one.\n\nIf this is an automated change, consider adding this file to the exclusion list in the project preferences:\n\"{WiseSVNProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n...or change your tool to silence the integration.",
+						$"The desired location\n\"{path}\"\nis marked as deleted in SVN. The file will be replaced in SVN with the new one.\n\nIf this is an automated change, consider adding this file to the exclusion list in the project preferences:\n\"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n...or change your tool to silence the integration.",
 						"Replace");
 				}
 
@@ -1549,7 +1549,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			// This is allowed only if there isn't ProjectPreference specified CLI path.
 			if (error.Contains("0x80004005") && string.IsNullOrEmpty(m_ProjectPrefs.PlatformSvnCLIPath)) {
 				displayMessage = $"SVN CLI (Command Line Interface) not found. " +
-					$"Please install it or specify path to a valid svn.exe in the svn preferences at:\n{WiseSVNProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
+					$"Please install it or specify path to a valid svn.exe in the svn preferences at:\n{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
 					$"You can also disable the SVN integration.";
 
 				return false;
@@ -1558,7 +1558,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			// Same as above but the specified svn.exe in the project preferences is missing.
 			if (error.Contains("0x80004005") && !string.IsNullOrEmpty(m_ProjectPrefs.PlatformSvnCLIPath)) {
 				displayMessage = $"Cannot find the specified in the svn project preferences svn.exe:\n{m_ProjectPrefs.PlatformSvnCLIPath}\n\n" +
-					$"You can reconfigure the svn preferences at:\n{WiseSVNProjectPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
+					$"You can reconfigure the svn preferences at:\n{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
 					$"You can also disable the SVN integration.";
 
 				return false;

@@ -43,14 +43,14 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			base.OnGUI(searchContext);
 
 			if (GUILayout.Button("Open WiseSVN preferences", GUILayout.ExpandWidth(false), GUILayout.Height(30f))) {
-				WiseSVNProjectPreferencesWindow.ShowProjectPreferences();
+				SVNPreferencesWindow.ShowProjectPreferences();
 			}
 
 			EditorGUILayout.Space();
 			EditorGUILayout.Space();
 			EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
-			WiseSVNProjectPreferencesWindow.DrawHelpAbout();
+			SVNPreferencesWindow.DrawHelpAbout();
 		}
 	}
 #endif

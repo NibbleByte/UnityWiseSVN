@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN.Preferences
 {
-	internal class WiseSVNProjectPreferencesWindow : EditorWindow
+	internal class SVNPreferencesWindow : EditorWindow
 	{
 		public enum PreferencesTab
 		{
@@ -48,7 +48,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 		public static void ShowProjectPreferences(PreferencesTab tab)
 		{
-			var window = GetWindow<WiseSVNProjectPreferencesWindow>(true, "Wise SVN Preferences");
+			var window = GetWindow<SVNPreferencesWindow>(true, "Wise SVN Preferences");
 			window.m_PersonalPrefs = SVNPreferencesManager.Instance.PersonalPrefs.Clone();
 			window.m_ProjectPrefs = SVNPreferencesManager.Instance.ProjectPrefs.Clone();
 			window.ShowUtility();
@@ -69,6 +69,19 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 		private bool m_FoldAutoLockHint = true;
 		private bool m_FoldBranchesDatabaseHint = true;
+
+		private SerializedObject m_SerializedObject;
+
+		private void OnEnable()
+		{
+			m_SerializedObject = new SerializedObject(this);
+		}
+
+		private void OnDisable()
+		{
+			if (m_SerializedObject != null)
+				m_SerializedObject.Dispose();
+		}
 
 		private void OnGUI()
 		{
@@ -231,8 +244,9 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		{
 			EditorGUILayout.HelpBox("These settings will be saved in the ProjectSettings folder.\nFeel free to add them to your version control system.\nCoordinate any changes here with your team.", MessageType.Warning);
 
-			var so = new SerializedObject(this);
-			var sp = so.FindProperty("m_ProjectPrefs");
+			m_SerializedObject.Update();
+
+			var sp = m_SerializedObject.FindProperty("m_ProjectPrefs");
 
 			m_ProjectPrefs.DownloadRepositoryChanges = EditorGUILayout.Toggle(new GUIContent("Check for repository changes", m_DownloadRepositoryChangesHint), m_ProjectPrefs.DownloadRepositoryChanges);
 
@@ -336,7 +350,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 			EditorGUILayout.PropertyField(sp.FindPropertyRelative("Exclude"), new GUIContent("Exclude Paths", "Relative path (contains '/') or asset name to be ignored by the SVN integrations. Use with caution.\n\nExample: \"Assets/Scenes/Baked\" or \"_deprecated\""), true);
 
-			so.ApplyModifiedProperties();
+			m_SerializedObject.ApplyModifiedProperties();
 		}
 
 		public static void DrawHelpAbout()

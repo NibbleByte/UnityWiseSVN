@@ -432,7 +432,7 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 				if (!Database.IsActive) {
 					EditorGUILayout.LabelField("To use Branch Selector, you must enable and setup\n\"Branches Database\" in the Project preferences...", GUILayout.Height(40f));
 					if (GUILayout.Button("Open Project Preferences")) {
-						Preferences.WiseSVNProjectPreferencesWindow.ShowProjectPreferences(Preferences.WiseSVNProjectPreferencesWindow.PreferencesTab.Project);
+						Preferences.SVNPreferencesWindow.ShowProjectPreferences(Preferences.SVNPreferencesWindow.PreferencesTab.Project);
 					}
 
 				} else if (!Database.IsReady) {
