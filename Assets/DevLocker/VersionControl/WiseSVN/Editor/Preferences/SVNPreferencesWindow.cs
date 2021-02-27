@@ -79,12 +79,15 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 		private void OnDisable()
 		{
-			if (m_SerializedObject != null)
+			if (m_SerializedObject != null) {
 				m_SerializedObject.Dispose();
+			}
 		}
 
 		private void OnGUI()
 		{
+			m_SerializedObject.Update();
+
 			const float labelWidthAdd = 40;
 			EditorGUIUtility.labelWidth += labelWidthAdd;
 
@@ -145,6 +148,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 
 			EditorGUIUtility.labelWidth -= labelWidthAdd;
+
+			m_SerializedObject.ApplyModifiedProperties();
 		}
 
 		private void SanitizeBeforeSave()
@@ -243,8 +248,6 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		private void DrawProjectPreferences()
 		{
 			EditorGUILayout.HelpBox("These settings will be saved in the ProjectSettings folder.\nFeel free to add them to your version control system.\nCoordinate any changes here with your team.", MessageType.Warning);
-
-			m_SerializedObject.Update();
 
 			var sp = m_SerializedObject.FindProperty("m_ProjectPrefs");
 
@@ -349,8 +352,6 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			}
 
 			EditorGUILayout.PropertyField(sp.FindPropertyRelative("Exclude"), new GUIContent("Exclude Paths", "Relative path (contains '/') or asset name to be ignored by the SVN integrations. Use with caution.\n\nExample: \"Assets/Scenes/Baked\" or \"_deprecated\""), true);
-
-			m_SerializedObject.ApplyModifiedProperties();
 		}
 
 		public static void DrawHelpAbout()
