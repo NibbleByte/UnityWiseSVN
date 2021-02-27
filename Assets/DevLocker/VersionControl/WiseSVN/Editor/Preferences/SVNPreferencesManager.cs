@@ -2,6 +2,7 @@ using DevLocker.VersionControl.WiseSVN.ContextMenus;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -139,7 +140,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				m_RetryTextures = false;
 
 				// If WiseSVN was just added to the project, Unity won't manage to load the textures the first time. Try again next frame.
-				if (FileStatusIcons[(int)VCFileStatus.Added].image == null) {
+				if (FileStatusIcons[(int)VCFileStatus.Modified].image == null) {
 
 					// We're using a flag as assembly reload may happen and update callback will be lost.
 					m_RetryTextures = true;
@@ -149,6 +150,10 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 						LoadTextures();
 						m_RetryTextures = false;
 						EditorApplication.update -= reloadTextures;
+
+						if (FileStatusIcons[(int)VCFileStatus.Modified].image == null) {
+							Debug.LogWarning("SVN overlay icons are missing.");
+						}
 					};
 
 					EditorApplication.update += reloadTextures;
@@ -228,21 +233,35 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		private void LoadTextures()
 		{
 			FileStatusIcons = new GUIContent[Enum.GetValues(typeof(VCFileStatus)).Length];
-			FileStatusIcons[(int)VCFileStatus.Normal] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNNormalIcon"));
-			FileStatusIcons[(int)VCFileStatus.Added] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNAddedIcon"));
-			FileStatusIcons[(int)VCFileStatus.Modified] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNModifiedIcon"));
-			FileStatusIcons[(int)VCFileStatus.Replaced] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNModifiedIcon"));
-			FileStatusIcons[(int)VCFileStatus.Deleted] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNDeletedIcon"));
-			FileStatusIcons[(int)VCFileStatus.Conflicted] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNConflictIcon"));
-			FileStatusIcons[(int)VCFileStatus.Unversioned] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/SVNUnversionedIcon"));
+			FileStatusIcons[(int)VCFileStatus.Normal] = LoadTexture("Editor/SVNOverlayIcons/SVNNormalIcon");
+			FileStatusIcons[(int)VCFileStatus.Added] = LoadTexture("Editor/SVNOverlayIcons/SVNAddedIcon");
+			FileStatusIcons[(int)VCFileStatus.Modified] = LoadTexture("Editor/SVNOverlayIcons/SVNModifiedIcon");
+			FileStatusIcons[(int)VCFileStatus.Replaced] = LoadTexture("Editor/SVNOverlayIcons/SVNModifiedIcon");
+			FileStatusIcons[(int)VCFileStatus.Deleted] = LoadTexture("Editor/SVNOverlayIcons/SVNDeletedIcon");
+			FileStatusIcons[(int)VCFileStatus.Conflicted] = LoadTexture("Editor/SVNOverlayIcons/SVNConflictIcon");
+			FileStatusIcons[(int)VCFileStatus.Unversioned] = LoadTexture("Editor/SVNOverlayIcons/SVNUnversionedIcon");
 
 			LockStatusIcons = new GUIContent[Enum.GetValues(typeof(VCLockStatus)).Length];
-			LockStatusIcons[(int)VCLockStatus.LockedHere] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon"), "You have locked this file.\nClick for more details.");
-			LockStatusIcons[(int)VCLockStatus.BrokenLock] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "You have a lock that is no longer valid (someone else stole it and released it).\nClick for more details.");
-			LockStatusIcons[(int)VCLockStatus.LockedOther] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Someone else locked this file.\nClick for more details.");
-			LockStatusIcons[(int)VCLockStatus.LockedButStolen] = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon"), "Your lock was stolen by someone else.\nClick for more details.");
+			LockStatusIcons[(int)VCLockStatus.LockedHere] = LoadTexture("Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon", "You have locked this file.\nClick for more details.");
+			LockStatusIcons[(int)VCLockStatus.BrokenLock] = LoadTexture("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon", "You have a lock that is no longer valid (someone else stole it and released it).\nClick for more details.");
+			LockStatusIcons[(int)VCLockStatus.LockedOther] = LoadTexture("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon", "Someone else locked this file.\nClick for more details.");
+			LockStatusIcons[(int)VCLockStatus.LockedButStolen] = LoadTexture("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon", "Your lock was stolen by someone else.\nClick for more details.");
 
-			RemoteStatusIcons = new GUIContent(Resources.Load<Texture2D>("Editor/SVNOverlayIcons/Others/SVNRemoteChangesIcon"));
+			RemoteStatusIcons = LoadTexture("Editor/SVNOverlayIcons/Others/SVNRemoteChangesIcon");
+		}
+
+		public static GUIContent LoadTexture(string path, string tooltip = null)
+		{
+			// This doesn't work on 2020 for some reason and Unity did not respond for 9 days.
+			//return new GUIContent(Resources.Load<Texture2D>(path), tooltip);
+
+			var texture = AssetDatabase.FindAssets(Path.GetFileNameWithoutExtension(path))
+				.Select(AssetDatabase.GUIDToAssetPath)
+				.Select(AssetDatabase.LoadAssetAtPath<Texture2D>)
+				.FirstOrDefault()
+				;
+
+			return new GUIContent(texture, tooltip);
 		}
 
 
