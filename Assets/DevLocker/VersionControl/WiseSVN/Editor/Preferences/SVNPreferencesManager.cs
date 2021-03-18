@@ -252,16 +252,15 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 		public static GUIContent LoadTexture(string path, string tooltip = null)
 		{
-			// This doesn't work on 2020 for some reason and Unity did not respond for 9 days.
-			//return new GUIContent(Resources.Load<Texture2D>(path), tooltip);
+			return new GUIContent(Resources.Load<Texture2D>(path), tooltip);
 
-			var texture = AssetDatabase.FindAssets(Path.GetFileNameWithoutExtension(path))
-				.Select(AssetDatabase.GUIDToAssetPath)
-				.Select(AssetDatabase.LoadAssetAtPath<Texture2D>)
-				.FirstOrDefault()
-				;
-
-			return new GUIContent(texture, tooltip);
+			//var texture = AssetDatabase.FindAssets(Path.GetFileNameWithoutExtension(path))
+			//	.Select(AssetDatabase.GUIDToAssetPath)
+			//	.Select(AssetDatabase.LoadAssetAtPath<Texture2D>)
+			//	.FirstOrDefault()
+			//	;
+			//
+			//return new GUIContent(texture, tooltip);
 		}
 
 
