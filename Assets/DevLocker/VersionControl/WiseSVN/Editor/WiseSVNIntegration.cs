@@ -953,7 +953,8 @@ namespace DevLocker.VersionControl.WiseSVN
 					"Conflicted files",
 					$"Failed to move the files to \n\"{directory}\"\nbecause it has conflicts. Resolve them first!",
 					"Check changes",
-					"Cancel")) {
+					"Cancel"
+					)) {
 					ShowChangesUI?.Invoke();
 				}
 
@@ -968,7 +969,12 @@ namespace DevLocker.VersionControl.WiseSVN
 					$"The target directory:\n\"{directory}\"\nis not under SVN control. Should it be added?",
 					"Add it!",
 					"Cancel"
+#if UNITY_2019_4_OR_NEWER
+					, DialogOptOutDecisionType.ForThisSession, "WiseSVN.AddUnversionedFolder"
 				))
+#else
+				))
+#endif
 					return false;
 
 				if (!AddParentFolders(directory, shellMonitor))
@@ -1467,7 +1473,13 @@ namespace DevLocker.VersionControl.WiseSVN
 						"Deleted file",
 						$"The desired location\n\"{newPath}\"\nis marked as deleted in SVN. Are you trying to replace it with a new one?",
 						"Replace",
-						"Cancel")) {
+						"Cancel"
+#if UNITY_2019_4_OR_NEWER
+						, DialogOptOutDecisionType.ForThisSession, "WiseSVN.ReplaceFile"
+					)) {
+#else
+					)) {
+#endif
 
 						using (var reporter = CreateReporter()) {
 							if (SVNReplaceFile(oldPath, newPath, reporter)) {
