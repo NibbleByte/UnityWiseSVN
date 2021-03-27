@@ -146,6 +146,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		[NonSerialized]
 		private static string m_LastDisplayedError = string.Empty;
 
+		private static HashSet<string> m_PendingErrorMessages = new HashSet<string>();
+
 		#region Logging
 
 		// Used to track the shell commands output for errors and log them on Dispose().
@@ -207,8 +209,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (m_HasErrors) {
 						Debug.LogError(output);
 						if (!m_Silent) {
-							EditorUtility.DisplayDialog("SVN Error",
-								"SVN error happened while processing the assets. Check the logs.", "I will!");
+							DisplayError("SVN error happened while processing the assets. Check the logs.");
 						}
 					} else if (m_LogOutput && m_HasCommand) {
 						Debug.Log(output);
@@ -308,7 +309,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (!string.IsNullOrEmpty(displayMessage) && !Silent && m_LastDisplayedError != displayMessage) {
 					Debug.LogError($"{displayMessage}\n\n{result.Error}");
 					m_LastDisplayedError = displayMessage;
-					EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
+					DisplayError(displayMessage);
 				}
 
 				if (isCritical) {
@@ -451,7 +452,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (m_LastDisplayedError != displayMessage) {
 						Debug.LogError($"{displayMessage}\n\n{result.Error}");
 						m_LastDisplayedError = displayMessage;
-						EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
+						DisplayError(displayMessage);
 					}
 
 
@@ -482,7 +483,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (m_LastDisplayedError != displayMessage) {
 						Debug.LogError($"{displayMessage}\n\n{result.Error}");
 						m_LastDisplayedError = displayMessage;
-						EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
+						DisplayError(displayMessage);
 					}
 
 					return lockDetails;
@@ -1021,7 +1022,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				bool isCritical = IsCriticalError(result.Error, out displayMessage);
 
 				if (!string.IsNullOrEmpty(displayMessage) && !Silent) {
-					EditorUtility.DisplayDialog("SVN Error", displayMessage, "I will!");
+					DisplayError(displayMessage);
 				}
 
 				if (isCritical) {
@@ -1681,6 +1682,31 @@ namespace DevLocker.VersionControl.WiseSVN
 		private static IEnumerable<string> Enumerate(string str)
 		{
 			yield return str;
+		}
+
+		private static void DisplayError(string message)
+		{
+			EditorApplication.update -= DisplayPendingMessages;
+			EditorApplication.update += DisplayPendingMessages;
+
+			m_PendingErrorMessages.Add(message);
+		}
+
+		private static void DisplayPendingMessages()
+		{
+			EditorApplication.update -= DisplayPendingMessages;
+
+			var message = string.Join("\n-----\n", m_PendingErrorMessages);
+
+			if (message.Length > 1500) {
+				message = message.Substring(0, 1490) + "...";
+			}
+
+#if UNITY_2019_4_OR_NEWER
+			EditorUtility.DisplayDialog("SVN Error", message, "I will!", DialogOptOutDecisionType.ForThisSession, "WiseSVN.ErrorMessages");
+#else
+			EditorUtility.DisplayDialog("SVN Error", message, "I will!");
+#endif
 		}
 
 		// Use for debug.
