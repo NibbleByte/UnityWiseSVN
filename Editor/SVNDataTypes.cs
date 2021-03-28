@@ -106,6 +106,12 @@ namespace DevLocker.VersionControl.WiseSVN
 		UnknownError,			// Failed for any other reason.
 	}
 
+	public enum RevertOperationResult
+	{
+		Success,				// Operation succeeded.
+		UnknownError,			// Failed for any other reason.
+	}
+
 	// How conflicts should be auto-resolved.
 	// http://svnbook.red-bean.com/en/1.8/svn.ref.svn.html#svn.ref.svn.sw.accept
 	public enum UpdateResolveConflicts

@@ -895,6 +895,58 @@ namespace DevLocker.VersionControl.WiseSVN
 			return SVNAsyncOperation<CommitOperationResult>.Start(op => Commit(assetPaths, includeMeta, recursive, message, encoding, keepLocks, targetsFileToUse, timeout, op));
 		}
 
+		/// <summary>
+		/// Revert files to SVN directly (without GUI).
+		/// This is an offline operation, but it still can take time, since it will copy from the original files.
+		/// RemoveAdded will remove added files from disk.
+		/// Recursive won't restore deleted files. You have to specify them manually. Weird.
+		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// </summary>
+		public static RevertOperationResult Revert(
+			IEnumerable<string> assetPaths,
+			bool includeMeta,
+			bool recursive,
+			bool removeAdded,
+			string targetsFileToUse = "",
+			int timeout = -1,
+			IShellMonitor shellMonitor = null
+			)
+		{
+			targetsFileToUse = string.IsNullOrEmpty(targetsFileToUse) ? FileUtil.GetUniqueTempPathInProject() : targetsFileToUse;
+			if (includeMeta) {
+				assetPaths = assetPaths.Select(path => path + ".meta").Concat(assetPaths);
+			}
+			File.WriteAllLines(targetsFileToUse, assetPaths.Select(SVNFormatPath));
+
+
+			var depth = recursive ? "infinity" : "empty";
+			var removeAddedArg = removeAdded ? "--remove-added" : "";
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"revert --targets \"{targetsFileToUse}\" --depth {depth} {removeAddedArg}", timeout, shellMonitor);
+			if (result.HasErrors) {
+				return RevertOperationResult.UnknownError;
+			}
+
+			return RevertOperationResult.Success;
+		}
+
+		/// <summary>
+		/// Revert files to SVN directly (without GUI).
+		/// This is an offline operation, but it still can take time, since it will copy from the original files.
+		/// RemoveAdded will remove added files from disk.
+		/// Recursive won't restore deleted files. You have to specify them manually. Weird.
+		/// </summary>
+		public static SVNAsyncOperation<RevertOperationResult> RevertAsync(
+			IEnumerable<string> assetPaths,
+			bool includeMeta, bool recursive,
+			bool removeAdded,
+			int timeout = -1
+			)
+		{
+			var targetsFileToUse = FileUtil.GetUniqueTempPathInProject();   // Not thread safe - call in main thread only.
+			return SVNAsyncOperation<RevertOperationResult>.Start(op => Revert(assetPaths, includeMeta, recursive, removeAdded, targetsFileToUse, timeout, op));
+		}
+
 
 		/// <summary>
 		/// Add files to SVN directly (without GUI).
