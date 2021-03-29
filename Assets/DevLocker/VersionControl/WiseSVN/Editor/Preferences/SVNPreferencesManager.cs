@@ -162,7 +162,20 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				Debug.Log($"Loaded WiseSVN Preferences. WiseSVN is turned {(PersonalPrefs.EnableCoreIntegration ? "on" : "off")}.");
 
 				if (PersonalPrefs.EnableCoreIntegration) {
-					var svnError = WiseSVNIntegration.CheckForSVNErrors();
+					var svnError = "";
+					try {
+						svnError = WiseSVNIntegration.CheckForSVNErrors();
+
+					} catch (Exception ex) {
+						PersonalPrefs.EnableCoreIntegration = false;
+
+						Debug.LogError($"Calling SVN CLI (Command Line Interface) caused fatal error!\nDisabling WiseSVN integration. Please fix the error and restart Unity.\n{ex}\n\n");
+#if UNITY_EDITOR_OSX
+						if (ex is IOException) {
+							Debug.LogError($"If you installed SVN via Brew or similar, you may need to add \"/usr/local/bin\" (or wherever svn binaries can be found) to your PATH environment variable. Example:\nsudo launchctl config user path /usr/local/bin\nAlternatively, you may add relative SVN CLI path in your WiseSVN preferences (\"Assets/SVN/SVN Preferences -> Project\")\n");
+						}
+#endif
+					}
 
 					// svn: warning: W155007: '...' is not a working copy!
 					// This can be returned when project is not a valid svn checkout. (Probably)
