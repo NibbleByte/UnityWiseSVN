@@ -139,6 +139,11 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 			}
 
+			if (statuses.Count >= SanityStatusesLimit) {
+				// If server has many remote changes or locks, don't spam me with overlay icons.
+				statuses = statuses.Where(s => s.Status != VCFileStatus.Normal).ToList();
+			}
+
 			// HACK: the base class works with the DataType for pending data. Guid won't be used.
 			return statuses
 				.Where(s => statuses.Count < SanityStatusesLimit	// Include everything when below the limit
