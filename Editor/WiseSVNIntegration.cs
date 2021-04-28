@@ -1474,7 +1474,13 @@ namespace DevLocker.VersionControl.WiseSVN
 					EditorUtility.DisplayDialog(
 						"Deleted file",
 						$"The desired location\n\"{path}\"\nis marked as deleted in SVN. The file will be replaced in SVN with the new one.\n\nIf this is an automated change, consider adding this file to the exclusion list in the project preferences:\n\"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n...or change your tool to silence the integration.",
-						"Replace");
+						"Replace"
+#if UNITY_2019_4_OR_NEWER
+						, DialogOptOutDecisionType.ForThisSession, "WiseSVN.ReplaceFile"
+					);
+#else
+					);
+#endif
 				}
 
 				using (var reporter = CreateReporter()) {
