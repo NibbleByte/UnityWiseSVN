@@ -50,7 +50,7 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 		public override void Initialize(bool freshlyCreated)
 		{
 			// HACK: Force WiseSVN initialize first, so it doesn't happen in the thread.
-			WiseSVNIntegration.ProjectRoot.StartsWith(string.Empty);
+			WiseSVNIntegration.ProjectRootUnity.StartsWith(string.Empty);
 
 			SVNPreferencesManager.Instance.PreferencesChanged += RefreshActive;
 			RefreshActive();
