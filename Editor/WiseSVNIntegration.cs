@@ -221,6 +221,9 @@ namespace DevLocker.VersionControl.WiseSVN
 					} else if (m_LogOutput && m_HasCommand) {
 						Debug.Log(output);
 					}
+
+					m_HasErrors = false;
+					m_HasCommand = false;
 				}
 			}
 		}
@@ -1598,12 +1601,22 @@ namespace DevLocker.VersionControl.WiseSVN
 							"Cancel"
 							)) {
 
+							reporter.AppendOutputLine("Running Update via GUI...");
 							RunUpdateUI?.Invoke();
+							reporter.AppendOutputLine("Update Finished.");
 
-							// Try moving it again.
-							result = ShellUtils.ExecuteCommand(SVN_Command, $"move \"{SVNFormatPath(oldPath)}\" \"{newPath}\"", COMMAND_TIMEOUT, reporter);
-							if (result.HasErrors)
+							if (EditorUtility.DisplayDialog(
+								"Retry Move / Rename?",
+								$"Update finished.\nDo you wish to retry moving the asset?\nAsset: {oldPath}",
+								"Retry Move / Rename",
+								"Cancel"
+								)) {
+								// Try moving it again with all the checks because the situation may have changed (conflicts & stuff).
+								reporter.Dispose();
+								return OnWillMoveAsset(oldPath, newPath);
+							} else {
 								return AssetMoveResult.FailedMove;
+							}
 
 						} else {
 							return AssetMoveResult.FailedMove;
