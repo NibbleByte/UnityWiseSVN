@@ -96,7 +96,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 
 		public override void ResolveAll(bool wait = false)
 		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:resolve /path:\"{WiseSVNIntegration.ProjectRoot}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:resolve /path:\"{WiseSVNIntegration.ProjectRootNative}\"", wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -171,7 +171,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 
 		public override void Cleanup(bool wait = false)
 		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:cleanup /path:\"{WiseSVNIntegration.ProjectRoot}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:cleanup /path:\"{WiseSVNIntegration.ProjectRootNative}\"", wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}

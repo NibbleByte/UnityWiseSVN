@@ -535,7 +535,7 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 								"Yes!", "No"
 								);
 							if (confirm && UnityEditor.SceneManagement.EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) {
-								var localPath = WiseSVNIntegration.WorkingCopyRootPath();
+								var localPathNative = WiseSVNIntegration.WorkingCopyRootPath();
 								var targetUrl = branchProject.BranchURL;
 
 								if (branchProject.BranchURL != branchProject.UnityProjectURL) {
@@ -545,12 +545,12 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 										"- Unity project folder",
 										"Working copy root", "Unity project");
 									if (!useBranchRoot) {
-										localPath = WiseSVNIntegration.ProjectRoot;
+										localPathNative = WiseSVNIntegration.ProjectRootNative;
 										targetUrl = branchProject.UnityProjectURL;
 									}
 								}
 
-								SVNContextMenusManager.Switch(localPath, targetUrl);
+								SVNContextMenusManager.Switch(localPathNative, targetUrl);
 								EditorApplication.Exit(0);
 							}
 						}

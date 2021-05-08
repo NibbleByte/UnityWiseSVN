@@ -47,7 +47,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 
 			// The snailsvn.sh currently doesn't accept "check-for-modifications" argument, but with some reverse engineering, managed to make it work like this.
 			// open "snailsvnfree://check-for-modifications/SomeFolderHere/UnityProject/Assets"
-			Application.OpenURL($"snailsvnfree://check-for-modifications{WiseSVNIntegration.ProjectRoot}/{path}");
+			Application.OpenURL($"snailsvnfree://check-for-modifications{WiseSVNIntegration.ProjectRootNative}/{path}");
 		}
 
 		public override void DiffChanges(string assetPath, bool wait = false)
@@ -95,7 +95,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 
 			var pathsArg = AssetPathsToContextPaths(includeMeta ? assetPaths.Concat(metas) : assetPaths, false);
 
-			var result = ExecuteCommand("add", pathsArg, WiseSVNIntegration.ProjectRoot, wait);
+			var result = ExecuteCommand("add", pathsArg, WiseSVNIntegration.ProjectRootNative, wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -130,7 +130,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (!assetPaths.Any())
 				return;
 
-			var result = ExecuteCommand("lock", AssetPathsToContextPaths(assetPaths, includeMeta), WiseSVNIntegration.ProjectRoot, wait);
+			var result = ExecuteCommand("lock", AssetPathsToContextPaths(assetPaths, includeMeta), WiseSVNIntegration.ProjectRootNative, wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -141,7 +141,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (!assetPaths.Any())
 				return;
 
-			var result = ExecuteCommand("unlock", AssetPathsToContextPaths(assetPaths, includeMeta), WiseSVNIntegration.ProjectRoot, wait);
+			var result = ExecuteCommand("unlock", AssetPathsToContextPaths(assetPaths, includeMeta), WiseSVNIntegration.ProjectRootNative, wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -169,13 +169,13 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 
 			// The snailsvn.sh currently doesn't accept "blame" argument, but with some reverse engineering, managed to make it work like this.
 			// open "snailsvnfree://svn-blame/SomeFolderHere/UnityProject/Assets/foo.txt"
-			Application.OpenURL($"snailsvnfree://svn-blame{WiseSVNIntegration.ProjectRoot}/{assetPath}");
+			Application.OpenURL($"snailsvnfree://svn-blame{WiseSVNIntegration.ProjectRootNative}/{assetPath}");
 		}
 
 		public override void Cleanup(bool wait = false)
 		{
 			// NOTE: SnailSVN doesn't pop up dialog for clean up. It just does some shady stuff in the background and a notification is shown some time later.
-			var result = ExecuteCommand("cleanup", WiseSVNIntegration.ProjectRoot, wait);
+			var result = ExecuteCommand("cleanup", WiseSVNIntegration.ProjectRootNative, wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -186,7 +186,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			// SnailSVN Repo-Browser doesn't accept URLs, only working copy paths which is no good for us.
 			Debug.LogError($"SnailSVN doesn't support Repo-Browser very well. Opening Repo-Browser for the current working copy.");
 
-			var result = ExecuteCommand("repo-browser", string.Empty, WiseSVNIntegration.ProjectRoot, wait);
+			var result = ExecuteCommand("repo-browser", string.Empty, WiseSVNIntegration.ProjectRootNative, wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -194,7 +194,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 
 		public override void Switch(string localPath, string url, bool wait = false)
 		{
-			var result = ExecuteCommand("switch", string.Empty, WiseSVNIntegration.ProjectRoot, wait);
+			var result = ExecuteCommand("switch", string.Empty, WiseSVNIntegration.ProjectRootNative, wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}

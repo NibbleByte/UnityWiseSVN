@@ -101,9 +101,11 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		#endregion
 
-		public static readonly string ProjectRoot;
+		public static readonly string ProjectRootNative;
+		public static readonly string ProjectRootUnity;
 
 		public static event Action ShowChangesUI;
+		public static event Action RunUpdateUI;
 
 		/// <summary>
 		/// Is the integration enabled.
@@ -137,7 +139,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private static string SVN_Command => string.IsNullOrEmpty(m_ProjectPrefs.PlatformSvnCLIPath)
 			? "svn"
-			: Path.Combine(ProjectRoot, m_ProjectPrefs.PlatformSvnCLIPath);
+			: Path.Combine(ProjectRootNative, m_ProjectPrefs.PlatformSvnCLIPath);
 
 		internal const int COMMAND_TIMEOUT = 20000;	// Milliseconds
 		internal const int ONLINE_COMMAND_TIMEOUT = 45000;  // Milliseconds
@@ -197,6 +199,11 @@ namespace DevLocker.VersionControl.WiseSVN
 				RequestAbort?.Invoke(kill);
 			}
 
+			public void ResetErrorFlag()
+			{
+				m_HasErrors = false;
+			}
+
 			public void Dispose()
 			{
 				if (!m_CombinedOutput.IsEmpty) {
@@ -229,7 +236,8 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		static WiseSVNIntegration()
 		{
-			ProjectRoot = Path.GetDirectoryName(Application.dataPath);
+			ProjectRootNative = Path.GetDirectoryName(Application.dataPath);
+			ProjectRootUnity = ProjectRootNative.Replace('\\', '/');
 		}
 
 		/// <summary>
@@ -1394,7 +1402,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// </summary>
 		public static string WorkingCopyRootPath()
 		{
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(ProjectRoot)}\"", COMMAND_TIMEOUT);
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(ProjectRootNative)}\"", COMMAND_TIMEOUT);
 
 			if (result.HasErrors)
 				return string.Empty;
@@ -1439,7 +1447,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// </summary>
 		public static string CheckForSVNErrors()
 		{
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth=empty \"{SVNFormatPath(ProjectRoot)}\"", COMMAND_TIMEOUT);
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth=empty \"{SVNFormatPath(ProjectRootNative)}\"", COMMAND_TIMEOUT);
 
 			return result.Error;
 		}
@@ -1571,9 +1579,41 @@ namespace DevLocker.VersionControl.WiseSVN
 					return AssetMoveResult.FailedMove;
 
 				var result = ShellUtils.ExecuteCommand(SVN_Command, $"move \"{SVNFormatPath(oldPath)}\" \"{newPath}\"", COMMAND_TIMEOUT, reporter);
-				if (result.HasErrors)
-					return AssetMoveResult.FailedMove;
+				if (result.HasErrors) {
+					// Moving files / folder into unversioned folder, sometimes results in this strange error. Handle it gracefully.
+					//svn: E155040: Cannot move mixed-revision subtree '...' [52:53]; try updating it first
+					if (result.Error.Contains("try updating it first") && !Silent) {
+						var formattedError = result
+							.Error
+							.Replace(ProjectRootNative + Path.DirectorySeparatorChar, "")
+							.Replace(" '", "\n'")
+							.Replace("; ", ";\n\n");
 
+						reporter.ResetErrorFlag();
+
+						if (EditorUtility.DisplayDialog(
+							"Update Needed",
+							$"Failed to move / rename files with error: \n{formattedError}",
+							"Run Update",
+							"Cancel"
+							)) {
+
+							RunUpdateUI?.Invoke();
+
+							// Try moving it again.
+							result = ShellUtils.ExecuteCommand(SVN_Command, $"move \"{SVNFormatPath(oldPath)}\" \"{newPath}\"", COMMAND_TIMEOUT, reporter);
+							if (result.HasErrors)
+								return AssetMoveResult.FailedMove;
+
+						} else {
+							return AssetMoveResult.FailedMove;
+						}
+					} else {
+						return AssetMoveResult.FailedMove;
+					}
+				}
+
+				// HACK: Really don't want to copy-paste the "try update first" error handle from above a second time. Hope this case never happens here.
 				result = ShellUtils.ExecuteCommand(SVN_Command, $"move \"{SVNFormatPath(oldPath + ".meta")}\" \"{newPath}.meta\"", COMMAND_TIMEOUT, reporter);
 				if (result.HasErrors)
 					return AssetMoveResult.FailedMove;

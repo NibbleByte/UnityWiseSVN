@@ -82,7 +82,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		public override void Initialize(bool freshlyCreated)
 		{
 			// HACK: Force WiseSVN initialize first, so it doesn't happen in the thread.
-			WiseSVNIntegration.ProjectRoot.StartsWith(string.Empty);
+			WiseSVNIntegration.ProjectRootUnity.StartsWith(string.Empty);
 
 			SVNPreferencesManager.Instance.PreferencesChanged += RefreshActive;
 			RefreshActive();
@@ -130,7 +130,7 @@ namespace DevLocker.VersionControl.WiseSVN
 							;
 
 						statuses.AddRange(paths
-							.Select(path => path.Replace(WiseSVNIntegration.ProjectRoot, ""))
+							.Select(path => path.Replace(WiseSVNIntegration.ProjectRootNative, ""))
 							.Select(path => new SVNStatusData() { Status = VCFileStatus.Unversioned, Path = path, LockDetails = LockDetails.Empty })
 							);
 					} catch(Exception) {
