@@ -187,6 +187,12 @@ namespace DevLocker.VersionControl.WiseSVN
 				// Not used for now...
 			}
 
+			// Because using AppendOutputLine() will output all the SVN operation spam that we parse.
+			public void AppendTraceLine(string line)
+			{
+				m_CombinedOutput.Enqueue(line);
+			}
+
 			public void AppendErrorLine(string line)
 			{
 				m_CombinedOutput.Enqueue(line);
@@ -1595,7 +1601,7 @@ namespace DevLocker.VersionControl.WiseSVN
 							"Cancel"
 							)) {
 
-							reporter.AppendOutputLine($"Moving file {oldPath} to {newPath} without SVN knowledge...");
+							reporter.AppendTraceLine($"Moving file \"{oldPath}\" to \"{newPath}\" without SVN knowledge...");
 
 							if (Directory.Exists(oldPath)) {
 								Directory.Move(oldPath, newPath);
@@ -1650,9 +1656,9 @@ namespace DevLocker.VersionControl.WiseSVN
 							"Cancel"
 							)) {
 
-							reporter.AppendOutputLine("Running Update via GUI...");
+							reporter.AppendTraceLine("Running Update via GUI...");
 							RunUpdateUI?.Invoke();
-							reporter.AppendOutputLine("Update Finished.");
+							reporter.AppendTraceLine("Update Finished.");
 
 							if (EditorUtility.DisplayDialog(
 								"Retry Move / Rename?",
