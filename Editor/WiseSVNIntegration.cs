@@ -1583,9 +1583,58 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				var result = ShellUtils.ExecuteCommand(SVN_Command, $"move \"{SVNFormatPath(oldPath)}\" \"{newPath}\"", COMMAND_TIMEOUT, reporter);
 				if (result.HasErrors) {
-					// Moving files / folder into unversioned folder, sometimes results in this strange error. Handle it gracefully.
-					//svn: E155040: Cannot move mixed-revision subtree '...' [52:53]; try updating it first
-					if (result.Error.Contains("try updating it first") && !Silent) {
+
+					// Moving files from one repository to another is not allowed (nested checkouts or externals).
+					//svn: E155023: Cannot copy to '...', as it is not from repository '...'; it is from '...'
+					if (result.Error.Contains("E155023")) {
+
+						if (Silent || EditorUtility.DisplayDialog(
+							"Error moving asset",
+							$"Failed to move file as it is from another external repository:\n{oldPath}\n\nWould you like to move the file without notifying SVN?\nWARNING: You'll loose the SVN history of the file.\n\nTarget path:\n{newPath}",
+							"Yes, ignore SVN",
+							"Cancel"
+							)) {
+
+							reporter.AppendOutputLine($"Moving file {oldPath} to {newPath} without SVN knowledge...");
+
+							if (Directory.Exists(oldPath)) {
+								Directory.Move(oldPath, newPath);
+								Directory.Move(oldPath + ".meta", newPath + ".meta");
+							} else {
+								File.Move(oldPath, newPath);
+								File.Move(oldPath + ".meta", newPath + ".meta");
+							}
+
+							// Reset after the danger is gone (manual file operations)
+							reporter.ResetErrorFlag();
+
+							result = ShellUtils.ExecuteCommand(SVN_Command, $"delete --force \"{SVNFormatPath(oldPath)}\"", COMMAND_TIMEOUT, reporter);
+							if (result.HasErrors)
+								return AssetMoveResult.FailedMove;
+
+							result = ShellUtils.ExecuteCommand(SVN_Command, $"delete --force \"{SVNFormatPath(oldPath + ".meta")}\"", COMMAND_TIMEOUT, reporter);
+							if (result.HasErrors)
+								return AssetMoveResult.FailedMove;
+
+							result = ShellUtils.ExecuteCommand(SVN_Command, $"add \"{SVNFormatPath(newPath)}\"", COMMAND_TIMEOUT, reporter);
+							if (result.HasErrors)
+								return AssetMoveResult.FailedMove;
+
+							result = ShellUtils.ExecuteCommand(SVN_Command, $"add \"{SVNFormatPath(newPath + ".meta")}\"", COMMAND_TIMEOUT, reporter);
+							if (result.HasErrors)
+								return AssetMoveResult.FailedMove;
+
+							return AssetMoveResult.DidMove;
+
+						} else {
+							reporter.ResetErrorFlag();
+							return AssetMoveResult.FailedMove;
+						}
+
+
+						// Moving files / folder into unversioned folder, sometimes results in this strange error. Handle it gracefully.
+						//svn: E155040: Cannot move mixed-revision subtree '...' [52:53]; try updating it first
+					} else if (result.Error.Contains("try updating it first") && !Silent) {
 						var formattedError = result
 							.Error
 							.Replace(ProjectRootNative + Path.DirectorySeparatorChar, "")
@@ -1717,7 +1766,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					// If -u is used, additional line is added at the end:
 					// Status against revision:     14
 					if (line.StartsWith("Status", StringComparison.Ordinal))
-						break;
+						continue;
 
 					// All externals append separate sections with their statuses:
 					// Performing status on external item at '...':
@@ -1726,7 +1775,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 					// If user has files in the "ignore-on-commit" list, this is added at the end plus empty line:
 					// ---Changelist 'ignore-on-commit': ...
-					if (string.IsNullOrEmpty(line))
+					if (string.IsNullOrWhiteSpace(line))
 						continue;
 					if (line.StartsWith("---", StringComparison.Ordinal))
 						break;
