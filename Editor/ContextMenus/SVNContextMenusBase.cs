@@ -49,8 +49,13 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(assetPath))
 				return PreparePathArg(Path.GetDirectoryName(Application.dataPath));
 
-			var paths = PreparePathArg(assetPath);
-			if (includeMeta) {
+			// Because svn doesn't like it when you pass ignored files to some operations, like commit.
+			string paths = "";
+			if (WiseSVNIntegration.GetStatus(assetPath).Status != VCFileStatus.Ignored) {
+				paths = PreparePathArg(assetPath);
+			}
+
+			if (includeMeta && WiseSVNIntegration.GetStatus(assetPath + ".meta").Status != VCFileStatus.Ignored) {
 				paths += FileArgumentsSeparator + PreparePathArg(assetPath + ".meta");
 			}
 
