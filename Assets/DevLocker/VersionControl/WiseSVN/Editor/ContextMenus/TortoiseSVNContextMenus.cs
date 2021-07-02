@@ -19,7 +19,11 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (!assetPaths.Any())
 				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:repostatus /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", wait);
+			string pathsArg = AssetPathsToContextPaths(assetPaths, includeMeta);
+			if (string.IsNullOrEmpty(pathsArg))
+				return;
+
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:repostatus /path:\"{pathsArg}\"", wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -27,7 +31,11 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 
 		public override void DiffChanges(string assetPath, bool wait = false)
 		{
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:diff /path:\"{AssetPathToContextPaths(assetPath, false)}\"", wait);
+			string pathsArg = AssetPathToContextPaths(assetPath, false);
+			if (string.IsNullOrEmpty(pathsArg))
+				return;
+			
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:diff /path:\"{pathsArg}\"", wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -37,8 +45,12 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (!assetPaths.Any())
 				return;
+			
+			string pathsArg = AssetPathsToContextPaths(assetPaths, includeMeta);
+			if (string.IsNullOrEmpty(pathsArg))
+				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:update /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:update /path:\"{pathsArg}\"", wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -48,8 +60,12 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (!assetPaths.Any())
 				return;
+			
+			string pathsArg = AssetPathsToContextPaths(assetPaths, includeMeta);
+			if (string.IsNullOrEmpty(pathsArg))
+				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:commit /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:commit /path:\"{pathsArg}\"", wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -73,7 +89,9 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				.Where(path => WiseSVNIntegration.GetStatus(path).Status == VCFileStatus.Unversioned)
 				;
 
-			var pathsArg = AssetPathsToContextPaths(includeMeta ? assetPaths.Concat(metas) : assetPaths, false);
+			string pathsArg = AssetPathsToContextPaths(includeMeta ? assetPaths.Concat(metas) : assetPaths, false);
+			if (string.IsNullOrEmpty(pathsArg))
+				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:add /path:\"{pathsArg}\"", wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
@@ -85,8 +103,12 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (!assetPaths.Any())
 				return;
+			
+			string pathsArg = AssetPathsToContextPaths(assetPaths, includeMeta);
+			if (string.IsNullOrEmpty(pathsArg))
+				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:revert /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:revert /path:\"{pathsArg}\"", wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -125,8 +147,12 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (!assetPaths.Any())
 				return;
+			
+			string pathsArg = AssetPathsToContextPaths(assetPaths, includeMeta);
+			if (string.IsNullOrEmpty(pathsArg))
+				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:lock /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:lock /path:\"{pathsArg}\"", wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -136,8 +162,12 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (!assetPaths.Any())
 				return;
+			
+			string pathsArg = AssetPathsToContextPaths(assetPaths, includeMeta);
+			if (string.IsNullOrEmpty(pathsArg))
+				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:unlock /path:\"{AssetPathsToContextPaths(assetPaths, includeMeta)}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:unlock /path:\"{pathsArg}\"", wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -147,8 +177,12 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (string.IsNullOrEmpty(assetPath))
 				return;
+			
+			string pathsArg = AssetPathToContextPaths(assetPath, false);
+			if (string.IsNullOrEmpty(pathsArg))
+				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:log /path:\"{AssetPathToContextPaths(assetPath, false)}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:log /path:\"{pathsArg}\"", wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -160,8 +194,12 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (string.IsNullOrEmpty(assetPath))
 				return;
+			
+			string pathsArg = AssetPathToContextPaths(assetPath, false);
+			if (string.IsNullOrEmpty(pathsArg))
+				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:blame /path:\"{AssetPathToContextPaths(assetPath, false)}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:blame /path:\"{pathsArg}\"", wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
