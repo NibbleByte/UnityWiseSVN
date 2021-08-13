@@ -61,6 +61,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 #else
 			public string PlatformSvnCLIPath => SvnCLIPathMacOS;
 #endif
+			public SVNMoveBehaviour MoveBehaviour = SVNMoveBehaviour.NormalSVNMove;
+
 			// Enable auto svn locking on asset modify.
 			public bool EnableAutoLocking = false;
 

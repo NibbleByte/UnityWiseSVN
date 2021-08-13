@@ -67,6 +67,13 @@ namespace DevLocker.VersionControl.WiseSVN
 		All = ~0,
 	}
 
+	public enum SVNMoveBehaviour
+	{
+		NormalSVNMove = 0,
+		UseAddAndDeleteForFolders = 2,
+		UseAddAndDeleteForAllAssets = 4,
+	}
+
 	public enum LockOperationResult
 	{
 		Success,				// Operation succeeded.

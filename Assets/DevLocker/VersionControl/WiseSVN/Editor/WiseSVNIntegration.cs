@@ -1587,6 +1587,18 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (!CheckAndAddParentFolderIfNeeded(newPath, true, reporter))
 					return AssetMoveResult.FailedMove;
 
+
+				if (m_ProjectPrefs.MoveBehaviour == SVNMoveBehaviour.UseAddAndDeleteForAllAssets ||
+					m_ProjectPrefs.MoveBehaviour == SVNMoveBehaviour.UseAddAndDeleteForFolders && Directory.Exists(oldPath)
+					) {
+
+					return MoveAssetByAddDeleteOperations(oldPath, newPath, reporter)
+						? AssetMoveResult.DidMove
+						: AssetMoveResult.FailedMove
+						;
+				}
+
+
 				var result = ShellUtils.ExecuteCommand(SVN_Command, $"move \"{SVNFormatPath(oldPath)}\" \"{newPath}\"", COMMAND_TIMEOUT, reporter);
 				if (result.HasErrors) {
 
@@ -1596,41 +1608,15 @@ namespace DevLocker.VersionControl.WiseSVN
 
 						if (Silent || EditorUtility.DisplayDialog(
 							"Error moving asset",
-							$"Failed to move file as it is from another external repository:\n{oldPath}\n\nWould you like to move the file without notifying SVN?\nWARNING: You'll loose the SVN history of the file.\n\nTarget path:\n{newPath}",
+							$"Failed to move file as destination is in another external repository:\n{oldPath}\n\nWould you like to force move the file anyway?\nWARNING: You'll loose the SVN history of the file.\n\nTarget path:\n{newPath}",
 							"Yes, ignore SVN",
 							"Cancel"
 							)) {
 
-							reporter.AppendTraceLine($"Moving file \"{oldPath}\" to \"{newPath}\" without SVN knowledge...");
-
-							if (Directory.Exists(oldPath)) {
-								Directory.Move(oldPath, newPath);
-								Directory.Move(oldPath + ".meta", newPath + ".meta");
-							} else {
-								File.Move(oldPath, newPath);
-								File.Move(oldPath + ".meta", newPath + ".meta");
-							}
-
-							// Reset after the danger is gone (manual file operations)
-							reporter.ResetErrorFlag();
-
-							result = ShellUtils.ExecuteCommand(SVN_Command, $"delete --force \"{SVNFormatPath(oldPath)}\"", COMMAND_TIMEOUT, reporter);
-							if (result.HasErrors)
-								return AssetMoveResult.FailedMove;
-
-							result = ShellUtils.ExecuteCommand(SVN_Command, $"delete --force \"{SVNFormatPath(oldPath + ".meta")}\"", COMMAND_TIMEOUT, reporter);
-							if (result.HasErrors)
-								return AssetMoveResult.FailedMove;
-
-							result = ShellUtils.ExecuteCommand(SVN_Command, $"add \"{SVNFormatPath(newPath)}\"", COMMAND_TIMEOUT, reporter);
-							if (result.HasErrors)
-								return AssetMoveResult.FailedMove;
-
-							result = ShellUtils.ExecuteCommand(SVN_Command, $"add \"{SVNFormatPath(newPath + ".meta")}\"", COMMAND_TIMEOUT, reporter);
-							if (result.HasErrors)
-								return AssetMoveResult.FailedMove;
-
-							return AssetMoveResult.DidMove;
+							return MoveAssetByAddDeleteOperations(oldPath, newPath, reporter)
+								? AssetMoveResult.DidMove
+								: AssetMoveResult.FailedMove
+								;
 
 						} else {
 							reporter.ResetErrorFlag();
@@ -1688,6 +1674,40 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				return AssetMoveResult.DidMove;
 			}
+		}
+
+		private static bool MoveAssetByAddDeleteOperations(string oldPath, string newPath, ResultReporter reporter)
+		{
+			reporter.AppendTraceLine($"Moving file \"{oldPath}\" to \"{newPath}\" without SVN history...");
+
+			if (Directory.Exists(oldPath)) {
+				Directory.Move(oldPath, newPath);
+				Directory.Move(oldPath + ".meta", newPath + ".meta");
+			} else {
+				File.Move(oldPath, newPath);
+				File.Move(oldPath + ".meta", newPath + ".meta");
+			}
+
+			// Reset after the danger is gone (manual file operations)
+			reporter.ResetErrorFlag();
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"delete --force \"{SVNFormatPath(oldPath)}\"", COMMAND_TIMEOUT, reporter);
+			if (result.HasErrors)
+				return false;
+
+			result = ShellUtils.ExecuteCommand(SVN_Command, $"delete --force \"{SVNFormatPath(oldPath + ".meta")}\"", COMMAND_TIMEOUT, reporter);
+			if (result.HasErrors)
+				return false;
+
+			result = ShellUtils.ExecuteCommand(SVN_Command, $"add \"{SVNFormatPath(newPath)}\"", COMMAND_TIMEOUT, reporter);
+			if (result.HasErrors)
+				return false;
+
+			result = ShellUtils.ExecuteCommand(SVN_Command, $"add \"{SVNFormatPath(newPath + ".meta")}\"", COMMAND_TIMEOUT, reporter);
+			if (result.HasErrors)
+				return false;
+
+			return true;
 		}
 
 		private static bool SVNReplaceFile(string oldPath, string newPath, IShellMonitor shellMonitor = null)
