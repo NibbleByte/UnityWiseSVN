@@ -5,10 +5,12 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN.Documentation
 {
-	// This an example window showing how you can integrate your tools with the WiseSVN plugin.
-	// When your tool needs to run some SVN operation it is best to run Async method
-	// and subscribe for the task events to avoid editor freezing.
-	// Those events are guaranteed to run on the Unity thread.
+	/// <summary>
+	/// This an example window showing how you can integrate your tools with the WiseSVN plugin.
+	/// When your tool needs to run some SVN operation it is best to run Async method
+	/// and subscribe for the task events to avoid editor freezing.
+	/// Those events are guaranteed to run on the Unity thread.
+	/// </summary>
 	public class ExampleStatusWindow : EditorWindow
 	{
 		private string m_CombinedOutput = "";
