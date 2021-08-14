@@ -217,14 +217,18 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 				}
 			}
 
+			process.CancelOutputRead();
 			process.OutputDataReceived -= outputReadLineHandler;
+			//process.StandardOutput.Close();
 			lock (outputBuilder) {
 				// When the main thread gets here, the process will not be running (unless it timed out),
 				// but the OutputDataReceived thread might still be appending the final strings. Lock it!
 				result.Output = outputBuilder.ToString();
 			}
 
+			process.CancelErrorRead();
 			process.ErrorDataReceived -= errorReadLineHandler;
+			//process.StandardError.Close();
 			lock (errorBuilder) {
 				// Same as above. Concat if error was present.
 				result.Error += errorBuilder.ToString();
@@ -238,6 +242,9 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 			// If process is stuck, this will hang Unity on recompile / exit.
 			// Not calling Dispose() in that regard will leak some resources / processes, but that shouldn't be the normal case anyway.
 			if (process.HasExited) {
+				// TODO: This still hangs sometimes. Last fix: added process.CancelOutputRead()
+				//		 Keep an eye if this keeps happening.
+				//		 Useful article: https://newbedev.com/process-sometimes-hangs-while-waiting-for-exit
 				process.Dispose();
 			}
 
