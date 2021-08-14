@@ -38,6 +38,10 @@ Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https:/
 * You don't have to leave Unity to do SVN chores.
 * Works on Windows and MacOS (maybe Linux?).
 * Simple API to integrate with your tools.
+  * Use `WiseSVNIntegration.RequestSilence()` and `WiseSVNIntegration.ClearSilence()` to temporarily suppress any WiseSVN pop-ups.
+  * Use `WiseSVNIntegration.RequestTemporaryDisable()` and `WiseSVNIntegration.ClearTemporaryDisable()` to temporarily disable any WiseSVN handling of file operations and updates.
+  * Use `SVNContextMenusManager` methods to invoke TortoiseSVN / SnailSVN commands.
+  * Use `WiseSVNIntegration.*Async()` methods to run direct SVN commands without any GUI (check `ExampleStatusWindow`).
 
 *Check the screenshots below*
 
