@@ -227,10 +227,12 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 			m_PersonalPrefs.DownloadRepositoryChanges =
 				(SVNPreferencesManager.BoolPreference)EditorGUILayout.EnumPopup(
-					new GUIContent("Check for repository changes", m_DownloadRepositoryChangesHint + "\n\nNOTE: this will override the project setting. Coordinate this with your team.")
+					new GUIContent("Check for repository changes", m_DownloadRepositoryChangesHint + "\n\nNOTE: this will override the project preference. Coordinate this with your team.")
 					, m_PersonalPrefs.DownloadRepositoryChanges);
 
 			EditorGUI.EndDisabledGroup();
+
+			m_PersonalPrefs.SvnCLIPath = EditorGUILayout.TextField(new GUIContent("SVN CLI Path", "Specify SVN CLI (svn.exe) binary path to use or leave empty for the defaults.\n\nNOTE: this will override the project preference. Coordinate this with your team."), m_PersonalPrefs.SvnCLIPath);
 
 			m_PersonalPrefs.ContextMenusClient = (ContextMenusClient)EditorGUILayout.EnumPopup(new GUIContent("Context menus client", "Select what client should be used with the context menus."), m_PersonalPrefs.ContextMenusClient);
 			if (GUI.changed) {
@@ -253,7 +255,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 			m_ProjectPrefs.DownloadRepositoryChanges = EditorGUILayout.Toggle(new GUIContent("Check for repository changes", m_DownloadRepositoryChangesHint), m_ProjectPrefs.DownloadRepositoryChanges);
 
-			m_ProjectPrefs.SvnCLIPath = EditorGUILayout.TextField(new GUIContent("SVN CLI Path", "If you desire to use specific SVN CLI (svn.exe) located in the project, write down its path relative to the project folder."), m_ProjectPrefs.SvnCLIPath);
+			m_ProjectPrefs.SvnCLIPath = EditorGUILayout.TextField(new GUIContent("SVN CLI Path", "Specify SVN CLI (svn.exe) binary path to use or leave empty for the defaults."), m_ProjectPrefs.SvnCLIPath);
 			m_ProjectPrefs.SvnCLIPathMacOS = EditorGUILayout.TextField(new GUIContent("SVN CLI Path MacOS", "Same as above, but for MacOS."), m_ProjectPrefs.SvnCLIPathMacOS);
 
 			m_ProjectPrefs.MoveBehaviour = (SVNMoveBehaviour)EditorGUILayout.EnumPopup(new GUIContent("Assets move behaviour", "Depending on your SVN repository, sometimes you may need to execute move commands as simple add and remove operations, loosing their history. Use with caution.\n(I'm looking at you github that emulates svn)."), m_ProjectPrefs.MoveBehaviour);
