@@ -608,6 +608,11 @@ namespace DevLocker.VersionControl.WiseSVN
 				// svn: E731001: No such host is known.
 				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
 					return LockOperationResult.UnableToConnectError;
+				
+				// Unable to connect to repository indicating some network or server problems.
+				//svn: warning: W160042: Lock failed: newer version of '...' exists
+				if (result.Error.Contains("W160042"))
+					return LockOperationResult.RemoteHasChanges;
 
 				return LockOperationResult.UnknownError;
 			}

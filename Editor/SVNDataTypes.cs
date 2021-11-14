@@ -79,6 +79,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		Success,				// Operation succeeded.
 		LockedByOther,			// File is locked by another working copy (may be the same user). Use Force to enforce the operation.
 		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
+		RemoteHasChanges,		// Newer version of the asset exists in the server repository. Update first.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
 		UnknownError,			// Failed for some reason.
 	}

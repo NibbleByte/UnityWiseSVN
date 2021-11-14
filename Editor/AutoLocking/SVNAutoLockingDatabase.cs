@@ -208,6 +208,16 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			return true;
 		}
 
+		private void RemoveKnownStatusData(SVNStatusData statusData)
+		{
+			for (int i = 0; i < m_KnownData.Count; ++i) {
+				if (m_KnownData[i].Equals(statusData)) {
+					m_KnownData.RemoveAt(i);
+					i--;
+				}
+			}
+		}
+
 		private SVNAsyncOperation<LockOperationResult> EnqueueOperation(SVNAsyncOperation<LockOperationResult>.OperationHandler operationHandler)
 		{
 			var op = new SVNAsyncOperation<LockOperationResult>(operationHandler);
@@ -237,7 +247,13 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			var targetsFileToUse = FileUtil.GetUniqueTempPathInProject();   // Not thread safe - call in main thread only.
 			EnqueueOperation(op => WiseSVNIntegration.LockFiles(lockedByOtherEntries.Select(sd => sd.Path), true, lockMessage, "", targetsFileToUse))
 			.Completed += (op) => {
-				if (op.Result != LockOperationResult.Success) {
+				if (op.Result == LockOperationResult.RemoteHasChanges) {
+					foreach (var failedStatusData in lockedByOtherEntries) {
+						RemoveKnownStatusData(failedStatusData);
+					}
+					Debug.LogWarning($"Auto-locking failed because server repository has newer changes. Please update first. Assets failed to lock:\n{string.Join("\n", lockedByOtherEntries.Select(sd => sd.Path))}");
+					EditorUtility.DisplayDialog("SVN Auto-Locking", "Stealing lock failed. Check the logs for more info.", "I will!");
+				} else if (op.Result != LockOperationResult.Success) {
 					Debug.LogError($"Auto-locking by force failed with result {op.Result} for assets:\n{string.Join("\n", lockedByOtherEntries.Select(sd => sd.Path))}.");
 					EditorUtility.DisplayDialog("SVN Auto-Locking", "Stealing lock failed. Check the logs for more info.", "I will!");
 				} else if (shouldLog) {
@@ -309,7 +325,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 				if (!matched && !autoLockingParam.TargetTypes.HasFlag(AssetType.OtherTypes))
 					continue;
 
-				if (statusData.LockStatus == VCLockStatus.NoLock) {
+				if (statusData.LockStatus == VCLockStatus.NoLock && statusData.RemoteStatus == VCRemoteFileStatus.None) {
 					shouldLock.Add(statusData);
 					continue;
 				}
@@ -356,7 +372,12 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 				var targetsFileToUse = FileUtil.GetUniqueTempPathInProject();   // Not thread safe - call in main thread only.
 				EnqueueOperation(op => WiseSVNIntegration.LockFiles(shouldLock.Select(sd => sd.Path), false, lockMessage, "", targetsFileToUse))
 				.Completed += (op) => {
-					if (op.Result != LockOperationResult.Success) {
+					if (op.Result == LockOperationResult.RemoteHasChanges) {
+						foreach (var failedStatusData in shouldLock) {
+							RemoveKnownStatusData(failedStatusData);
+						}
+						Debug.LogWarning($"Auto-locking failed because server repository has newer changes. Please update first. Assets failed to lock:\n{string.Join("\n", shouldLock.Select(sd => sd.Path))}");
+					} else if (op.Result != LockOperationResult.Success) {
 						Debug.LogError($"Auto-locking failed with result {op.Result} for assets:\n{string.Join("\n", shouldLock.Select(sd => sd.Path))}");
 					} else if (shouldLog) {
 						Debug.Log($"Auto-locked assets:\n{string.Join("\n", shouldLock.Select(sd => sd.Path))}");
