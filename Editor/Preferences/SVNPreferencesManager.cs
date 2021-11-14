@@ -165,12 +165,12 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 				Debug.Log($"Loaded WiseSVN Preferences. WiseSVN is turned {(PersonalPrefs.EnableCoreIntegration ? "on" : "off")}.");
 
-				SVNContextMenusManager.SetupContextType(PersonalPrefs.ContextMenusClient);
-
 				if (PersonalPrefs.EnableCoreIntegration) {
 					CheckSVNSupport();
 				}
 			}
+
+			SVNContextMenusManager.SetupContextType(PersonalPrefs.ContextMenusClient);
 		}
 
 		public GUIContent GetFileStatusIconContent(VCFileStatus status)
