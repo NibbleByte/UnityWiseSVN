@@ -24,6 +24,8 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			public VCLockStatus LockStatus => StatusData.LockStatus;
 			public string Owner => StatusData.LockDetails.Owner;
 
+			public LockEntryData() { }
+
 			public LockEntryData(SVNStatusData statusData)
 			{
 				var assetPath = statusData.Path;
@@ -35,6 +37,9 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 
 				StatusData = statusData;
 				TargetObject = AssetDatabase.LoadMainAssetAtPath(assetPath);
+
+				// Can't lock if there is newer version at the repository.
+				ShouldLock = statusData.RemoteStatus == VCRemoteFileStatus.None;
 			}
 		}
 
@@ -93,6 +98,8 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			const float LockColumnSize = 34;
 			const float OwnerSize = 140f;
 
+			bool needsUpdate = false;
+
 			EditorGUILayout.BeginHorizontal();
 
 			GUILayout.Label("Lock", EditorStyles.boldLabel, GUILayout.Width(LockColumnSize));
@@ -106,6 +113,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			foreach (var lockEntry in m_LockEntries) {
 
 				EditorGUILayout.BeginHorizontal();
+				EditorGUI.BeginDisabledGroup(lockEntry.StatusData.RemoteStatus != VCRemoteFileStatus.None);
 
 				const float LockCheckBoxWidth = 14;
 				GUILayout.Space(LockColumnSize - LockCheckBoxWidth);
@@ -122,10 +130,22 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 					EditorGUILayout.TextField($"({assetComment}) {lockEntry.AssetName}");
 				}
 
-				EditorGUILayout.TextField(lockEntry.Owner, GUILayout.Width(OwnerSize));
+				if (lockEntry.StatusData.RemoteStatus == VCRemoteFileStatus.None) {
+					EditorGUILayout.TextField(lockEntry.Owner, GUILayout.Width(OwnerSize));
+				} else {
+					Color prevColor = GUI.color;
+					GUI.color = Color.yellow;
+					
+					EditorGUILayout.LabelField(new GUIContent("Out of date!", "Can't lock because the server repository has newer changes. You need to update."), GUILayout.Width(OwnerSize));
+					needsUpdate = true;
+
+					GUI.color = prevColor;
+				}
 
 				EditorGUI.EndDisabledGroup();
-
+				
+				EditorGUI.EndDisabledGroup();
+				
 				EditorGUILayout.EndHorizontal();
 			}
 
@@ -142,12 +162,21 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			}
 
 			GUILayout.FlexibleSpace();
+			
+			var prevBackgroundColor = GUI.backgroundColor;
 
+			GUI.backgroundColor = Color.yellow;
+			if (needsUpdate && GUILayout.Button("Update All")) {
+				SVNContextMenusManager.UpdateAll();
+				SVNAutoLockingDatabase.Instance.ClearKnowledge();
+				Close();
+			}
+			
+			GUI.backgroundColor = prevBackgroundColor;
 			if (GUILayout.Button("Skip All")) {
 				Close();
 			}
 
-			var prevColor = GUI.backgroundColor;
 			GUI.backgroundColor = Color.green;
 			if (GUILayout.Button("Force Lock Selected")) {
 				var selectedStatusData = m_LockEntries
@@ -160,7 +189,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 				}
 				Close();
 			}
-			GUI.backgroundColor = prevColor;
+			GUI.backgroundColor = prevBackgroundColor;
 
 			EditorGUILayout.EndHorizontal();
 		}
