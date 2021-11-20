@@ -4,6 +4,8 @@
 
 Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) user interface. A must have plugin if you use SVN as your version control system in your project.
 
+[Assets Store](https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636) | [Unity Forum](https://forum.unity.com/threads/wise-svn-powerful-tortoisesvn-snailsvn-integration.844168/) | [Reddit](https://www.reddit.com/r/Unity3D/comments/fgjovk/finally_a_fully_working_tortoisesvn_snailsvn/)
+
 ## Table of Contents
 [Features](#features)<br />
 [Usage](#usage)<br />
@@ -95,9 +97,3 @@ This is an issue with how Unity works, not the plugin iteself. Unity says its by
 ![Auto-Locking](Docs/Screenshots/WiseSVN-Auto-Lock-By-Force.png)
 
 ![Branch Selector](Docs/Screenshots/WiseSVN-BranchSelector.png)
-
-
-## Community
-* [Assets Store](https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636)
-* [Unity Forum](https://forum.unity.com/threads/wise-svn-powerful-tortoisesvn-snailsvn-integration.844168/)
-* [Reddit](https://www.reddit.com/r/Unity3D/comments/fgjovk/finally_a_fully_working_tortoisesvn_snailsvn/)
