@@ -140,8 +140,11 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			if (statuses.Count >= SanityStatusesLimit) {
-				// If server has many remote changes or locks, don't spam me with overlay icons.
-				statuses = statuses.Where(s => s.Status != VCFileStatus.Normal).ToList();
+				// If server has many remote changes, don't spam me with overlay icons.
+				// Keep showing locked assets or scenes out of date.
+				statuses = statuses
+					.Where(s => s.Status != VCFileStatus.Normal || s.LockStatus != VCLockStatus.NoLock || s.Path.EndsWith(".unity"))
+					.ToList();
 			}
 
 			// HACK: the base class works with the DataType for pending data. Guid won't be used.
@@ -150,6 +153,8 @@ namespace DevLocker.VersionControl.WiseSVN
 				|| s.Status == VCFileStatus.Added
 				|| s.Status == VCFileStatus.Modified
 				|| s.Status == VCFileStatus.Conflicted
+				|| s.LockStatus != VCLockStatus.NoLock 
+				|| s.Path.EndsWith(".unity")
 				)
 				.Select(s => new GuidStatusDatasBind() { MergedStatusData = s })
 				.ToArray();

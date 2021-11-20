@@ -38,6 +38,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 			// When populating the database, should it check for server changes as well (locks & modified files).
 			public BoolPreference DownloadRepositoryChanges = BoolPreference.SameAsProjectPreference;
+			public bool WarnForPotentialConflicts = true;
 
 			public int AutoRefreshDatabaseInterval = 60;    // seconds; Less than 0 will disable it.
 			public ContextMenusClient ContextMenusClient = ContextMenusClient.TortoiseSVN;
@@ -235,7 +236,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			LockStatusIcons[(int)VCLockStatus.LockedOther] = LoadTexture("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon", "Someone else locked this file.\nClick for more details.");
 			LockStatusIcons[(int)VCLockStatus.LockedButStolen] = LoadTexture("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon", "Your lock was stolen by someone else.\nClick for more details.");
 
-			RemoteStatusIcons = LoadTexture("Editor/SVNOverlayIcons/Others/SVNRemoteChangesIcon");
+			RemoteStatusIcons = LoadTexture("Editor/SVNOverlayIcons/Others/SVNRemoteChangesIcon", "Asset is out of date. Update to avoid conflicts.");
 		}
 
 		public static GUIContent LoadTexture(string path, string tooltip = null)
