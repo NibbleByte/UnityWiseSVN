@@ -125,17 +125,24 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private void CheckPrefab()
 		{
-			var stage = UnityEditor.Experimental.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
-			bool prefabIsOpen = stage != null && !string.IsNullOrEmpty(stage.prefabAssetPath);
+			var stage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+
+#if UNITY_2020_1_OR_NEWER
+			string prefabPath = stage?.assetPath ?? string.Empty;
+#else
+			string prefabPath = stage?.prefabAssetPath ?? string.Empty;
+#endif
+
+			bool prefabIsOpen = !string.IsNullOrEmpty(prefabPath);
 			bool prefabWasOpen = !string.IsNullOrEmpty(m_CurrentPrefabPath);
 
 			if (prefabWasOpen != prefabIsOpen) {
-				RefreshPrefabMessage(stage?.prefabAssetPath ?? string.Empty);
+				RefreshPrefabMessage(prefabPath);
 				return;
 			}
 
-			if (prefabIsOpen && m_CurrentPrefabPath != stage.prefabAssetPath) {
-				RefreshPrefabMessage(stage.prefabAssetPath);
+			if (prefabIsOpen && m_CurrentPrefabPath != prefabPath) {
+				RefreshPrefabMessage(prefabPath);
 				return;
 			}
 		}
