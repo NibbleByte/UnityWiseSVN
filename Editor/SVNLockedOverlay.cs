@@ -125,7 +125,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private void CheckPrefab()
 		{
-			var stage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+			var stage = UnityEditor.Experimental.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
 
 #if UNITY_2020_1_OR_NEWER
 			string prefabPath = stage?.assetPath ?? string.Empty;
