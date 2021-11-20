@@ -22,6 +22,7 @@ Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https:/
 * **Show overlay svn status icons**
   * Show server changes that you need to update.
   * Show locked files by you and your colleges. 
+* Displays warning in the SceneView when the current scene or edited prefab is out of date or locked.
 * Auto-Lock assets by path and type
   * Modified files (asset or meta) that match specified path and type will be automatically locked.
   * When files are locked by someone else a prompt will be shown allowing users to steal the lock by force.
