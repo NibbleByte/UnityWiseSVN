@@ -224,13 +224,13 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		[MenuItem("Assets/SVN/Revert All", false, -800)]
 		public static void RevertAll()
 		{
-			m_Integration?.Revert(GetRootAssetPath(), false);
+			m_Integration?.Revert(GetRootAssetPath(), false, true);
 		}
 
 		[MenuItem("Assets/SVN/Revert", false, -800)]
 		public static void RevertSelected()
 		{
-			m_Integration?.Revert(GetSelectedAssetPaths(), true);
+			m_Integration?.Revert(GetSelectedAssetPaths(), true, true);
 		}
 
 		public static void Revert(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
