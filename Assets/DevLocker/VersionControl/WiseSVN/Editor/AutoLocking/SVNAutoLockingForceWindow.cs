@@ -157,7 +157,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 
 			if (GUILayout.Button("Toggle Selected")) {
 				foreach(var lockEntry in m_LockEntries) {
-					lockEntry.ShouldLock = !lockEntry.ShouldLock;
+					lockEntry.ShouldLock = !lockEntry.ShouldLock && lockEntry.StatusData.RemoteStatus == VCRemoteFileStatus.None;
 				}
 			}
 

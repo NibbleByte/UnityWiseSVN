@@ -230,6 +230,13 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 					new GUIContent("Check for repository changes", m_DownloadRepositoryChangesHint + "\n\nNOTE: this will override the project preference. Coordinate this with your team.")
 					, m_PersonalPrefs.DownloadRepositoryChanges);
 
+			bool downloadChangesEnabled = m_PersonalPrefs.DownloadRepositoryChanges == SVNPreferencesManager.BoolPreference.Enabled ||
+										  m_PersonalPrefs.DownloadRepositoryChanges == SVNPreferencesManager.BoolPreference.SameAsProjectPreference && m_ProjectPrefs.DownloadRepositoryChanges;
+
+			EditorGUI.BeginDisabledGroup(!downloadChangesEnabled);
+			m_PersonalPrefs.WarnForPotentialConflicts = EditorGUILayout.Toggle(new GUIContent("Warn for potential conflicts", "Display warning in the SceneView when the current scene or edited prefab is out of date or locked."), m_PersonalPrefs.WarnForPotentialConflicts);
+			EditorGUI.EndDisabledGroup();
+
 			EditorGUI.EndDisabledGroup();
 
 			m_PersonalPrefs.SvnCLIPath = EditorGUILayout.TextField(new GUIContent("SVN CLI Path", "Specify SVN CLI (svn.exe) binary path to use or leave empty for the defaults.\n\nNOTE: this will override the project preference. Coordinate this with your team."), m_PersonalPrefs.SvnCLIPath);
