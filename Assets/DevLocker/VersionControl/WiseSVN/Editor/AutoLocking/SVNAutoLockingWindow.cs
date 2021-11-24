@@ -55,7 +55,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 
 		public static void PromptLock(IEnumerable<SVNStatusData> shouldLockEntries, IEnumerable<SVNStatusData> lockedByOtherEntries)
 		{
-			var window = GetWindow<SVNAutoLockingWindow>(true, "SVN Lock Wizard");
+			var window = GetWindow<SVNAutoLockingWindow>(true, "SVN Lock Modified Assets");
 			window.minSize = new Vector2(584, 500f);
 			var center = new Vector2(Screen.currentResolution.width, Screen.currentResolution.height) / 2f;
 			window.position = new Rect(center - window.position.size / 2, window.position.size);
@@ -75,7 +75,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 
 		void OnGUI()
 		{
-			EditorGUILayout.LabelField("Lock Selected Assets", EditorStyles.boldLabel);
+			EditorGUILayout.LabelField("Lock Modified Assets", EditorStyles.boldLabel);
 
 			m_WhatAreLocksHintShown = EditorGUILayout.Foldout(m_WhatAreLocksHintShown, "What are locks?");
 			if (m_WhatAreLocksHintShown) {
