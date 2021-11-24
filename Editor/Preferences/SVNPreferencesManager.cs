@@ -53,7 +53,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		[Serializable]
 		internal class ProjectPreferences
 		{
-			public bool DownloadRepositoryChanges = false;
+			public bool DownloadRepositoryChanges = true;
 
 			// Use PlatformSvnCLIPath instead as it is platform independent.
 			public string SvnCLIPath = string.Empty;
