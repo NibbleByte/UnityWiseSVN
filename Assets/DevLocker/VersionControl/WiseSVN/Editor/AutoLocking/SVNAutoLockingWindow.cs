@@ -10,7 +10,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 	/// <summary>
 	/// Popup that prompts user should it force-lock changed assets.
 	/// </summary>
-	public class SVNAutoLockingForceWindow : EditorWindow
+	public class SVNAutoLockingWindow : EditorWindow
 	{
 		[Serializable]
 		private class LockEntryData
@@ -23,6 +23,9 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			public string AssetName => System.IO.Path.GetFileName(StatusData.Path);
 			public VCLockStatus LockStatus => StatusData.LockStatus;
 			public string Owner => StatusData.LockDetails.Owner;
+
+			public bool LockedByOther => LockStatus == VCLockStatus.LockedOther
+			                             || LockStatus == VCLockStatus.LockedButStolen;
 
 			public LockEntryData() { }
 
@@ -38,28 +41,31 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 				StatusData = statusData;
 				TargetObject = AssetDatabase.LoadMainAssetAtPath(assetPath);
 
-				// Can't lock if there is newer version at the repository.
-				ShouldLock = statusData.RemoteStatus == VCRemoteFileStatus.None;
+				// Can't lock if there is newer version at the repository or locked by others.
+				ShouldLock = statusData.RemoteStatus == VCRemoteFileStatus.None && !LockedByOther;
 			}
 		}
 
 		private bool m_WhatAreLocksHintShown = false;
 		private bool m_WhatIsForceLocksHintShown = false;
+
+		private bool m_AllowStealingLocks = false;
 		private List<LockEntryData> m_LockEntries = new List<LockEntryData>();
 		private Vector2 m_LockEntriesScroll;
 
-		public static void PromptForceLock(IEnumerable<SVNStatusData> lockedByOtherEntries)
+		public static void PromptLock(IEnumerable<SVNStatusData> shouldLockEntries, IEnumerable<SVNStatusData> lockedByOtherEntries)
 		{
-			var window = GetWindow<SVNAutoLockingForceWindow>(true, "SVN Auto-Lock by Force");
+			var window = GetWindow<SVNAutoLockingWindow>(true, "SVN Lock Wizard");
 			window.minSize = new Vector2(584, 500f);
 			var center = new Vector2(Screen.currentResolution.width, Screen.currentResolution.height) / 2f;
 			window.position = new Rect(center - window.position.size / 2, window.position.size);
 			window.AppendEntriesToLock(lockedByOtherEntries);
+			window.AppendEntriesToLock(shouldLockEntries);
 		}
 
-		private void AppendEntriesToLock(IEnumerable<SVNStatusData> lockedByOtherEntries)
+		private void AppendEntriesToLock(IEnumerable<SVNStatusData> entries)
 		{
-			var toAdd = lockedByOtherEntries
+			var toAdd = entries
 				.Where(sd => m_LockEntries.All(e => e.StatusData.Path != sd.Path))
 				.Select(sd => new LockEntryData(sd))
 				;
@@ -69,7 +75,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 
 		void OnGUI()
 		{
-			EditorGUILayout.LabelField("Lock Assets by Force", EditorStyles.boldLabel);
+			EditorGUILayout.LabelField("Lock Selected Assets", EditorStyles.boldLabel);
 
 			m_WhatAreLocksHintShown = EditorGUILayout.Foldout(m_WhatAreLocksHintShown, "What are locks?");
 			if (m_WhatAreLocksHintShown) {
@@ -82,12 +88,16 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 				EditorGUILayout.Space();
 			}
 
-			m_WhatIsForceLocksHintShown = EditorGUILayout.Foldout(m_WhatIsForceLocksHintShown, "What is \"lock by force \"?");
-			if (m_WhatIsForceLocksHintShown) {
-				EditorGUILayout.HelpBox("These assets have local changes and are all locked by someone else. You can steal their lock by force.\n" +
-					"They are probably working on these asset and by committing your changes you risk others having conflicts in the future.\n\n" +
-					"Coordinate with the locks' owner and select which assets you want to lock by force.",
-					MessageType.Info, true);
+			m_AllowStealingLocks = EditorGUILayout.Toggle("Steal locks by force", m_AllowStealingLocks);
+
+			if (m_AllowStealingLocks) {
+				m_WhatIsForceLocksHintShown = EditorGUILayout.Foldout(m_WhatIsForceLocksHintShown, "What is \"Steal locks by force\"?");
+				if (m_WhatIsForceLocksHintShown) {
+					EditorGUILayout.HelpBox("These assets have local changes and are all locked by someone else. You can steal their lock by force.\n" +
+					                        "They are probably working on these asset and by committing your changes you risk others having conflicts in the future.\n\n" +
+					                        "Coordinate with the locks' owner and select which assets you want to lock by force.",
+						MessageType.Info, true);
+				}
 			}
 
 			EditorGUILayout.HelpBox(
@@ -113,11 +123,17 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			foreach (var lockEntry in m_LockEntries) {
 
 				EditorGUILayout.BeginHorizontal();
-				EditorGUI.BeginDisabledGroup(lockEntry.StatusData.RemoteStatus != VCRemoteFileStatus.None);
+
+				bool shouldDisableRow = lockEntry.StatusData.RemoteStatus != VCRemoteFileStatus.None;
+				if (!m_AllowStealingLocks) {
+					shouldDisableRow = shouldDisableRow || lockEntry.LockedByOther;
+				}
+
+				EditorGUI.BeginDisabledGroup(shouldDisableRow);
 
 				const float LockCheckBoxWidth = 14;
 				GUILayout.Space(LockColumnSize - LockCheckBoxWidth);
-				lockEntry.ShouldLock = EditorGUILayout.Toggle(lockEntry.ShouldLock, GUILayout.Width(LockCheckBoxWidth));
+				lockEntry.ShouldLock = EditorGUILayout.Toggle(lockEntry.ShouldLock, GUILayout.Width(LockCheckBoxWidth)) && !shouldDisableRow;
 
 				EditorGUI.BeginDisabledGroup(!lockEntry.ShouldLock);
 
@@ -131,11 +147,15 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 				}
 
 				if (lockEntry.StatusData.RemoteStatus == VCRemoteFileStatus.None) {
-					EditorGUILayout.TextField(lockEntry.Owner, GUILayout.Width(OwnerSize));
+					if (lockEntry.LockedByOther) {
+						EditorGUILayout.TextField(lockEntry.Owner, GUILayout.Width(OwnerSize));
+					} else {
+						EditorGUILayout.LabelField("", GUILayout.Width(OwnerSize));
+					}
 				} else {
 					Color prevColor = GUI.color;
 					GUI.color = Color.yellow;
-					
+
 					EditorGUILayout.LabelField(new GUIContent("Out of date!", "Can't lock because the server repository has newer changes. You need to update."), GUILayout.Width(OwnerSize));
 					needsUpdate = true;
 
@@ -143,9 +163,9 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 				}
 
 				EditorGUI.EndDisabledGroup();
-				
+
 				EditorGUI.EndDisabledGroup();
-				
+
 				EditorGUILayout.EndHorizontal();
 			}
 
@@ -157,12 +177,18 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 
 			if (GUILayout.Button("Toggle Selected")) {
 				foreach(var lockEntry in m_LockEntries) {
-					lockEntry.ShouldLock = !lockEntry.ShouldLock && lockEntry.StatusData.RemoteStatus == VCRemoteFileStatus.None;
+
+					bool lockConflict = lockEntry.StatusData.RemoteStatus != VCRemoteFileStatus.None;
+					if (!m_AllowStealingLocks) {
+						lockConflict = lockConflict || lockEntry.LockedByOther;
+					}
+
+					lockEntry.ShouldLock = !lockEntry.ShouldLock && !lockConflict;
 				}
 			}
 
 			GUILayout.FlexibleSpace();
-			
+
 			var prevBackgroundColor = GUI.backgroundColor;
 
 			GUI.backgroundColor = Color.yellow;
@@ -171,21 +197,23 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 				SVNAutoLockingDatabase.Instance.ClearKnowledge();
 				Close();
 			}
-			
+
 			GUI.backgroundColor = prevBackgroundColor;
 			if (GUILayout.Button("Skip All")) {
 				Close();
 			}
 
-			GUI.backgroundColor = Color.green;
-			if (GUILayout.Button("Force Lock Selected")) {
+			GUI.backgroundColor = m_AllowStealingLocks ? Color.red : Color.green;
+			var lockSelectedButtonText = m_AllowStealingLocks ? "Lock OR STEAL Selected" : "Lock Selected";
+
+			if (GUILayout.Button(lockSelectedButtonText)) {
 				var selectedStatusData = m_LockEntries
 					.Where(e => e.ShouldLock)
 					.Select(e => e.StatusData)
-					;
+					.ToList();
 
 				if (selectedStatusData.Any()) {
-					SVNAutoLockingDatabase.Instance.ForceLock(selectedStatusData);
+					SVNAutoLockingDatabase.Instance.LockEntries(selectedStatusData, m_AllowStealingLocks);
 				}
 				Close();
 			}

@@ -73,6 +73,9 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			[Tooltip(LockMessageHint)]
 			public string AutoLockMessage = "Auto-locked.";
 
+			[Tooltip("Automatically unlock if asset becomes unmodified (i.e. you reverted the asset).")]
+			public bool AutoUnlockIfUnmodified = false;
+
 #if UNITY_2020_2_OR_NEWER
 			// Because we are rendering this list manually.
 			[NonReorderable]

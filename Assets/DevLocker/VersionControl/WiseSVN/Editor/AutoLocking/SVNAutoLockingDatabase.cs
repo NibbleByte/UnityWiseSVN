@@ -208,14 +208,16 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			return true;
 		}
 
-		private void RemoveKnownStatusData(SVNStatusData statusData)
+		private bool RemoveKnownStatusData(SVNStatusData statusData)
 		{
 			for (int i = 0; i < m_KnownData.Count; ++i) {
-				if (m_KnownData[i].Equals(statusData)) {
+				if (m_KnownData[i].Path == statusData.Path) {
 					m_KnownData.RemoveAt(i);
-					i--;
+					return true;
 				}
 			}
+
+			return false;
 		}
 
 		private SVNAsyncOperation<LockOperationResult> EnqueueOperation(SVNAsyncOperation<LockOperationResult>.OperationHandler operationHandler)
@@ -239,25 +241,29 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			}
 		}
 
-		public void ForceLock(IEnumerable<SVNStatusData> lockedByOtherEntries)
+		public void LockEntries(IEnumerable<SVNStatusData> entries, bool forceLock)
 		{
 			var shouldLog = SVNPreferencesManager.Instance.PersonalPrefs.TraceLogs.HasFlag(SVNTraceLogs.SVNOperations);
 			var lockMessage = SVNPreferencesManager.Instance.ProjectPrefs.AutoLockMessage;
 
+			var entriesList = entries.ToList();
+			if (entriesList.Count == 0)
+				return;
+
 			var targetsFileToUse = FileUtil.GetUniqueTempPathInProject();   // Not thread safe - call in main thread only.
-			EnqueueOperation(op => WiseSVNIntegration.LockFiles(lockedByOtherEntries.Select(sd => sd.Path), true, lockMessage, "", targetsFileToUse))
+			EnqueueOperation(op => WiseSVNIntegration.LockFiles(entriesList.Select(sd => sd.Path), forceLock, lockMessage, "", targetsFileToUse))
 			.Completed += (op) => {
 				if (op.Result == LockOperationResult.RemoteHasChanges) {
-					foreach (var failedStatusData in lockedByOtherEntries) {
+					foreach (var failedStatusData in entriesList) {
 						RemoveKnownStatusData(failedStatusData);
 					}
-					Debug.LogWarning($"Auto-locking failed because server repository has newer changes. Please update first. Assets failed to lock:\n{string.Join("\n", lockedByOtherEntries.Select(sd => sd.Path))}");
-					EditorUtility.DisplayDialog("SVN Auto-Locking", "Stealing lock failed. Check the logs for more info.", "I will!");
+					Debug.LogWarning($"Locking failed because server repository has newer changes. Please update first. Assets failed to lock:\n{string.Join("\n", entriesList.Select(sd => sd.Path))}");
+					EditorUtility.DisplayDialog("SVN Locking", "Lock failed. Check the logs for more info.", "I will!");
 				} else if (op.Result != LockOperationResult.Success) {
-					Debug.LogError($"Auto-locking by force failed with result {op.Result} for assets:\n{string.Join("\n", lockedByOtherEntries.Select(sd => sd.Path))}.");
+					Debug.LogError($"Locking failed with result {op.Result} for assets:\n{string.Join("\n", entriesList.Select(sd => sd.Path))}.");
 					EditorUtility.DisplayDialog("SVN Auto-Locking", "Stealing lock failed. Check the logs for more info.", "I will!");
 				} else if (shouldLog) {
-					Debug.Log($"Auto-locked assets by force:\n{string.Join("\n", lockedByOtherEntries.Select(sd => sd.Path))}");
+					Debug.Log($"Locked assets:\n{string.Join("\n", entriesList.Select(sd => sd.Path))}");
 				}
 			};
 
@@ -285,7 +291,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 				}
 			}
 
-			m_KnownData.RemoveAll(known => !statusDatabaseData.Any(unknown => known.Path == unknown.Path));
+			m_KnownData.RemoveAll(known => statusDatabaseData.All(unknown => known.Path != unknown.Path));
 
 			var shouldLock = new List<SVNStatusData>(newEntries.Count);
 			var lockedByOtherEntries = new List<SVNStatusData>(newEntries.Count);
@@ -327,44 +333,49 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 
 				if (statusData.LockStatus == VCLockStatus.NoLock && statusData.RemoteStatus == VCRemoteFileStatus.None) {
 					shouldLock.Add(statusData);
-					continue;
-				}
-
-				lockedByOtherEntries.Add(statusData);
-			}
-
-			// Check for old assets to unlock.
-			foreach(var statusData in statusDatabaseData) {
-
-				if (statusData.Status != VCFileStatus.Normal)
-					continue;
-
-				var assetPath = statusData.Path;
-				if (statusData.Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase)) {
-					assetPath = statusData.Path.Substring(0, statusData.Path.LastIndexOf(".meta"));
-				}
-				assetPath = assetPath.Replace("\\", "/");
-
-				var autoLockingParam = m_ProjectPrefs.AutoLockingParameters
-					.FirstOrDefault(al => assetPath.StartsWith(al.TargetFolder, StringComparison.OrdinalIgnoreCase));
-
-				if (string.IsNullOrEmpty(autoLockingParam.TargetFolder))
-					continue;
-
-				if (SVNPreferencesManager.ShouldExclude(autoLockingParam.Exclude, assetPath))
-					continue;
-
-				bool matched = IsAssetOfType(assetPath, autoLockingParam.TargetTypes, false);
-				if (!matched && !autoLockingParam.TargetTypes.HasFlag(AssetType.OtherTypes))
-					continue;
-
-				if (statusData.LockStatus != VCLockStatus.NoLock && statusData.LockStatus != VCLockStatus.LockedOther) {
-					shouldUnlock.Add(statusData);
+				} else {
+					lockedByOtherEntries.Add(statusData);
 				}
 			}
 
+			if (m_ProjectPrefs.AutoUnlockIfUnmodified) {
+
+				// Check for old assets to unlock.
+				foreach (var statusData in statusDatabaseData) {
+
+					if (statusData.Status != VCFileStatus.Normal)
+						continue;
+
+					var assetPath = statusData.Path;
+					if (statusData.Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase)) {
+						assetPath = statusData.Path.Substring(0, statusData.Path.LastIndexOf(".meta"));
+					}
+
+					assetPath = assetPath.Replace("\\", "/");
+
+					var autoLockingParam = m_ProjectPrefs.AutoLockingParameters
+						.FirstOrDefault(al => assetPath.StartsWith(al.TargetFolder, StringComparison.OrdinalIgnoreCase));
+
+					if (string.IsNullOrEmpty(autoLockingParam.TargetFolder))
+						continue;
+
+					if (SVNPreferencesManager.ShouldExclude(autoLockingParam.Exclude, assetPath))
+						continue;
+
+					bool matched = IsAssetOfType(assetPath, autoLockingParam.TargetTypes, false);
+					if (!matched && !autoLockingParam.TargetTypes.HasFlag(AssetType.OtherTypes))
+						continue;
+
+					if (statusData.LockStatus != VCLockStatus.NoLock && statusData.LockStatus != VCLockStatus.LockedOther) {
+						shouldUnlock.Add(statusData);
+					}
+				}
+			}
 
 			var shouldLog = SVNPreferencesManager.Instance.PersonalPrefs.TraceLogs.HasFlag(SVNTraceLogs.SVNOperations);
+
+			// Auto-locking has been removed. User needs to explicitly select what to lock and what not.
+			/*
 			var lockMessage = SVNPreferencesManager.Instance.ProjectPrefs.AutoLockMessage;
 
 			if (shouldLock.Count > 0) {
@@ -384,6 +395,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 					}
 				};
 			}
+			*/
 
 			if (shouldUnlock.Count > 0) {
 				var targetsFileToUse = FileUtil.GetUniqueTempPathInProject();   // Not thread safe - call in main thread only.
@@ -400,8 +412,8 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 				};
 			}
 
-			if (lockedByOtherEntries.Count > 0) {
-				SVNAutoLockingForceWindow.PromptForceLock(lockedByOtherEntries);
+			if (shouldLock.Count > 0 || lockedByOtherEntries.Count > 0) {
+				SVNAutoLockingWindow.PromptLock(shouldLock, lockedByOtherEntries);
 			}
 
 			if (m_PendingOperations.Count > 0 && m_HasPendingOperations == false) {

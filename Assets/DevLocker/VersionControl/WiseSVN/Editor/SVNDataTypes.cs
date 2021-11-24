@@ -180,6 +180,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				&& SwitchedExternalStatus == other.SwitchedExternalStatus
 				&& LockStatus == other.LockStatus
 				&& RemoteStatus == other.RemoteStatus
+				&& LockDetails.Equals(other.LockDetails)
 				;
 		}
 
@@ -203,6 +204,15 @@ namespace DevLocker.VersionControl.WiseSVN
 		public bool IsValid => !string.IsNullOrEmpty(Path);
 
 		public static LockDetails Empty => new LockDetails() {Path = string.Empty, Owner = string.Empty, Message = string.Empty, Date = string.Empty};
+
+		public bool Equals(LockDetails other)
+		{
+			return Path == other.Path
+			       && Owner == other.Owner
+			       && Message == other.Message
+			       && Date == other.Date
+				;
+		}
 	}
 
 	public struct SVNStatusDataOptions

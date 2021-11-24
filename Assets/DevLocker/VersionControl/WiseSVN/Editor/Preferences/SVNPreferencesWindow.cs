@@ -294,6 +294,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				}
 
 				EditorGUILayout.PropertyField(sp.FindPropertyRelative("AutoLockMessage"), new GUIContent("Lock Message", SVNPreferencesManager.ProjectPreferences.LockMessageHint));
+				
+				EditorGUILayout.PropertyField(sp.FindPropertyRelative("AutoUnlockIfUnmodified"));
 
 				//EditorGUILayout.PropertyField(sp.FindPropertyRelative("AutoLockingParameters"));
 

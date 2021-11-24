@@ -131,9 +131,9 @@ namespace DevLocker.VersionControl.WiseSVN
 							          $"Lock Status: {ObjectNames.NicifyVariableName(knownStatusData.LockStatus.ToString())}\n" +
 							          $"Owner: {knownStatusData.LockDetails.Owner}\n" +
 							          $"Date: {dateStr}\n" +
-							          $"Message:\n{knownStatusData.LockDetails.Message}";
+							          $"Message:\n{knownStatusData.LockDetails.Message}\n";
 						}
-						EditorUtility.DisplayDialog("SVN Lock Details", details, "Ok");
+						EditorUtility.DisplayDialog("SVN Lock Details", details.TrimEnd('\n'), "Ok");
 					}
 				}
 			}
