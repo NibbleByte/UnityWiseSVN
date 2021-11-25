@@ -6,7 +6,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace DevLocker.VersionControl.WiseSVN.LockPrompt
+namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 {
 	/// <summary>
 	/// Listens for newly modified assets and notifies user if they were locked.

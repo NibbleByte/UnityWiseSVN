@@ -1,7 +1,7 @@
 using DevLocker.VersionControl.WiseSVN.Preferences;
 using UnityEditor;
 
-namespace DevLocker.VersionControl.WiseSVN.LockPrompt
+namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 {
 	/// <summary>
 	/// Starts the database if enabled.
