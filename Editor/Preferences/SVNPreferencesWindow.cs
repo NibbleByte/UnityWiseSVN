@@ -1,4 +1,4 @@
-using DevLocker.VersionControl.WiseSVN.AutoLocking;
+using DevLocker.VersionControl.WiseSVN.LockPrompt;
 using DevLocker.VersionControl.WiseSVN.Branches;
 using DevLocker.VersionControl.WiseSVN.ContextMenus;
 using System;
@@ -52,8 +52,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			window.m_PersonalPrefs = SVNPreferencesManager.Instance.PersonalPrefs.Clone();
 			window.m_ProjectPrefs = SVNPreferencesManager.Instance.ProjectPrefs.Clone();
 			window.ShowUtility();
-			window.position = new Rect(500f, 250f, 520f, 400f);
-			window.minSize = new Vector2(520f, 400f);
+			window.position = new Rect(500f, 250f, 550f, 400f);
+			window.minSize = new Vector2(550f, 400f);
 			window.m_SelectedTab = tab;
 		}
 
@@ -67,7 +67,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		private Vector2 m_ProjectPreferencesScroll;
 		private const string m_DownloadRepositoryChangesHint = "Work online - will ask the repository if there are any changes on the server.\nEnabling this will show locks and out of date additional icons.\nRefreshes might be slower due to the network communication, but shouldn't slow down your editor.";
 
-		private bool m_FoldAutoLockHint = true;
+		private bool m_FoldLockPromptHint = true;
 		private bool m_FoldBranchesDatabaseHint = true;
 
 		private SerializedObject m_SerializedObject;
@@ -117,7 +117,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 					if (m_PersonalPrefs.EnableCoreIntegration) {
 						SVNStatusesDatabase.Instance.InvalidateDatabase();
 						SVNBranchesDatabase.Instance.InvalidateDatabase();
-						SVNAutoLockingDatabaseStarter.TryStartIfNeeded();
+						SVNLockPromptDatabaseStarter.TryStartIfNeeded();
 					}
 				}
 				GUI.backgroundColor = prevColor;
@@ -158,20 +158,20 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			m_ProjectPrefs.SvnCLIPathMacOS = SVNPreferencesManager.SanitizeUnityPath(m_ProjectPrefs.SvnCLIPathMacOS);
 			m_ProjectPrefs.Exclude = SanitizePathsList(m_ProjectPrefs.Exclude);
 
-			if (m_ProjectPrefs.EnableAutoLocking) {
+			if (m_ProjectPrefs.EnableLockPrompt) {
 
-				if (m_ProjectPrefs.AutoLockingParameters.Count == 0) {
-					EditorUtility.DisplayDialog("Auto-Locking", "In order to use auto-locking, you must provide at least one auto-locking parameters element.\n\nAuto-Locking will be disabled.", "Ok");
-					m_ProjectPrefs.EnableAutoLocking = false;
+				if (m_ProjectPrefs.LockPromptParameters.Count == 0) {
+					EditorUtility.DisplayDialog("Lock Prompt", "In order to use lock prompts, you must provide at least one lock prompt parameters element.\n\nLock Prompt will be disabled.", "Ok");
+					m_ProjectPrefs.EnableLockPrompt = false;
 				}
 
-				m_ProjectPrefs.AutoLockingParameters = m_ProjectPrefs.AutoLockingParameters
+				m_ProjectPrefs.LockPromptParameters = m_ProjectPrefs.LockPromptParameters
 					.Select(sp => sp.Sanitized())
 					.ToList();
 
-				if (m_ProjectPrefs.AutoLockingParameters.Any(sp => !sp.IsValid)) {
-					EditorUtility.DisplayDialog("Auto-Locking", "Some of the auto-locking parameters have invalid data. Please fix it.\n\nAuto-Locking will be disabled.", "Ok");
-					m_ProjectPrefs.EnableAutoLocking = false;
+				if (m_ProjectPrefs.LockPromptParameters.Any(sp => !sp.IsValid)) {
+					EditorUtility.DisplayDialog("Lock Prompt", "Some of the lock prompt parameters have invalid data. Please fix it.\n\nLock Prompt will be disabled.", "Ok");
+					m_ProjectPrefs.EnableLockPrompt = false;
 				}
 			}
 
@@ -268,50 +268,50 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			m_ProjectPrefs.MoveBehaviour = (SVNMoveBehaviour)EditorGUILayout.EnumPopup(new GUIContent("Assets move behaviour", "Depending on your SVN repository, sometimes you may need to execute move commands as simple add and remove operations, loosing their history. Use with caution.\n(I'm looking at you github that emulates svn)."), m_ProjectPrefs.MoveBehaviour);
 
 			if (!m_PersonalPrefs.PopulateStatusesDatabase) {
-				EditorGUILayout.HelpBox("Auto-locking requires enabled overlay icons support from the Personal preferences!", MessageType.Warning);
+				EditorGUILayout.HelpBox("Lock prompts require enabled overlay icons support from the Personal preferences!", MessageType.Warning);
 			}
 			EditorGUI.BeginDisabledGroup(!m_PersonalPrefs.PopulateStatusesDatabase);
 
-			m_ProjectPrefs.EnableAutoLocking = EditorGUILayout.Toggle(new GUIContent("Enable Auto-Locking", "Automatically svn lock asset when it or its meta file gets modified."), m_ProjectPrefs.EnableAutoLocking);
-			if (m_ProjectPrefs.EnableAutoLocking) {
+			m_ProjectPrefs.EnableLockPrompt = EditorGUILayout.Toggle(new GUIContent("Enable Lock Prompts", "Prompt user to lock assets when it or its meta becomes modified."), m_ProjectPrefs.EnableLockPrompt);
+			if (m_ProjectPrefs.EnableLockPrompt) {
 				EditorGUI.indentLevel++;
 
-				m_FoldAutoLockHint = EditorGUILayout.Foldout(m_FoldAutoLockHint, "Auto-Locking Hint:");
-				var autolockHint = "Every time the user modifies any asset or its meta, svn lock will be executed (unless already locked).\n" +
-								   "If asset is already locked by others and was NOT modified locally before, warning will be shown to the user.\n" +
-								   "SVN lock will be executed on all matching modified assets on start up as well.\n\n" +
-								   "Describe below what asset folders and asset types should be monitored for auto-locking.\n" +
+				m_FoldLockPromptHint = EditorGUILayout.Foldout(m_FoldLockPromptHint, "Lock Prompt Hint:");
+				var lockPromptHint = "If asset or its meta becomes modified a pop-up window will prompt the user to lock or ignore it.\n" +
+								   "It shows if modified assets are locked by others or out of date, which prevents locking them.\n" +
+								   "If left unlocked, the window won't prompt again for those assets.\n" +
+								   "On editor startup user will be prompted again for all modified unlocked assets.\n\n" +
+								   "Describe below what asset folders and asset types should be monitored for locking.\n" +
 								   "To monitor the whole project, type in \"Assets\" for TargetFolder\n" +
-								   "Coordinate this with your team.\n" +
+								   "Coordinate this with your team and commit the preference.\n" +
 								   "Must have at least one entry to work properly."
 
 					;
-				if (m_FoldAutoLockHint) {
+
+				if (m_FoldLockPromptHint) {
 					EditorGUILayout.BeginHorizontal();
 					GUILayout.Space((EditorGUI.indentLevel + 1) * 16f);
-					GUILayout.Label(autolockHint, EditorStyles.helpBox);
+					GUILayout.Label(lockPromptHint, EditorStyles.helpBox);
 					EditorGUILayout.EndHorizontal();
 				}
 
-				EditorGUILayout.PropertyField(sp.FindPropertyRelative("AutoLockMessage"), new GUIContent("Lock Message", SVNPreferencesManager.ProjectPreferences.LockMessageHint));
-				
+				EditorGUILayout.PropertyField(sp.FindPropertyRelative("LockPromptMessage"), new GUIContent("Lock Message", SVNPreferencesManager.ProjectPreferences.LockMessageHint));
+
 				EditorGUILayout.PropertyField(sp.FindPropertyRelative("AutoUnlockIfUnmodified"));
 
-				//EditorGUILayout.PropertyField(sp.FindPropertyRelative("AutoLockingParameters"));
-
 				// HACK: PropertyDrawers are not drawn in EditorWindow! Draw everything manually to have custom stuff!
-				var alProperty = sp.FindPropertyRelative("AutoLockingParameters").Copy();
+				var alProperty = sp.FindPropertyRelative("LockPromptParameters").Copy();
 				var alPropertyEnd = alProperty.GetEndProperty();
 
 				var prevIndentLevel = EditorGUI.indentLevel;
 
-				EditorGUILayout.PropertyField(alProperty, false);   // Draw the AutoLockingParameters itself always.
+				EditorGUILayout.PropertyField(alProperty, false);   // Draw the LockPromptParameters itself always.
 
 				while (alProperty.NextVisible(alProperty.isExpanded) && !SerializedProperty.EqualContents(alProperty, alPropertyEnd)) {
 					EditorGUI.indentLevel = prevIndentLevel + alProperty.depth - 1;
 
 					var label = new GUIContent(alProperty.displayName);
-					label.tooltip = GetSerializedPropertyTooltip<AutoLockingParameters>(alProperty, false);
+					label.tooltip = GetSerializedPropertyTooltip<LockPromptParameters>(alProperty, false);
 
 					if (alProperty.type == "Enum") {
 						// HACK: If it is enum, it is probably AssetType. No real way to know (unless by field name)!

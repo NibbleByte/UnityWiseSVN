@@ -107,7 +107,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				Depth = SVNStatusDataOptions.SearchDepth.Infinity,
 				RaiseError = false,
 				Timeout = WiseSVNIntegration.ONLINE_COMMAND_TIMEOUT * 2,
-				Offline = !SVNPreferencesManager.Instance.DownloadRepositoryChanges && !SVNPreferencesManager.Instance.ProjectPrefs.EnableAutoLocking,
+				Offline = !SVNPreferencesManager.Instance.DownloadRepositoryChanges && !SVNPreferencesManager.Instance.ProjectPrefs.EnableLockPrompt,
 				FetchLockOwner = true,
 			};
 
@@ -153,7 +153,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				|| s.Status == VCFileStatus.Added
 				|| s.Status == VCFileStatus.Modified
 				|| s.Status == VCFileStatus.Conflicted
-				|| s.LockStatus != VCLockStatus.NoLock 
+				|| s.LockStatus != VCLockStatus.NoLock
 				|| s.Path.EndsWith(".unity")
 				)
 				.Select(s => new GuidStatusDatasBind() { MergedStatusData = s })
@@ -195,7 +195,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (statusData.Status != VCFileStatus.Deleted)
 						continue;
 
-					// HACK: Deleted assets don't have guids, but we still want to keep track of them (Auto-Locking for example).
+					// HACK: Deleted assets don't have guids, but we still want to keep track of them (Lock prompt for example).
 					//		 As long as this is unique it will work.
 					guid = assetPath;
 				}

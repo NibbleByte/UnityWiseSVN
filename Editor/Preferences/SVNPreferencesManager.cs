@@ -66,12 +66,12 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 #endif
 			public SVNMoveBehaviour MoveBehaviour = SVNMoveBehaviour.NormalSVNMove;
 
-			// Enable auto svn locking on asset modify.
-			public bool EnableAutoLocking = false;
+			// Enable lock prompts on asset modify.
+			public bool EnableLockPrompt = false;
 
-			public const string LockMessageHint = "Message used when auto-locking.";
+			public const string LockMessageHint = "Message used when locked after prompting the user.";
 			[Tooltip(LockMessageHint)]
-			public string AutoLockMessage = "Auto-locked.";
+			public string LockPromptMessage = "Auto-locked.";
 
 			[Tooltip("Automatically unlock if asset becomes unmodified (i.e. you reverted the asset).")]
 			public bool AutoUnlockIfUnmodified = false;
@@ -80,8 +80,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			// Because we are rendering this list manually.
 			[NonReorderable]
 #endif
-			// Auto-locking parameters for when asset is modified.
-			public List<AutoLockingParameters> AutoLockingParameters = new List<AutoLockingParameters>();
+			// Lock prompt parameters for when asset is modified.
+			public List<LockPromptParameters> LockPromptParameters = new List<LockPromptParameters>();
 
 
 			// Enable svn branches database.
@@ -108,7 +108,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			{
 				var clone = (ProjectPreferences) MemberwiseClone();
 
-				clone.AutoLockingParameters = new List<AutoLockingParameters>(AutoLockingParameters);
+				clone.LockPromptParameters = new List<LockPromptParameters>(LockPromptParameters);
 				clone.BranchesDatabaseScanParameters = new List<BranchScanParameters>(BranchesDatabaseScanParameters);
 				clone.PinnedBranches = new List<string>(PinnedBranches);
 				clone.Exclude = new List<string>(Exclude);

@@ -17,7 +17,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		[InitializeOnLoad]
 		class SVNLockedOverlayStarter
 		{
-			// HACK: If this was the SVNAutoLockingDatabase itself it causes exceptions on assembly reload.
+			// HACK: If this was the SVNLockPromptDatabase itself it causes exceptions on assembly reload.
 			//		 The static constructor gets called during reload because the instance exists.
 			static SVNLockedOverlayStarter()
 			{
