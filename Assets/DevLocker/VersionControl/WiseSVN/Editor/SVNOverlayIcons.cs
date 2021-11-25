@@ -14,7 +14,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	{
 		private static SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
 
-		private static bool IsActive => m_PersonalPrefs.EnableCoreIntegration && (m_PersonalPrefs.PopulateStatusesDatabase || SVNPreferencesManager.Instance.ProjectPrefs.EnableAutoLocking);
+		private static bool IsActive => m_PersonalPrefs.EnableCoreIntegration && (m_PersonalPrefs.PopulateStatusesDatabase || SVNPreferencesManager.Instance.ProjectPrefs.EnableLockPrompt);
 
 		private static bool m_ShowNormalStatusIcons = false;
 
@@ -45,7 +45,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		private static void InvalidateDatabaseMenu()
 		{
 			SVNStatusesDatabase.Instance.InvalidateDatabase();
-			AutoLocking.SVNAutoLockingDatabase.Instance.ClearKnowledge();
+			LockPrompt.SVNLockPromptDatabase.Instance.ClearKnowledge();
 		}
 
 		private static void OnDatabaseChanged()
@@ -64,7 +64,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			var statusData = SVNStatusesDatabase.Instance.GetKnownStatusData(guid);
 
 			var downloadRepositoryChanges = SVNPreferencesManager.Instance.DownloadRepositoryChanges;
-			var autoLocking = SVNPreferencesManager.Instance.ProjectPrefs.EnableAutoLocking;
+			var lockPrompt = SVNPreferencesManager.Instance.ProjectPrefs.EnableLockPrompt;
 
 			//
 			// Remote Status
@@ -94,7 +94,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			//
 			// Lock Status
 			//
-			if ((downloadRepositoryChanges || autoLocking) && statusData.LockStatus != VCLockStatus.NoLock) {
+			if ((downloadRepositoryChanges || lockPrompt) && statusData.LockStatus != VCLockStatus.NoLock) {
 				var lockStatusIcon = SVNPreferencesManager.Instance.GetLockStatusIconContent(statusData.LockStatus);
 
 				if (lockStatusIcon != null) {

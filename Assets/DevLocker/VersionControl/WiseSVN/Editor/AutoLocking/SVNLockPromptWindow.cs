@@ -5,12 +5,12 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace DevLocker.VersionControl.WiseSVN.AutoLocking
+namespace DevLocker.VersionControl.WiseSVN.LockPrompt
 {
 	/// <summary>
 	/// Popup that prompts user should it force-lock changed assets.
 	/// </summary>
-	public class SVNAutoLockingWindow : EditorWindow
+	public class SVNLockPromptWindow : EditorWindow
 	{
 		[Serializable]
 		private class LockEntryData
@@ -55,7 +55,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 
 		public static void PromptLock(IEnumerable<SVNStatusData> shouldLockEntries, IEnumerable<SVNStatusData> lockedByOtherEntries)
 		{
-			var window = GetWindow<SVNAutoLockingWindow>(true, "SVN Lock Modified Assets");
+			var window = GetWindow<SVNLockPromptWindow>(true, "SVN Lock Modified Assets");
 			window.minSize = new Vector2(584, 500f);
 			var center = new Vector2(Screen.currentResolution.width, Screen.currentResolution.height) / 2f;
 			window.position = new Rect(center - window.position.size / 2, window.position.size);
@@ -194,7 +194,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			GUI.backgroundColor = Color.yellow;
 			if (needsUpdate && GUILayout.Button("Update All")) {
 				SVNContextMenusManager.UpdateAll();
-				SVNAutoLockingDatabase.Instance.ClearKnowledge();
+				SVNLockPromptDatabase.Instance.ClearKnowledge();
 				Close();
 			}
 
@@ -213,7 +213,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 					.ToList();
 
 				if (selectedStatusData.Any()) {
-					SVNAutoLockingDatabase.Instance.LockEntries(selectedStatusData, m_AllowStealingLocks);
+					SVNLockPromptDatabase.Instance.LockEntries(selectedStatusData, m_AllowStealingLocks);
 				}
 				Close();
 			}

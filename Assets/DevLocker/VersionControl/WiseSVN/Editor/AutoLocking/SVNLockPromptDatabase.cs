@@ -6,14 +6,14 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace DevLocker.VersionControl.WiseSVN.AutoLocking
+namespace DevLocker.VersionControl.WiseSVN.LockPrompt
 {
 	/// <summary>
 	/// Listens for newly modified assets and notifies user if they were locked.
 	/// </summary>
-	public class SVNAutoLockingDatabase : Utils.EditorPersistentSingleton<SVNAutoLockingDatabase>
+	public class SVNLockPromptDatabase : Utils.EditorPersistentSingleton<SVNLockPromptDatabase>
 	{
-		public bool IsActive => m_PersonalPrefs.EnableCoreIntegration && m_PersonalPrefs.PopulateStatusesDatabase && m_ProjectPrefs.EnableAutoLocking;
+		public bool IsActive => m_PersonalPrefs.EnableCoreIntegration && m_PersonalPrefs.PopulateStatusesDatabase && m_ProjectPrefs.EnableLockPrompt;
 
 		private List<SVNStatusData> m_KnownData = new List<SVNStatusData>();
 
@@ -244,7 +244,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 		public void LockEntries(IEnumerable<SVNStatusData> entries, bool forceLock)
 		{
 			var shouldLog = SVNPreferencesManager.Instance.PersonalPrefs.TraceLogs.HasFlag(SVNTraceLogs.SVNOperations);
-			var lockMessage = SVNPreferencesManager.Instance.ProjectPrefs.AutoLockMessage;
+			var lockMessage = SVNPreferencesManager.Instance.ProjectPrefs.LockPromptMessage;
 
 			var entriesList = entries.ToList();
 			if (entriesList.Count == 0)
@@ -258,10 +258,10 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 						RemoveKnownStatusData(failedStatusData);
 					}
 					Debug.LogWarning($"Locking failed because server repository has newer changes. Please update first. Assets failed to lock:\n{string.Join("\n", entriesList.Select(sd => sd.Path))}");
-					EditorUtility.DisplayDialog("SVN Locking", "Lock failed. Check the logs for more info.", "I will!");
+					EditorUtility.DisplayDialog("SVN Lock Prompt", "Lock failed. Check the logs for more info.", "I will!");
 				} else if (op.Result != LockOperationResult.Success) {
 					Debug.LogError($"Locking failed with result {op.Result} for assets:\n{string.Join("\n", entriesList.Select(sd => sd.Path))}.");
-					EditorUtility.DisplayDialog("SVN Auto-Locking", "Stealing lock failed. Check the logs for more info.", "I will!");
+					EditorUtility.DisplayDialog("SVN Lock Prompt", "Stealing lock failed. Check the logs for more info.", "I will!");
 				} else if (shouldLog) {
 					Debug.Log($"Locked assets:\n{string.Join("\n", entriesList.Select(sd => sd.Path))}");
 				}
@@ -315,20 +315,20 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 				}
 				assetPath = assetPath.Replace("\\", "/");
 
-				var autoLockingParam = m_ProjectPrefs.AutoLockingParameters
+				var lockPromptParam = m_ProjectPrefs.LockPromptParameters
 					.FirstOrDefault(al => assetPath.StartsWith(al.TargetFolder, StringComparison.OrdinalIgnoreCase));
 
-				if (string.IsNullOrEmpty(autoLockingParam.TargetFolder))
+				if (string.IsNullOrEmpty(lockPromptParam.TargetFolder))
 					continue;
 
-				if (isMeta && !autoLockingParam.IncludeTargetMetas)
+				if (isMeta && !lockPromptParam.IncludeTargetMetas)
 					continue;
 
-				if (SVNPreferencesManager.ShouldExclude(autoLockingParam.Exclude, assetPath))
+				if (SVNPreferencesManager.ShouldExclude(lockPromptParam.Exclude, assetPath))
 					continue;
 
-				bool matched = IsAssetOfType(assetPath, autoLockingParam.TargetTypes, statusData.Status == VCFileStatus.Deleted);
-				if (!matched && !autoLockingParam.TargetTypes.HasFlag(AssetType.OtherTypes))
+				bool matched = IsAssetOfType(assetPath, lockPromptParam.TargetTypes, statusData.Status == VCFileStatus.Deleted);
+				if (!matched && !lockPromptParam.TargetTypes.HasFlag(AssetType.OtherTypes))
 					continue;
 
 				if (statusData.LockStatus == VCLockStatus.NoLock && statusData.RemoteStatus == VCRemoteFileStatus.None) {
@@ -353,17 +353,17 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 
 					assetPath = assetPath.Replace("\\", "/");
 
-					var autoLockingParam = m_ProjectPrefs.AutoLockingParameters
+					var lockPromptParam = m_ProjectPrefs.LockPromptParameters
 						.FirstOrDefault(al => assetPath.StartsWith(al.TargetFolder, StringComparison.OrdinalIgnoreCase));
 
-					if (string.IsNullOrEmpty(autoLockingParam.TargetFolder))
+					if (string.IsNullOrEmpty(lockPromptParam.TargetFolder))
 						continue;
 
-					if (SVNPreferencesManager.ShouldExclude(autoLockingParam.Exclude, assetPath))
+					if (SVNPreferencesManager.ShouldExclude(lockPromptParam.Exclude, assetPath))
 						continue;
 
-					bool matched = IsAssetOfType(assetPath, autoLockingParam.TargetTypes, false);
-					if (!matched && !autoLockingParam.TargetTypes.HasFlag(AssetType.OtherTypes))
+					bool matched = IsAssetOfType(assetPath, lockPromptParam.TargetTypes, false);
+					if (!matched && !lockPromptParam.TargetTypes.HasFlag(AssetType.OtherTypes))
 						continue;
 
 					if (statusData.LockStatus != VCLockStatus.NoLock && statusData.LockStatus != VCLockStatus.LockedOther) {
@@ -413,7 +413,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			}
 
 			if (shouldLock.Count > 0 || lockedByOtherEntries.Count > 0) {
-				SVNAutoLockingWindow.PromptLock(shouldLock, lockedByOtherEntries);
+				SVNLockPromptWindow.PromptLock(shouldLock, lockedByOtherEntries);
 			}
 
 			if (m_PendingOperations.Count > 0 && m_HasPendingOperations == false) {

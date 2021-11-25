@@ -1,17 +1,17 @@
 using DevLocker.VersionControl.WiseSVN.Preferences;
 using UnityEditor;
 
-namespace DevLocker.VersionControl.WiseSVN.AutoLocking
+namespace DevLocker.VersionControl.WiseSVN.LockPrompt
 {
 	/// <summary>
 	/// Starts the database if enabled.
 	/// </summary>
 	[InitializeOnLoad]
-	public static class SVNAutoLockingDatabaseStarter
+	public static class SVNLockPromptDatabaseStarter
 	{
 		// HACK: If this was the SVNAutoLockingDatabase itself it causes exceptions on assembly reload.
 		//		 The static constructor gets called during reload because the instance exists.
-		static SVNAutoLockingDatabaseStarter()
+		static SVNLockPromptDatabaseStarter()
 		{
 			TryStartIfNeeded();
 		}
@@ -22,7 +22,7 @@ namespace DevLocker.VersionControl.WiseSVN.AutoLocking
 			var projectPrefs = SVNPreferencesManager.Instance.ProjectPrefs;
 
 			// HACK: Just touch the SVNAutoLockingDatabase instance to initialize it.
-			if (playerPrefs.EnableCoreIntegration && projectPrefs.EnableAutoLocking && SVNAutoLockingDatabase.Instance.IsActive)
+			if (playerPrefs.EnableCoreIntegration && projectPrefs.EnableLockPrompt && SVNLockPromptDatabase.Instance.IsActive)
 				return;
 		}
 	}
