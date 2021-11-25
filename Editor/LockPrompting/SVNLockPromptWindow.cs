@@ -5,7 +5,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace DevLocker.VersionControl.WiseSVN.LockPrompt
+namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 {
 	/// <summary>
 	/// Popup that prompts user should it force-lock changed assets.

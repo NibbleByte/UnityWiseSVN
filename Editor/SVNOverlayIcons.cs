@@ -45,7 +45,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		private static void InvalidateDatabaseMenu()
 		{
 			SVNStatusesDatabase.Instance.InvalidateDatabase();
-			LockPrompt.SVNLockPromptDatabase.Instance.ClearKnowledge();
+			LockPrompting.SVNLockPromptDatabase.Instance.ClearKnowledge();
 		}
 
 		private static void OnDatabaseChanged()
