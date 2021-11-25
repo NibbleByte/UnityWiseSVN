@@ -22,15 +22,20 @@ Simple but powerful SVN Integration for Unity 3D utilizing <a href="https://tort
 &nbsp;&nbsp;&#8594; Moving assets to unversioned folder will ask the user to add that folder to SVN as well.<br />
 &nbsp;&nbsp;&#8594; Moving folders / files that have conflicts will be rejected.<br />
 &nbsp;&nbsp;&#8594; Will work with other custom tools as long as they move / rename assets using Unity API.<br />
+<br />
 &#8226; Provides assets context menu for manual SVN operations like commit, update, revert etc.<br />
+<br />
 &#8226; <em>Show overlay svn status icons</em><br />
 &nbsp;&nbsp;&#8594; Show server changes that you need to update.<br />
 &nbsp;&nbsp;&#8594; Show locked files by you and your colleges.<br />
+<br />
 &#8226; Displays warning in the SceneView when the current scene or edited prefab is out of date or locked.<br />
+<br />
 &#8226; Lock prompt on modifying assets by path and type (perforce checkout like)<br />
 &nbsp;&nbsp;&#8594; If asset or its meta becomes modified a pop-up window will prompt the user to lock or ignore it.<br />
 &nbsp;&nbsp;&#8594; The window shows if modified assets are locked by others or out of date, which prevents locking them.<br />
 &nbsp;&nbsp;&#8594; If left unlocked, the window won't prompt again for those assets. Will prompt on editor restart.<br />
+<br />
 &#8226; Branch Selector <br />
 &nbsp;&nbsp;&#8594; Scans for Unity projects in your SVN repository's branches. <br />
 &nbsp;&nbsp;&#8594; Lists all available branches. <br />
@@ -38,10 +43,12 @@ Simple but powerful SVN Integration for Unity 3D utilizing <a href="https://tort
 &nbsp;&nbsp;&#8594; Opens "Show Log" on target asset in selected branch. <br />
 &nbsp;&nbsp;&#8594; Switches to selected branch. <br />
 &nbsp;&nbsp;&#8594; Scans for conflicts (shows which branches have changes to the target asset). <br />
+<br />
 &#8226; Minimal performance impact<br />
 &#8226; Survives assembly reloads<br />
 &#8226; You don't have to leave Unity to do SVN chores.<br />
 &#8226; Works on Windows and MacOS (maybe Linux?)<br />
+<br />
 &#8226; Simple API to integrate with your tools.<br />
 &nbsp;&nbsp;&#8594; Use <em>WiseSVNIntegration.RequestSilence()</em> and <em>WiseSVNIntegration.ClearSilence()</em> to temporarily suppress any WiseSVN pop-ups. <br />
 &nbsp;&nbsp;&#8594; Use <em>WiseSVNIntegration.RequestTemporaryDisable()</em> and <em>WiseSVNIntegration.ClearTemporaryDisable()</em> to temporarily disable any WiseSVN handling of file operations and updates. <br />

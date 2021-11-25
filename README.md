@@ -94,6 +94,7 @@ This is an issue with how Unity works, not the plugin iteself. Unity says its by
 ![File Operations](Docs/Screenshots/WiseSVN-Rename-Shot.png)
 ![Preferences](Docs/Screenshots/WiseSVN-Preferences-Shot.png)
 
-![Auto-Locking](Docs/Screenshots/WiseSVN-Lock-Prompt.png)
+![Lock Prompt](Docs/Screenshots/WiseSVN-Lock-Prompt.png)
+![Locked Scene Warning](Docs/Screenshots/WiseSVN-Locked-Scene-Warning.png)
 
 ![Branch Selector](Docs/Screenshots/WiseSVN-BranchSelector.png)
