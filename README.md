@@ -25,10 +25,10 @@ Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https:/
   * Show server changes that you need to update.
   * Show locked files by you and your colleges. 
 * Displays warning in the SceneView when the current scene or edited prefab is out of date or locked.
-* Auto-Lock assets by path and type
-  * Modified files (asset or meta) that match specified path and type will be automatically locked.
-  * When files are locked by someone else a prompt will be shown allowing users to steal the lock by force.
-  * When file changes are cleared, they will be unlocked automatically.
+* Lock prompt on modifying assets by path and type (perforce checkout like)
+  * If asset or its meta becomes modified a pop-up window will prompt the user to lock or ignore it.
+  * The window shows if modified assets are locked by others or out of date, which prevents locking them.
+  * If left unlocked, the window won't prompt again for those assets. Will prompt on editor restart.
 * Branch Selector
   * Scans for Unity projects in your SVN repository's branches.
   * Lists all available branches.
@@ -94,6 +94,6 @@ This is an issue with how Unity works, not the plugin iteself. Unity says its by
 ![File Operations](Docs/Screenshots/WiseSVN-Rename-Shot.png)
 ![Preferences](Docs/Screenshots/WiseSVN-Preferences-Shot.png)
 
-![Auto-Locking](Docs/Screenshots/WiseSVN-Auto-Lock-By-Force.png)
+![Auto-Locking](Docs/Screenshots/WiseSVN-Lock-Prompt.png)
 
 ![Branch Selector](Docs/Screenshots/WiseSVN-BranchSelector.png)
