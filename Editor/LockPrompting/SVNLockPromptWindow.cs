@@ -137,13 +137,21 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 				EditorGUI.BeginDisabledGroup(!lockEntry.ShouldLock);
 
-				if (lockEntry.TargetObject && !lockEntry.IsMeta) {
-					EditorGUILayout.ObjectField(lockEntry.TargetObject,
-						lockEntry.TargetObject ? lockEntry.TargetObject.GetType() : typeof(UnityEngine.Object),
-						false, GUILayout.ExpandWidth(true));
-				} else {
+				if (lockEntry.TargetObject == null || lockEntry.IsMeta) {
 					var assetComment = (lockEntry.StatusData.Status == VCFileStatus.Deleted) ? "deleted" : "meta";
-					EditorGUILayout.TextField($"({assetComment}) {lockEntry.AssetName}");
+					EditorGUILayout.TextField($"({assetComment}) {lockEntry.AssetName}", GUILayout.ExpandWidth(true));
+				}
+
+				if (lockEntry.StatusData.Status != VCFileStatus.Deleted) {
+					if (lockEntry.IsMeta) {
+						EditorGUILayout.ObjectField(lockEntry.TargetObject,
+							lockEntry.TargetObject ? lockEntry.TargetObject.GetType() : typeof(UnityEngine.Object),
+							false, GUILayout.MaxWidth(100f));
+					} else {
+						EditorGUILayout.ObjectField(lockEntry.TargetObject,
+							lockEntry.TargetObject ? lockEntry.TargetObject.GetType() : typeof(UnityEngine.Object),
+							false, GUILayout.ExpandWidth(true));
+					}
 				}
 
 				if (lockEntry.StatusData.RemoteStatus == VCRemoteFileStatus.None) {
