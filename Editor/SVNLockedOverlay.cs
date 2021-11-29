@@ -169,7 +169,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private void SceneViewOnGUI(SceneView sceneView)
 		{
-			if (Application.isPlaying)
+			if (Application.isPlaying || !SVNStatusesDatabase.Instance.IsReady)
 				return;
 
 			Handles.BeginGUI();
@@ -202,16 +202,23 @@ namespace DevLocker.VersionControl.WiseSVN
 				var prevBackgroundColor = GUI.backgroundColor;
 				GUI.backgroundColor = Color.red;
 
-				var prevColor = GUI.color;
-				GUI.color = Color.white;
 
 				if (m_MessageStyle == null) {
 					m_MessageStyle = new GUIStyle(GUI.skin.box);
 					m_MessageStyle.alignment = TextAnchor.MiddleCenter;
+					m_MessageStyle.normal.textColor = Color.white;
+					m_MessageStyle.active.textColor = Color.white;
+					m_MessageStyle.focused.textColor = Color.white;
+					m_MessageStyle.hover.textColor = Color.white;
 				}
 
 				GUI.Box(messageRect, targetMessage, m_MessageStyle);
 
+				// HACK: the text color of the box is done in the style, because it breaks
+				//		 when unity starts and displays it immediately.
+				var prevColor = GUI.color;
+				GUI.color = Color.white;
+				
 				if (GUI.Button(closeRect, "X")) {
 					if (string.IsNullOrEmpty(m_PrefabMessage)) {
 						m_SceneMessage = string.Empty;
