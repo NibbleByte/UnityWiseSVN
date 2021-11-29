@@ -76,7 +76,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 						match |= prefabType == PrefabAssetType.Regular || prefabType == PrefabAssetType.Variant;
 
 					if (assetTypeMask.HasFlag(AssetType.Model))
-						match |= return prefabType == PrefabAssetType.Model;
+						match |= prefabType == PrefabAssetType.Model;
 #else
 					var prefabType = PrefabUtility.GetPrefabType(go);
 					if (assetTypeMask.HasFlag(AssetType.Prefab))
@@ -202,7 +202,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			for(int i = 0; i < m_KnownData.Count; ++i) {
 				var knownData = m_KnownData[i];
 				if (knownData.Path == statusData.Path) {
-					if (knownData.Equals(statusData)) {
+					if (knownData.Equals(statusData, false)) {
 						return false;
 					} else {
 						m_KnownData[i] = statusData;

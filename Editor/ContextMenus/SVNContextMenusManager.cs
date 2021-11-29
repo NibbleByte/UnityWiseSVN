@@ -272,7 +272,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 				var countPrev = modifiedPaths.Count;
 				modifiedPaths.AddRange(SVNStatusesDatabase.Instance
 					.GetAllKnownStatusData(guid, false, true, true)
-					.Where(sd => sd.Status != VCFileStatus.Normal && sd.Status != VCFileStatus.Unversioned)
+					.Where(sd => sd.Status != VCFileStatus.Unversioned)
+					.Where(sd => sd.Status != VCFileStatus.Normal || sd.LockStatus != VCLockStatus.NoLock)
 					.Where(sd => !onlyLocked || (sd.LockStatus != VCLockStatus.NoLock && sd.LockStatus != VCLockStatus.LockedOther))
 					.Select(sd => sd.Path)
 					);
