@@ -50,6 +50,10 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 		public bool IsAssetOfType(string assetPath, AssetType assetTypeMask, bool isDeleted)
 		{
+			// All flags are set, skip checks.
+			if ((int)assetTypeMask == ~0)
+				return true;
+
 			if (assetTypeMask.HasFlag(AssetType.Scene) && assetPath.EndsWith(".unity", StringComparison.OrdinalIgnoreCase))
 				return true;
 
@@ -63,22 +67,26 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 				var go = AssetDatabase.LoadMainAssetAtPath(assetPath) as GameObject;
 
 				if (go) {
+					bool match = false;
+
 #if UNITY_2018_1_OR_NEWER
 					var prefabType = PrefabUtility.GetPrefabAssetType(go);
 
 					if (assetTypeMask.HasFlag(AssetType.Prefab))
-						return prefabType == PrefabAssetType.Regular || prefabType == PrefabAssetType.Variant;
+						match |= prefabType == PrefabAssetType.Regular || prefabType == PrefabAssetType.Variant;
 
 					if (assetTypeMask.HasFlag(AssetType.Model))
-						return prefabType == PrefabAssetType.Model;
+						match |= return prefabType == PrefabAssetType.Model;
 #else
 					var prefabType = PrefabUtility.GetPrefabType(go);
 					if (assetTypeMask.HasFlag(AssetType.Prefab))
-						return prefabType == PrefabType.Prefab;
+						match |= prefabType == PrefabType.Prefab;
 
 					if (assetTypeMask.HasFlag(AssetType.Model))
-						return prefabType == PrefabType.ModelPrefab;
+						match |= prefabType == PrefabType.ModelPrefab;
 #endif
+
+					return match;
 				}
 
 				if (isDeleted) {
