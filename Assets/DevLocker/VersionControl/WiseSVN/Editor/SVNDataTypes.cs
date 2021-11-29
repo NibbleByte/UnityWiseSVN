@@ -172,15 +172,15 @@ namespace DevLocker.VersionControl.WiseSVN
 			PropertiesStatus == VCPropertiesStatus.Conflicted ||
 			TreeConflictStatus == VCTreeConflictStatus.TreeConflict;
 
-		public bool Equals(SVNStatusData other)
+		public bool Equals(SVNStatusData other, bool skipOnline)
 		{
 			return Status == other.Status
 				&& PropertiesStatus == other.PropertiesStatus
 				&& TreeConflictStatus == other.TreeConflictStatus
 				&& SwitchedExternalStatus == other.SwitchedExternalStatus
-				&& LockStatus == other.LockStatus
-				&& RemoteStatus == other.RemoteStatus
-				&& LockDetails.Equals(other.LockDetails)
+				&& (skipOnline || LockStatus == other.LockStatus)
+				&& (skipOnline || RemoteStatus == other.RemoteStatus)
+				&& (skipOnline || LockDetails.Equals(other.LockDetails))
 				;
 		}
 
