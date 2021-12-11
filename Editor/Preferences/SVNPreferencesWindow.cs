@@ -424,6 +424,13 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 					Application.OpenURL(redditURL);
 				}
 
+				GUILayout.Label("|", GUILayout.ExpandWidth(false));
+
+				if (GUILayout.Button("OpenUPM", urlStyle, GUILayout.ExpandWidth(false))) {
+					var openUPMurl = "https://openupm.com/packages/devlocker.versioncontrol.wisesvn";
+					Application.OpenURL(openUPMurl);
+				}
+
 				EditorGUILayout.EndHorizontal();
 
 				EditorGUILayout.Space();
