@@ -6,13 +6,14 @@ Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https:/
 
 [Assets Store](https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636) | [Unity Forum](https://forum.unity.com/threads/wise-svn-powerful-tortoisesvn-snailsvn-integration.844168/) | [Reddit](https://www.reddit.com/r/Unity3D/comments/fgjovk/finally_a_fully_working_tortoisesvn_snailsvn/)
 
+[![openupm](https://img.shields.io/npm/v/devlocker.versioncontrol.wisesvn?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/devlocker.versioncontrol.wisesvn/)
+
 ## Table of Contents
 [Features](#features)<br />
 [Usage](#usage)<br />
 [Installation](#installation)<br />
 [Overlay Icons](#overlay-icons)<br />
 [Screenshots](#screenshots)<br />
-[Community](#community)<br />
 
 ## Features
 * **Hooks up to Unity move and delete file operations and executes respective svn commands to stay in sync.**
@@ -58,14 +59,19 @@ Preferred workflow is to always work inside Unity - use the \"Assets/SVN/...\" m
 This is an issue with how Unity works, not the plugin iteself. Unity says its by "design".**
 
 ## Installation
-* Github upm package (pointless if you use git?) - merge this to your `Packages/manifest.json`
+* Asset Store plugin: https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636
+* [OpenUPM](https://openupm.com/packages/devlocker.versioncontrol.wisesvn) support:
+```
+npm install -g openupm-cli
+openupm add devlocker.versioncontrol.wisesvn
+```
+* Github upm package - merge this to your `Packages/manifest.json`
 ```
 {
   "dependencies": {
     "devlocker.versioncontrol.wisesvn": "https://github.com/NibbleByte/UnityWiseSVN.git#upm"
 }
 ```
-* Asset Store plugin: https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636
 
 #### Prerequisites
 * Have SVN installed
