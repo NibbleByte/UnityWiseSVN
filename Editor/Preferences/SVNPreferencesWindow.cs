@@ -234,7 +234,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 										  m_PersonalPrefs.DownloadRepositoryChanges == SVNPreferencesManager.BoolPreference.SameAsProjectPreference && m_ProjectPrefs.DownloadRepositoryChanges;
 
 			EditorGUI.BeginDisabledGroup(!downloadChangesEnabled);
-			m_PersonalPrefs.WarnForPotentialConflicts = EditorGUILayout.Toggle(new GUIContent("Warn for potential conflicts", "Display warning in the SceneView when the current scene or edited prefab is out of date or locked."), m_PersonalPrefs.WarnForPotentialConflicts);
+			m_PersonalPrefs.WarnForPotentialConflicts = EditorGUILayout.Toggle(new GUIContent("SceneView overlay for conflicts", "Display warning in the SceneView when the current scene or edited prefab is out of date or locked."), m_PersonalPrefs.WarnForPotentialConflicts);
 			EditorGUI.EndDisabledGroup();
 
 			EditorGUI.EndDisabledGroup();
