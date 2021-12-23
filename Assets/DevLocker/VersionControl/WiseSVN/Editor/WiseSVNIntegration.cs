@@ -608,7 +608,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				// svn: E731001: No such host is known.
 				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
 					return LockOperationResult.UnableToConnectError;
-				
+
 				// Unable to connect to repository indicating some network or server problems.
 				//svn: warning: W160042: Lock failed: newer version of '...' exists
 				if (result.Error.Contains("W160042"))
@@ -1506,8 +1506,11 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				var isMeta = path.EndsWith(".meta");
 
+				/*
+				// This is just annoying and not useful. We can't do anything about it.
+				// It often happens with tools that pre-generate files, for example: baking light maps.
 				if (!isMeta && !Silent) {
-					EditorUtility.DisplayDialog(
+					bool choice = EditorUtility.DisplayDialog(
 						"Deleted file",
 						$"The desired location\n\"{path}\"\nis marked as deleted in SVN. The file will be replaced in SVN with the new one.\n\nIf this is an automated change, consider adding this file to the exclusion list in the project preferences:\n\"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n...or change your tool to silence the integration.",
 						"Replace"
@@ -1517,14 +1520,42 @@ namespace DevLocker.VersionControl.WiseSVN
 #else
 					);
 #endif
+					if (!choice)
+						return;
 				}
+				*/
 
 				using (var reporter = CreateReporter()) {
+					reporter.AppendTraceLine($"Created file \"{path}\" has deleted svn status. Reverting SVN status, while keeping the original file...");
+
 					// File isn't still created, so we need to improvise.
 					var result = ShellUtils.ExecuteCommand(SVN_Command, $"revert \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT, reporter);
 					Debug.Assert(!result.HasErrors, "Revert of deleted file failed.");
 					File.Delete(path);
+
+
+
+					if (isMeta) {
+						var mainAssetPath = path.Substring(0, path.Length - ".meta".Length);
+
+						var mainStatusData = GetStatus(mainAssetPath);
+
+						// If asset came OUTSIDE of Unity, OnWillCreateAsset() will get called only for it's meta,
+						// leaving the main asset with Deleted svn status and existing file.
+						if (File.Exists(mainAssetPath) && mainStatusData.Status == VCFileStatus.Deleted) {
+
+							reporter.AppendTraceLine($"Asset \"{mainAssetPath}\" was created from outside Unity and has deleted SVN status. Reverting SVN status, while keeping the original file...");
+							File.Move(mainAssetPath, mainAssetPath + ".tmp");
+
+							result = ShellUtils.ExecuteCommand(SVN_Command, $"revert \"{SVNFormatPath(mainAssetPath)}\"", COMMAND_TIMEOUT, reporter);
+							Debug.Assert(!result.HasErrors, "Revert of deleted file failed.");
+							File.Delete(mainAssetPath);
+
+							File.Move(mainAssetPath + ".tmp", mainAssetPath);
+						}
+					}
 				}
+
 			}
 		}
 
@@ -1742,7 +1773,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			if (result.HasErrors)
 				return false;
 
-			return false;
+			return true;
 		}
 
 
