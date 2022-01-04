@@ -28,7 +28,12 @@ namespace DevLocker.VersionControl.WiseSVN
 		[SerializeField]
 		private string m_SceneMessage;
 		[SerializeField]
+		private float m_SceneMessageWidth;
+		[SerializeField]
 		private string m_PrefabMessage;
+		[SerializeField]
+		private float m_PrefabMessageWidth;
+
 
 
 		[SerializeField]
@@ -51,6 +56,20 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			SVNPreferencesManager.Instance.PreferencesChanged += PreferencesChanged;
 			SVNStatusesDatabase.Instance.DatabaseChanged += OnDatabaseChanged;
+		}
+
+		private GUIStyle GetMessageStyle()
+		{
+			if (m_MessageStyle == null) {
+				m_MessageStyle = new GUIStyle(GUI.skin.box);
+				m_MessageStyle.alignment = TextAnchor.MiddleCenter;
+				m_MessageStyle.normal.textColor = Color.white;
+				m_MessageStyle.active.textColor = Color.white;
+				m_MessageStyle.focused.textColor = Color.white;
+				m_MessageStyle.hover.textColor = Color.white;
+			}
+
+			return m_MessageStyle;
 		}
 
 		private void PreferencesChanged()
@@ -113,7 +132,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (statusData.RemoteStatus != VCRemoteFileStatus.None) {
 					m_SceneMessage += $"Scene \"{scene.name}\" is out of date in SVN!\n";
 				} else if (statusData.LockStatus == VCLockStatus.LockedOther || statusData.LockStatus == VCLockStatus.LockedButStolen) {
-					m_SceneMessage += $"Scene \"{scene.name}\" is locked in SVN!\n";
+					m_SceneMessage += $"Scene \"{scene.name}\" is locked by {statusData.LockDetails.Owner} in SVN!\n";
 				} else if (statusData.LockStatus == VCLockStatus.BrokenLock) {
 					m_SceneMessage += $"Scene \"{scene.name}\" lock is broken in SVN!\n";
 				}
@@ -121,6 +140,8 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			m_SceneMessage = m_SceneMessage.TrimEnd('\n');
+
+			m_SceneMessageWidth = GetMessageStyle().CalcSize(new GUIContent(m_SceneMessage)).x;
 		}
 
 		private void CheckPrefab()
@@ -159,12 +180,14 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (statusData.RemoteStatus != VCRemoteFileStatus.None) {
 					m_PrefabMessage = $"Prefab \"{Path.GetFileNameWithoutExtension(prefabPath)}\" is out of date in SVN!";
 				} else if (statusData.LockStatus == VCLockStatus.LockedOther || statusData.LockStatus == VCLockStatus.LockedButStolen) {
-					m_PrefabMessage = $"Prefab \"{Path.GetFileNameWithoutExtension(prefabPath)}\" is locked in SVN!";
+					m_PrefabMessage = $"Prefab \"{Path.GetFileNameWithoutExtension(prefabPath)}\" is locked by {statusData.LockDetails.Owner} in SVN!";
 				} else if (statusData.LockStatus == VCLockStatus.BrokenLock) {
 					m_PrefabMessage = $"Prefab \"{Path.GetFileNameWithoutExtension(prefabPath)}\" lock is broken in SVN!";
 				}
 
 			}
+			
+			m_PrefabMessageWidth = GetMessageStyle().CalcSize(new GUIContent(m_PrefabMessage)).x;
 		}
 
 		private void SceneViewOnGUI(SceneView sceneView)
@@ -181,8 +204,9 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			if (!string.IsNullOrEmpty(m_SceneMessage) && string.IsNullOrEmpty(m_CurrentPrefabPath) || !string.IsNullOrEmpty(m_PrefabMessage)) {
 				string targetMessage = string.IsNullOrEmpty(m_PrefabMessage) ? m_SceneMessage : m_PrefabMessage;
+				float targetWidth = string.IsNullOrEmpty(m_PrefabMessage) ? m_SceneMessageWidth : m_PrefabMessageWidth;
 
-				const float width = 400f;
+				float width = Mathf.Max(300, targetWidth + 40f);
 				const float height = 70f;
 
 				Rect messageRect = new Rect();
@@ -203,16 +227,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				GUI.backgroundColor = Color.red;
 
 
-				if (m_MessageStyle == null) {
-					m_MessageStyle = new GUIStyle(GUI.skin.box);
-					m_MessageStyle.alignment = TextAnchor.MiddleCenter;
-					m_MessageStyle.normal.textColor = Color.white;
-					m_MessageStyle.active.textColor = Color.white;
-					m_MessageStyle.focused.textColor = Color.white;
-					m_MessageStyle.hover.textColor = Color.white;
-				}
-
-				GUI.Box(messageRect, targetMessage, m_MessageStyle);
+				GUI.Box(messageRect, targetMessage, GetMessageStyle());
 
 				// HACK: the text color of the box is done in the style, because it breaks
 				//		 when unity starts and displays it immediately.
