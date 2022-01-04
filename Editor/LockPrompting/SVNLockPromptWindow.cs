@@ -36,7 +36,6 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 					assetPath = statusData.Path.Substring(0, statusData.Path.LastIndexOf(".meta"));
 					IsMeta = true;
 				}
-				assetPath = assetPath.Replace("\\", "/");
 
 				StatusData = statusData;
 				TargetObject = AssetDatabase.LoadMainAssetAtPath(assetPath);
