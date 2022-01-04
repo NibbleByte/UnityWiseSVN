@@ -40,8 +40,8 @@ namespace DevLocker.VersionControl.WiseSVN
 	/// </summary>
 	public class SVNStatusesDatabase : Utils.DatabasePersistentSingleton<SVNStatusesDatabase, GuidStatusDatasBind>
 	{
-		private const string INVALID_GUID = "00000000000000000000000000000000";
-		private const string ASSETS_FOLDER_GUID = "00000000000000001000000000000000";
+		public const string INVALID_GUID = "00000000000000000000000000000000";
+		public const string ASSETS_FOLDER_GUID = "00000000000000001000000000000000";
 
 
 		// Note: not all of these are rendered. Check the Database icons.
@@ -79,6 +79,11 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private string[] m_ExcludedPaths = new string[0];
 
+		/// <summary>
+		/// The collected statuses are not complete due to some reason (for example, they were too many).
+		/// </summary>
+		public bool DataIsIncomplete { get; private set; }
+
 		//
 		//=============================================================================
 		//
@@ -98,6 +103,10 @@ namespace DevLocker.VersionControl.WiseSVN
 		protected override void RefreshActive()
 		{
 			base.RefreshActive();
+
+			if (!IsActive) {
+				DataIsIncomplete = false;
+			}
 
 			// Copy them so they can be safely accessed from the worker thread.
 			m_ExcludedPaths = SVNPreferencesManager.Instance.ProjectPrefs.Exclude.ToArray();
@@ -145,6 +154,8 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 			}
 
+			DataIsIncomplete = unversionedFolders.Count >= SanityUnversionedFoldersLimit || statuses.Count >= SanityStatusesLimit;
+
 			// Just in case...
 			if (unversionedFolders.Count >= SanityUnversionedFoldersLimit) {
 				unversionedFolders.Clear();
@@ -177,7 +188,11 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			// Sanity check!
 			if (pendingData.Length > SanityStatusesLimit) {
-				Debug.LogWarning($"SVNStatusDatabase gathered {pendingData.Length} changes which is waay to much. Ignoring gathered changes to avoid slowing down the editor!");
+				// No more logging, displaying an icon.
+				if (DoTraceLogs) {
+					Debug.LogWarning($"SVNStatusDatabase gathered {pendingData.Length} changes which is waay to much. Ignoring gathered changes to avoid slowing down the editor!");
+				}
+
 				return;
 			}
 

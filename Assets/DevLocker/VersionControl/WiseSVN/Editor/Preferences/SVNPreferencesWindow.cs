@@ -220,6 +220,9 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			EditorGUI.BeginDisabledGroup(!m_PersonalPrefs.EnableCoreIntegration);
 
 			m_PersonalPrefs.PopulateStatusesDatabase = EditorGUILayout.Toggle(new GUIContent("Enable overlay icons", "Enables overlay icons in the project windows.\nPopulates internal cache with statuses of changed entities.\nFile changes may trigger repopulation of the cache."), m_PersonalPrefs.PopulateStatusesDatabase);
+			if (SVNStatusesDatabase.Instance.DataIsIncomplete) {
+				GUILayout.Label(SVNOverlayIcons.GetDataIsIncompleteWarning());
+			}
 			EditorGUI.BeginDisabledGroup(!m_PersonalPrefs.PopulateStatusesDatabase);
 
 			m_PersonalPrefs.ShowNormalStatusOverlayIcon = EditorGUILayout.Toggle(new GUIContent("Show Normal Status Green Icon", "Normal status is versioned asset that doesn't have any changes."), m_PersonalPrefs.ShowNormalStatusOverlayIcon);
