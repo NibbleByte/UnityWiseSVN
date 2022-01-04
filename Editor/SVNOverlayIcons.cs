@@ -19,6 +19,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		private static bool m_ShowNormalStatusIcons = false;
 		private static string[] m_ExcludedPaths = new string[0];
 
+		private static GUIContent m_DataIsIncompleteWarning;
+
 		static SVNOverlayIcons()
 		{
 			SVNPreferencesManager.Instance.PreferencesChanged += PreferencesChanged;
@@ -55,13 +57,40 @@ namespace DevLocker.VersionControl.WiseSVN
 			EditorApplication.RepaintProjectWindow();
 		}
 
+		internal static GUIContent GetDataIsIncompleteWarning()
+		{
+			if (m_DataIsIncompleteWarning == null) {
+				string warningTooltip = "Some or all SVN overlay icons are skipped as you have too many changes to display.\n" +
+					"If you have a lot of unversioned files consider adding them to a svn ignore list.\n" +
+					"If the server repository has a lot of changes, consider updating.";
+
+				m_DataIsIncompleteWarning = EditorGUIUtility.IconContent("console.warnicon.sml");
+				m_DataIsIncompleteWarning.tooltip = warningTooltip;
+			}
+
+			return m_DataIsIncompleteWarning;
+		}
+
 		private static void ItemOnGUI(string guid, Rect selectionRect)
 		{
-			if (string.IsNullOrEmpty(guid) || guid.StartsWith("00000000", StringComparison.Ordinal))
+			if (string.IsNullOrEmpty(guid) || guid.StartsWith("00000000", StringComparison.Ordinal)) {
+
+				if (SVNStatusesDatabase.Instance.DataIsIncomplete && guid.Equals(SVNStatusesDatabase.ASSETS_FOLDER_GUID, StringComparison.OrdinalIgnoreCase)) {
+
+					var iconRect = new Rect(selectionRect);
+					iconRect.height = 20;
+					iconRect.x += iconRect.width - iconRect.height - 8f;
+					iconRect.width = iconRect.height;
+					iconRect.y -= 2f;
+
+					GUI.Label(iconRect, GetDataIsIncompleteWarning());
+				}
+
 				// Cause what are the chances of having a guid starting with so many zeroes?!
 				//|| guid.Equals(INVALID_GUID, StringComparison.Ordinal)
 				//|| guid.Equals(ASSETS_FOLDER_GUID, StringComparison.Ordinal)
 				return;
+			}
 
 			var statusData = SVNStatusesDatabase.Instance.GetKnownStatusData(guid);
 
