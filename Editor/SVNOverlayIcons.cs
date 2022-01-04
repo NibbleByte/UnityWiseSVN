@@ -17,6 +17,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		private static bool IsActive => m_PersonalPrefs.EnableCoreIntegration && (m_PersonalPrefs.PopulateStatusesDatabase || SVNPreferencesManager.Instance.ProjectPrefs.EnableLockPrompt);
 
 		private static bool m_ShowNormalStatusIcons = false;
+		private static string[] m_ExcludedPaths = new string[0];
 
 		static SVNOverlayIcons()
 		{
@@ -33,6 +34,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				EditorApplication.projectWindowItemOnGUI += ItemOnGUI;
 
 				m_ShowNormalStatusIcons = SVNPreferencesManager.Instance.PersonalPrefs.ShowNormalStatusOverlayIcon;
+				m_ExcludedPaths = SVNPreferencesManager.Instance.ProjectPrefs.Exclude.ToArray();
 			} else {
 				EditorApplication.projectWindowItemOnGUI -= ItemOnGUI;
 			}
@@ -154,6 +156,16 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			if (m_ShowNormalStatusIcons && !statusData.IsValid) {
 				fileStatus = VCFileStatus.Normal;
+
+				if (m_ExcludedPaths.Length > 0) {
+					string path = AssetDatabase.GUIDToAssetPath(guid);
+					foreach (string excludedPath in m_ExcludedPaths) {
+						if (path.StartsWith(excludedPath, StringComparison.OrdinalIgnoreCase)) {
+							fileStatus = VCFileStatus.Ignored;
+							break;
+						}
+					}
+				}
 			}
 
 			GUIContent fileStatusIcon = SVNPreferencesManager.Instance.GetFileStatusIconContent(fileStatus);
