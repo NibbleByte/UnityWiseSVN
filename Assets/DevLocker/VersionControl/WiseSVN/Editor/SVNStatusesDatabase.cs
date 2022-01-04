@@ -77,6 +77,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		// Any assets contained in these folders are considered unversioned.
 		private string[] m_UnversionedFolders = new string[0];
 
+		private string[] m_ExcludedPaths = new string[0];
+
 		//
 		//=============================================================================
 		//
@@ -91,6 +93,14 @@ namespace DevLocker.VersionControl.WiseSVN
 			RefreshActive();
 
 			base.Initialize(freshlyCreated);
+		}
+
+		protected override void RefreshActive()
+		{
+			base.RefreshActive();
+
+			// Copy them so they can be safely accessed from the worker thread.
+			m_ExcludedPaths = SVNPreferencesManager.Instance.ProjectPrefs.Exclude.ToArray();
 		}
 
 		#endregion
@@ -120,6 +130,7 @@ namespace DevLocker.VersionControl.WiseSVN
 #if UNITY_2018_4_OR_NEWER
 				.Concat(WiseSVNIntegration.GetStatuses("Packages", statusOptions))
 #endif
+				.Where(s => !m_ExcludedPaths.Any(e => s.Path.StartsWith(e, StringComparison.OrdinalIgnoreCase)))
 				.Where(s => s.Status != VCFileStatus.Missing)
 				.ToList();
 

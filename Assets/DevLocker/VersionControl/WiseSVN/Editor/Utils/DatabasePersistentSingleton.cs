@@ -27,6 +27,7 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 		// Is the database currently being populated?
 		public bool IsUpdating => m_PendingUpdate;
 
+		public event Action DatabaseChangeStarting;
 		public event Action DatabaseChanged;
 
 		[SerializeField] private bool m_IsReady;
@@ -85,7 +86,7 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 		}
 
 		// Call this when IsActive has changed.
-		protected void RefreshActive()
+		protected virtual void RefreshActive()
 		{
 			if (IsActive) {
 				EditorApplication.update -= AutoRefresh;
@@ -96,6 +97,7 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 			} else {
 				EditorApplication.update -= AutoRefresh;
 
+				DatabaseChangeStarting?.Invoke();
 				m_Data.Clear();
 				m_IsReady = false;
 				DatabaseChanged?.Invoke();
@@ -119,6 +121,8 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 			if (m_WorkerThread != null || m_PendingData != null) {
 				throw new Exception(name + " starting database update, while another one is pending?");
 			}
+
+			DatabaseChangeStarting?.Invoke();
 
 			m_PendingUpdate = true;
 
