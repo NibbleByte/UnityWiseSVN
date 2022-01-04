@@ -331,6 +331,12 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			if (!string.IsNullOrEmpty(result.Error)) {
 
+				// svn: warning: W155010: The node '...' was not found.
+				// This can be returned when path is under unversioned directory. In that case we consider it is unversioned as well.
+				if (result.Error.Contains("W155010")) {
+					return new[] { new SVNStatusData() { Path = path, Status = VCFileStatus.Unversioned, LockDetails = LockDetails.Empty } };
+				}
+
 				if (!options.RaiseError)
 					return Enumerable.Empty<SVNStatusData>();
 
@@ -463,6 +469,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			string url;
 			LockDetails lockDetails = LockDetails.Empty;
+
+			path = path.Replace('\\', '/');
 
 			//
 			// Find the repository url of the path.
@@ -1111,6 +1119,12 @@ namespace DevLocker.VersionControl.WiseSVN
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth=infinity \"{SVNFormatPath(path)}\"", timeout, shellMonitor);
 
 			if (!string.IsNullOrEmpty(result.Error)) {
+
+				// svn: warning: W155010: The node '...' was not found.
+				// This can be returned when path is under unversioned directory. In that case we consider it is unversioned as well.
+				if (result.Error.Contains("W155010")) {
+					return false;
+				}
 
 				string displayMessage;
 				bool isCritical = IsCriticalError(result.Error, out displayMessage);
@@ -1779,13 +1793,6 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private static bool IsCriticalError(string error, out string displayMessage)
 		{
-			// svn: warning: W155010: The node '...' was not found.
-			// This can be returned when path is under unversioned directory. In that case we consider it is unversioned as well.
-			if (error.Contains("W155010")) {
-				displayMessage = string.Empty;
-				return false;
-			}
-
 			// svn: warning: W155007: '...' is not a working copy!
 			// This can be returned when project is not a valid svn checkout. (Probably)
 			if (error.Contains("W155007")) {
@@ -1880,7 +1887,7 @@ namespace DevLocker.VersionControl.WiseSVN
 						statusData.RemoteStatus = m_RemoteStatusMap[line[8]];
 					}
 
-					statusData.Path = line.Substring(pathStart);
+					statusData.Path = line.Substring(pathStart).Replace('\\', '/');
 
 					// NOTE: If you pass absolute path to svn, the output will be with absolute path -> always pass relative path and we'll be good.
 					// If path is not relative, make it.

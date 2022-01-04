@@ -321,7 +321,6 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 					assetPath = statusData.Path.Substring(0, statusData.Path.LastIndexOf(".meta"));
 					isMeta = true;
 				}
-				assetPath = assetPath.Replace("\\", "/");
 
 				var lockPromptParam = m_ProjectPrefs.LockPromptParameters
 					.FirstOrDefault(al => assetPath.StartsWith(al.TargetFolder, StringComparison.OrdinalIgnoreCase));
@@ -358,8 +357,6 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 					if (statusData.Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase)) {
 						assetPath = statusData.Path.Substring(0, statusData.Path.LastIndexOf(".meta"));
 					}
-
-					assetPath = assetPath.Replace("\\", "/");
 
 					var lockPromptParam = m_ProjectPrefs.LockPromptParameters
 						.FirstOrDefault(al => assetPath.StartsWith(al.TargetFolder, StringComparison.OrdinalIgnoreCase));
