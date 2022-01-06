@@ -17,7 +17,11 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 		{
 			public SVNStatusData StatusData;
 			public bool IsMeta = false;
+
+#pragma warning disable CA2235 // Field is a member of Serializable but is not of such type. Unity will handle this.
 			public UnityEngine.Object TargetObject;
+#pragma warning restore CA2235
+
 			public bool ShouldLock = true;
 
 			public string AssetName => System.IO.Path.GetFileName(StatusData.Path);
