@@ -17,6 +17,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		private static bool IsActive => m_PersonalPrefs.EnableCoreIntegration && (m_PersonalPrefs.PopulateStatusesDatabase || SVNPreferencesManager.Instance.ProjectPrefs.EnableLockPrompt);
 
 		private static bool m_ShowNormalStatusIcons = false;
+		private static bool m_ShowExcludeStatusIcons = false;
 		private static string[] m_ExcludedPaths = new string[0];
 
 		private static GUIContent m_DataIsIncompleteWarning;
@@ -36,6 +37,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				EditorApplication.projectWindowItemOnGUI += ItemOnGUI;
 
 				m_ShowNormalStatusIcons = SVNPreferencesManager.Instance.PersonalPrefs.ShowNormalStatusOverlayIcon;
+				m_ShowExcludeStatusIcons = SVNPreferencesManager.Instance.PersonalPrefs.ShowExcludedStatusOverlayIcon;
 				m_ExcludedPaths = SVNPreferencesManager.Instance.ProjectPrefs.Exclude.ToArray();
 			} else {
 				EditorApplication.projectWindowItemOnGUI -= ItemOnGUI;
@@ -183,6 +185,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					break;
 			}
 
+			// Handle unknown statuses.
 			if (m_ShowNormalStatusIcons && !statusData.IsValid) {
 				fileStatus = VCFileStatus.Normal;
 
@@ -190,7 +193,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					string path = AssetDatabase.GUIDToAssetPath(guid);
 					foreach (string excludedPath in m_ExcludedPaths) {
 						if (path.StartsWith(excludedPath, StringComparison.OrdinalIgnoreCase)) {
-							fileStatus = VCFileStatus.Ignored;
+							fileStatus = m_ShowExcludeStatusIcons ? VCFileStatus.Excluded : VCFileStatus.None;
 							break;
 						}
 					}
@@ -201,6 +204,11 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			// Entries with normal status are present when there is other data to show. Skip the icon if disabled.
 			if (!m_ShowNormalStatusIcons && fileStatus == VCFileStatus.Normal) {
+				fileStatusIcon = null;
+			}
+
+			// Excluded items are added explicitly - their status exists (is known).
+			if (!m_ShowExcludeStatusIcons && fileStatus == VCFileStatus.Excluded) {
 				fileStatusIcon = null;
 			}
 
