@@ -19,6 +19,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		Incomplete,	// Not used
 		Merged, 	// Not used
 		Obstructed,
+		ReadOnly,
+		Excluded,	// Used for excluded by WiseSVN preference folders / assets
 		None,	// File not found or something worse....
 	}
 

@@ -225,7 +225,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			}
 			EditorGUI.BeginDisabledGroup(!m_PersonalPrefs.PopulateStatusesDatabase);
 
-			m_PersonalPrefs.ShowNormalStatusOverlayIcon = EditorGUILayout.Toggle(new GUIContent("Show Normal Status Green Icon", "Normal status is versioned asset that doesn't have any changes."), m_PersonalPrefs.ShowNormalStatusOverlayIcon);
+			m_PersonalPrefs.ShowNormalStatusOverlayIcon = EditorGUILayout.Toggle(new GUIContent("Show Normal status green icon", "Normal status is versioned asset that doesn't have any changes."), m_PersonalPrefs.ShowNormalStatusOverlayIcon);
+			m_PersonalPrefs.ShowExcludedStatusOverlayIcon = EditorGUILayout.Toggle(new GUIContent("Show Excluded gray icon", "Show gray icon over the items added in the Exclude list in the Project tab of these preferences. These are non-recursive."), m_PersonalPrefs.ShowExcludedStatusOverlayIcon);
 			m_PersonalPrefs.AutoRefreshDatabaseInterval = EditorGUILayout.IntField(new GUIContent("Overlay icons refresh interval", "How much seconds to wait for the next overlay icons refresh.\nNOTE: -1 will deactivate it - only file changes will trigger refresh."), m_PersonalPrefs.AutoRefreshDatabaseInterval);
 
 			m_PersonalPrefs.DownloadRepositoryChanges =

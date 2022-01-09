@@ -138,6 +138,10 @@ namespace DevLocker.VersionControl.WiseSVN
 #if UNITY_2018_4_OR_NEWER
 			GatherDataInThreadRecursive("Packages", statuses, unversionedFolders);
 #endif
+			// Add excluded items explicitly so their icon shows even when "Normal status green icon" is disabled.
+			foreach(string excludedPath in m_ProjectCachedPrefs.Exclude) {
+				statuses.Add(new SVNStatusData() { Path = excludedPath, Status = VCFileStatus.Excluded, LockDetails = LockDetails.Empty });
+			}
 
 			DataIsIncomplete = unversionedFolders.Count >= SanityUnversionedFoldersLimit || statuses.Count >= SanityStatusesLimit;
 
