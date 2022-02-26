@@ -198,7 +198,25 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		[MenuItem("Assets/SVN/Commit", false, -900)]
 		public static void CommitSelected()
 		{
-			m_Integration?.Commit(GetSelectedAssetPaths(), true);
+			var paths = GetSelectedAssetPaths().ToList();
+			if (paths.Count == 1) {
+
+				if (paths[0] == "Assets") {
+					// Special case for the "Assets" folder as it doesn't have a meta file and that kind of breaks the TortoiseSVN.
+					CommitAll();
+					return;
+				}
+
+				// TortoiseSVN shows "(multiple targets selected)" for commit path when more than one was specified.
+				// Don't specify the .meta unless really needed to.
+				var statusData = WiseSVNIntegration.GetStatus(paths[0] + ".meta");
+				if (statusData.Status == VCFileStatus.Normal && !statusData.IsConflicted) {
+					m_Integration?.Commit(paths, false);
+					return;
+				}
+			}
+
+			m_Integration?.Commit(paths, true);
 		}
 
 		public static void Commit(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
@@ -230,6 +248,24 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		[MenuItem("Assets/SVN/Revert", false, -800)]
 		public static void RevertSelected()
 		{
+			var paths = GetSelectedAssetPaths().ToList();
+			if (paths.Count == 1) {
+
+				if (paths[0] == "Assets") {
+					// Special case for the "Assets" folder as it doesn't have a meta file and that kind of breaks the TortoiseSVN.
+					RevertAll();
+					return;
+				}
+
+				// TortoiseSVN shows the meta file for revert even if it has no changes.
+				// Don't specify the .meta unless really needed to.
+				var statusData = WiseSVNIntegration.GetStatus(paths[0] + ".meta");
+				if (statusData.Status == VCFileStatus.Normal && !statusData.IsConflicted) {
+					m_Integration?.Revert(paths, false);
+					return;
+				}
+			}
+
 			m_Integration?.Revert(GetSelectedAssetPaths(), true, true);
 		}
 
