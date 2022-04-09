@@ -38,6 +38,7 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 		public abstract double RefreshInterval { get; }
 
 		private double m_LastRefreshTime;   // TODO: Maybe serialize this?
+		private double m_LastUpdateStart;
 
 		#region Thread Work Related Data
 		// Filled in by a worker thread.
@@ -115,7 +116,8 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 		protected virtual void StartDatabaseUpdate()
 		{
 			if (DoTraceLogs) {
-				Debug.Log($"Started update of {name} at {EditorApplication.timeSinceStartup:0.00}");
+				m_LastUpdateStart = EditorApplication.timeSinceStartup;
+				Debug.Log($"Started update of {name} at {m_LastUpdateStart:0.00}");
 			}
 
 			if (m_WorkerThread != null || m_PendingData != null) {
@@ -175,7 +177,7 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 				return;
 
 			if (DoTraceLogs) {
-				Debug.Log($"Finished updating {name} at {EditorApplication.timeSinceStartup:0.00}");
+				Debug.Log($"Finished updating {name} for {(EditorApplication.timeSinceStartup - m_LastUpdateStart):0.00} seconds");
 			}
 
 			EditorApplication.update -= WaitAndFinishDatabaseUpdate;

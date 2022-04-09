@@ -32,6 +32,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		{
 			public bool EnableCoreIntegration = true;		// Sync file operations with SVN
 			public bool PopulateStatusesDatabase = true;    // For overlay icons etc.
+			public bool PopulateIgnoresDatabase = true;    // For svn-ignored icons etc.
 			public bool ShowNormalStatusOverlayIcon = false;
 			public bool ShowExcludedStatusOverlayIcon = true;
 
@@ -232,9 +233,9 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			FileStatusIcons[(int)VCFileStatus.Replaced] = LoadTexture("Editor/SVNOverlayIcons/SVNModifiedIcon");
 			FileStatusIcons[(int)VCFileStatus.Deleted] = LoadTexture("Editor/SVNOverlayIcons/SVNDeletedIcon");
 			FileStatusIcons[(int)VCFileStatus.Conflicted] = LoadTexture("Editor/SVNOverlayIcons/SVNConflictIcon");
-			FileStatusIcons[(int)VCFileStatus.Ignored] = LoadTexture("Editor/SVNOverlayIcons/SVNIgnoredIcon");
+			FileStatusIcons[(int)VCFileStatus.Ignored] = LoadTexture("Editor/SVNOverlayIcons/SVNIgnoredIcon", "This item is in a svn-ignore list. It is not tracked by SVN.");
 			FileStatusIcons[(int)VCFileStatus.Unversioned] = LoadTexture("Editor/SVNOverlayIcons/SVNUnversionedIcon");
-			FileStatusIcons[(int)VCFileStatus.Excluded] = LoadTexture("Editor/SVNOverlayIcons/SVNReadOnlyIcon", "This item is excluded from monitoring by WiseSVN. Check the WiseSVN preferences.");
+			FileStatusIcons[(int)VCFileStatus.Excluded] = LoadTexture("Editor/SVNOverlayIcons/SVNReadOnlyIcon", "This item is excluded from monitoring by WiseSVN, but it may still be tracked by SVN. Check the WiseSVN preferences - Excludes setting.");
 
 			LockStatusIcons = new GUIContent[Enum.GetValues(typeof(VCLockStatus)).Length];
 			LockStatusIcons[(int)VCLockStatus.LockedHere] = LoadTexture("Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon", "You have locked this file.\nClick for more details.");

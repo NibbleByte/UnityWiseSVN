@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using UnityEditor;
 using UnityEngine;
 
@@ -76,12 +77,15 @@ namespace DevLocker.VersionControl.WiseSVN
 #else
 		public override bool TemporaryDisabled => WiseSVNIntegration.TemporaryDisabled || UnityEditorInternal.InternalEditorUtility.inBatchMode || BuildPipeline.isBuildingPlayer;
 #endif
-		public override bool DoTraceLogs => (m_PersonalPrefs.TraceLogs & SVNTraceLogs.DatabaseUpdates) != 0;
+		public override bool DoTraceLogs => (m_PersonalCachedPrefs.TraceLogs & SVNTraceLogs.DatabaseUpdates) != 0;
 
 		public override double RefreshInterval => m_PersonalPrefs.AutoRefreshDatabaseInterval;
 
 		// Any assets contained in these folders are considered unversioned.
 		private string[] m_UnversionedFolders = new string[0];
+
+		// SVN-Ignored files and folders.
+		private string[] m_IgnoredEntries = new string[0];
 
 		/// <summary>
 		/// The collected statuses are not complete due to some reason (for example, they were too many).
@@ -128,22 +132,48 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private const int SanityStatusesLimit = 600;
 		private const int SanityUnversionedFoldersLimit = 250;
+		private const int SanityIgnoresLimit = 250;
 
 		// Executed in a worker thread.
 		protected override GuidStatusDatasBind[] GatherDataInThread()
 		{
 			List<SVNStatusData> statuses = new List<SVNStatusData>();
 			List<string> unversionedFolders = new List<string>();
-			GatherDataInThreadRecursive("Assets", statuses, unversionedFolders);
+			List<string> ignoredEntries = new List<string>();
+
+			var timings = new StringBuilder("SVNStatusesDatabase Gathering Data Timings:\n");
+
+			var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+			GatherStatusDataInThreadRecursive("Assets", statuses, unversionedFolders);
 #if UNITY_2018_4_OR_NEWER
-			GatherDataInThreadRecursive("Packages", statuses, unversionedFolders);
+			GatherStatusDataInThreadRecursive("Packages", statuses, unversionedFolders);
 #endif
+
 			// Add excluded items explicitly so their icon shows even when "Normal status green icon" is disabled.
 			foreach(string excludedPath in m_ProjectCachedPrefs.Exclude) {
 				statuses.Add(new SVNStatusData() { Path = excludedPath, Status = VCFileStatus.Excluded, LockDetails = LockDetails.Empty });
 			}
 
-			DataIsIncomplete = unversionedFolders.Count >= SanityUnversionedFoldersLimit || statuses.Count >= SanityStatusesLimit;
+			timings.AppendLine("Gather Status Data - " + (stopwatch.ElapsedMilliseconds / 1000f));
+			stopwatch.Restart();
+
+
+			if (m_PersonalCachedPrefs.PopulateIgnoresDatabase) {
+				GatherIgnoresInThread("Assets", ignoredEntries);
+#if UNITY_2018_4_OR_NEWER
+				GatherIgnoresInThread("Packages", ignoredEntries);
+#endif
+				timings.AppendLine("Gather svn:ignore - " + (stopwatch.ElapsedMilliseconds / 1000f));
+				stopwatch.Restart();
+
+				GatherGlobalIgnoresInThread(ignoredEntries);
+
+				timings.AppendLine("Gather svn:global-ignores - " + (stopwatch.ElapsedMilliseconds / 1000f));
+				stopwatch.Restart();
+			}
+
+			DataIsIncomplete = unversionedFolders.Count >= SanityUnversionedFoldersLimit || statuses.Count >= SanityStatusesLimit || ignoredEntries.Count > SanityIgnoresLimit;
 
 			// Just in case...
 			if (unversionedFolders.Count >= SanityUnversionedFoldersLimit) {
@@ -158,10 +188,13 @@ namespace DevLocker.VersionControl.WiseSVN
 					.ToList();
 			}
 
-			m_UnversionedFolders = unversionedFolders.ToArray();
+			if (ignoredEntries.Count >= SanityIgnoresLimit) {
+				ignoredEntries.RemoveRange(ignoredEntries.Count, ignoredEntries.Count - SanityIgnoresLimit - 1);
+			}
+
 
 			// HACK: the base class works with the DataType for pending data. Guid won't be used.
-			return statuses
+			GuidStatusDatasBind[] pendingData = statuses
 				.Where(s => statuses.Count < SanityStatusesLimit	// Include everything when below the limit
 				|| s.Status == VCFileStatus.Added
 				|| s.Status == VCFileStatus.Modified
@@ -171,9 +204,27 @@ namespace DevLocker.VersionControl.WiseSVN
 				)
 				.Select(s => new GuidStatusDatasBind() { MergedStatusData = s })
 				.ToArray();
+
+			string projectRootPath = WiseSVNIntegration.ProjectRootNative + '\\';
+			m_IgnoredEntries = ignoredEntries
+				.Select(path => path.Replace(projectRootPath, ""))
+				.Select(path => path.Replace('\\', '/'))
+				.Distinct()
+				.ToArray();
+
+			m_UnversionedFolders = unversionedFolders.ToArray();
+
+			timings.AppendLine("Gather Processing Data - " + (stopwatch.ElapsedMilliseconds / 1000f));
+			stopwatch.Restart();
+
+			if (DoTraceLogs) {
+				Debug.Log(timings.ToString());
+			}
+
+			return pendingData;
 		}
 
-		private void GatherDataInThreadRecursive(string repositoryPath, List<SVNStatusData> foundStatuses, List<string> foundUnversionedFolders)
+		private void GatherStatusDataInThreadRecursive(string repositoryPath, List<SVNStatusData> foundStatuses, List<string> foundUnversionedFolders)
 		{
 			var statusOptions = new SVNStatusDataOptions() {
 				Depth = SVNStatusDataOptions.SearchDepth.Infinity,
@@ -196,9 +247,24 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (statusData.Status == VCFileStatus.Unversioned && Directory.Exists(statusData.Path)) {
 
 					// Nested repositories return unknown status, but are hidden in the TortoiseSVN commit window.
-					// Add their statuses to support them. Also removing this folder should display it as normal status.
+					// Add their statuses to support them. Also removing this folder data should display it as normal status.
 					if (Directory.Exists($"{statusData.Path}/.svn")) {
-						GatherDataInThreadRecursive(statusData.Path, foundStatuses, foundUnversionedFolders);
+						GatherStatusDataInThreadRecursive(statusData.Path, foundStatuses, foundUnversionedFolders);
+
+						// Folder meta file could also be unversioned. This will force unversioned overlay icon to show, even though the folder status is removed.
+						// Remove the meta file status as well.
+						var metaIndex = statuses.FindIndex(sd => sd.Status == VCFileStatus.Unversioned && sd.Path == statusData.Path + ".meta");
+						if (metaIndex != -1) {
+
+							foundStatuses.RemoveAll(sd => sd.Path == statusData.Path + ".meta");
+
+							statuses.RemoveAt(metaIndex);
+
+							if (metaIndex < i) {
+								--i;
+							}
+						}
+
 						statuses.RemoveAt(i);
 						--i;
 						continue;
@@ -208,6 +274,66 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 
 				foundStatuses.Add(statusData);
+			}
+		}
+
+		private void GatherIgnoresInThread(string repositoryPath, List<string> foundIgnoredEntries)
+		{
+			var propgets = new List<PropgetEntry>();
+
+			PropgetOperationResult result = WiseSVNIntegration.Propget(repositoryPath, "svn:ignore", true, propgets);
+			if (result != PropgetOperationResult.Success && DoTraceLogs) {
+				Debug.LogError($"SVN: Failed to collect svn ignored entries for \"{repositoryPath}\". Type: \"svn:ignore\".");
+				return;
+			}
+
+			// Keep in mind that "svn:ignore" values may include wildcards (* and ?).
+			// Also all ignored entries do not appear in the "svn status" command, which we consider as "normal" status.
+			// This is why we need to collect actual ignored files, as there is no good other way to recognize them.
+			foreach (PropgetEntry propget in propgets) {
+				foreach (string line in propget.Lines) {
+					var matchedEntries = Directory.EnumerateFileSystemEntries(propget.Path, line, SearchOption.TopDirectoryOnly);
+					foundIgnoredEntries.AddRange(matchedEntries);
+				}
+			}
+		}
+
+		private void GatherGlobalIgnoresInThread(List<string> foundIgnoredEntries)
+		{
+			var propgets = new List<PropgetEntry>();
+
+			PropgetOperationResult result = WiseSVNIntegration.Propget(WiseSVNIntegration.ProjectRootNative, "svn:global-ignores", true, propgets);
+			if (result != PropgetOperationResult.Success && DoTraceLogs) {
+				Debug.LogError($"SVN: Failed to collect svn ignored entries for \"{WiseSVNIntegration.ProjectRootNative}\". Type: \"svn:global-ignores\".");
+				return;
+			}
+
+			foreach (PropgetEntry propget in propgets) {
+
+				// Start folder is returned as "."
+				if (propget.Path == ".") {
+
+					// Enumerating the root folder would be too expensive (Library is huge). Just enumerate meaningful folders.
+					// "svn:global-ignores" are applied recursively to all sub-folders.
+					foreach (string line in propget.Lines) {
+						var matchedEntries = Directory.EnumerateFileSystemEntries("Assets", line, SearchOption.AllDirectories);
+						foundIgnoredEntries.AddRange(matchedEntries);
+					}
+
+#if UNITY_2018_4_OR_NEWER
+					foreach (string line in propget.Lines) {
+						var matchedEntries = Directory.EnumerateFileSystemEntries("Packages", line, SearchOption.AllDirectories);
+						foundIgnoredEntries.AddRange(matchedEntries);
+					}
+#endif
+
+					continue;
+				}
+
+				foreach (string line in propget.Lines) {
+					var matchedEntries = Directory.EnumerateFileSystemEntries(propget.Path, line, SearchOption.AllDirectories);
+					foundIgnoredEntries.AddRange(matchedEntries);
+				}
 			}
 		}
 
@@ -412,12 +538,23 @@ namespace DevLocker.VersionControl.WiseSVN
 					return bind.MergedStatusData;
 			}
 
+			string path = null;
 			if (m_UnversionedFolders.Length > 0) {
-				string path = AssetDatabase.GUIDToAssetPath(guid);
+				path = AssetDatabase.GUIDToAssetPath(guid);
 
 				foreach (string unversionedFolder in m_UnversionedFolders) {
 					if (path.StartsWith(unversionedFolder, StringComparison.OrdinalIgnoreCase))
 						return new SVNStatusData() { Path = path, Status = VCFileStatus.Unversioned, LockDetails = LockDetails.Empty };
+				}
+			}
+
+			if (m_IgnoredEntries.Length > 0) {
+				path = path ?? AssetDatabase.GUIDToAssetPath(guid);
+
+				foreach (string ignoredPath in m_IgnoredEntries) {
+					if (path.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase)) {
+						return new SVNStatusData() { Path = path, Status = VCFileStatus.Ignored, LockDetails = LockDetails.Empty };
+					}
 				}
 			}
 
