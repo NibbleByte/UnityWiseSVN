@@ -86,6 +86,10 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		// SVN-Ignored files and folders.
 		private string[] m_IgnoredEntries = new string[0];
+		// SVN-Global-ignored entries are stored separately as they are checked only once, because they are much slower.
+		private string[] m_GlobalIgnoredEntries = new string[0];
+
+		public bool m_GlobalIgnoresCollected = false;
 
 		/// <summary>
 		/// The collected statuses are not complete due to some reason (for example, they were too many).
@@ -140,6 +144,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			List<SVNStatusData> statuses = new List<SVNStatusData>();
 			List<string> unversionedFolders = new List<string>();
 			List<string> ignoredEntries = new List<string>();
+			List<string> globalIgnoredEntries = new List<string>();
 
 			var timings = new StringBuilder("SVNStatusesDatabase Gathering Data Timings:\n");
 
@@ -167,13 +172,15 @@ namespace DevLocker.VersionControl.WiseSVN
 				timings.AppendLine("Gather svn:ignore - " + (stopwatch.ElapsedMilliseconds / 1000f));
 				stopwatch.Restart();
 
-				GatherGlobalIgnoresInThread(ignoredEntries);
+				if (!m_GlobalIgnoresCollected) {
+					GatherGlobalIgnoresInThread(globalIgnoredEntries);
 
-				timings.AppendLine("Gather svn:global-ignores - " + (stopwatch.ElapsedMilliseconds / 1000f));
-				stopwatch.Restart();
+					timings.AppendLine("Gather svn:global-ignores - " + (stopwatch.ElapsedMilliseconds / 1000f));
+					stopwatch.Restart();
+				}
 			}
 
-			DataIsIncomplete = unversionedFolders.Count >= SanityUnversionedFoldersLimit || statuses.Count >= SanityStatusesLimit || ignoredEntries.Count > SanityIgnoresLimit;
+			DataIsIncomplete = unversionedFolders.Count >= SanityUnversionedFoldersLimit || statuses.Count >= SanityStatusesLimit || ignoredEntries.Count > SanityIgnoresLimit || globalIgnoredEntries.Count > SanityIgnoresLimit;
 
 			// Just in case...
 			if (unversionedFolders.Count >= SanityUnversionedFoldersLimit) {
@@ -189,7 +196,11 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			if (ignoredEntries.Count >= SanityIgnoresLimit) {
-				ignoredEntries.RemoveRange(ignoredEntries.Count, ignoredEntries.Count - SanityIgnoresLimit - 1);
+				ignoredEntries.RemoveRange(SanityIgnoresLimit, ignoredEntries.Count - SanityIgnoresLimit);
+			}
+
+			if (globalIgnoredEntries.Count >= SanityIgnoresLimit) {
+				globalIgnoredEntries.RemoveRange(SanityIgnoresLimit, globalIgnoredEntries.Count - SanityIgnoresLimit);
 			}
 
 
@@ -211,6 +222,16 @@ namespace DevLocker.VersionControl.WiseSVN
 				.Select(path => path.Replace('\\', '/'))
 				.Distinct()
 				.ToArray();
+
+			if (!m_GlobalIgnoresCollected) {
+				m_GlobalIgnoredEntries = globalIgnoredEntries
+					.Select(path => path.Replace(projectRootPath, ""))
+					.Select(path => path.Replace('\\', '/'))
+					.Distinct()
+					.ToArray();
+
+				m_GlobalIgnoresCollected = true;
+			}
 
 			m_UnversionedFolders = unversionedFolders.ToArray();
 
@@ -552,6 +573,16 @@ namespace DevLocker.VersionControl.WiseSVN
 				path = path ?? AssetDatabase.GUIDToAssetPath(guid);
 
 				foreach (string ignoredPath in m_IgnoredEntries) {
+					if (path.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase)) {
+						return new SVNStatusData() { Path = path, Status = VCFileStatus.Ignored, LockDetails = LockDetails.Empty };
+					}
+				}
+			}
+
+			if (m_GlobalIgnoredEntries.Length > 0) {
+				path = path ?? AssetDatabase.GUIDToAssetPath(guid);
+
+				foreach (string ignoredPath in m_GlobalIgnoredEntries) {
 					if (path.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase)) {
 						return new SVNStatusData() { Path = path, Status = VCFileStatus.Ignored, LockDetails = LockDetails.Empty };
 					}

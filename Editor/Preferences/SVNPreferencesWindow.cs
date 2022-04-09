@@ -115,6 +115,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 					// When turning on the integration do instant refresh.
 					// Works when editor started with disabled integration. Doing it here to avoid circle dependency.
 					if (m_PersonalPrefs.EnableCoreIntegration) {
+						SVNStatusesDatabase.Instance.m_GlobalIgnoresCollected = false;
 						SVNStatusesDatabase.Instance.InvalidateDatabase();
 						SVNBranchesDatabase.Instance.InvalidateDatabase();
 						SVNLockPromptDatabaseStarter.TryStartIfNeeded();
