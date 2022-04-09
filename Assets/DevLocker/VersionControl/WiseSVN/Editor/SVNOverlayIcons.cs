@@ -50,6 +50,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		[MenuItem(InvalidateDatabaseMenuText, false, 195)]
 		private static void InvalidateDatabaseMenu()
 		{
+			SVNStatusesDatabase.Instance.m_GlobalIgnoresCollected = false;
 			SVNStatusesDatabase.Instance.InvalidateDatabase();
 			LockPrompting.SVNLockPromptDatabase.Instance.ClearKnowledge();
 		}
