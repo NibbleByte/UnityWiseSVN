@@ -508,13 +508,21 @@ namespace DevLocker.VersionControl.WiseSVN
 
 
 				if (statusData.Status == VCFileStatus.Normal) {
-
+					
+					var knownStatusBind = m_Data.FirstOrDefault(b => b.Key == guid) ?? new GuidStatusDatasBind();
+					var knownMergedData = knownStatusBind.MergedStatusData;
+					
 					// Check if just switched to normal from something else.
-					var knownStatusData = GetKnownStatusData(guid);
 					// Normal might be present in the database if it is locked.
-					if (knownStatusData.Status != VCFileStatus.None && knownStatusData.Status != VCFileStatus.Normal) {
-						if (knownStatusData.LockStatus == VCLockStatus.NoLock && knownStatusData.RemoteStatus == VCRemoteFileStatus.None) {
+					if (knownMergedData.Status != VCFileStatus.None && knownMergedData.Status != VCFileStatus.Normal) {
+						if (knownMergedData.LockStatus == VCLockStatus.NoLock && knownMergedData.RemoteStatus == VCRemoteFileStatus.None) {
 							RemoveStatusData(guid);
+						} else {
+							bool knownIsMeta = knownStatusBind.AssetStatusData.Status == VCFileStatus.Normal;	// Meta, not asset.
+							knownMergedData = knownIsMeta ? knownStatusBind.MetaStatusData : knownStatusBind.AssetStatusData;
+							knownMergedData.Status = VCFileStatus.Normal;
+							
+							SetStatusData(guid, knownMergedData, true, false, knownIsMeta);
 						}
 
 						InvalidateDatabase();
@@ -659,6 +667,15 @@ namespace DevLocker.VersionControl.WiseSVN
 
 							return false;
 						}
+					}
+					
+					// Merged should always display lock and remote status.
+					if (statusData.LockStatus == VCLockStatus.NoLock) {
+						statusData.LockStatus = bind.MergedStatusData.LockStatus;
+						statusData.LockDetails = bind.MergedStatusData.LockDetails;
+					}
+					if (statusData.RemoteStatus == VCRemoteFileStatus.None) {
+						statusData.RemoteStatus= bind.MergedStatusData.RemoteStatus;
 					}
 
 					bind.MergedStatusData = statusData;
