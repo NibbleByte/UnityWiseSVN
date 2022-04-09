@@ -7,7 +7,7 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 	/// Starts the database if enabled.
 	/// </summary>
 	[InitializeOnLoad]
-	public static class SVNBranchesDatabaseStarter
+	internal static class SVNBranchesDatabaseStarter
 	{
 		// HACK: If this was the SVNBranchesDatabase itself it causes exceptions on assembly reload.
 		//		 The static constructor gets called during reload because the instance exists.

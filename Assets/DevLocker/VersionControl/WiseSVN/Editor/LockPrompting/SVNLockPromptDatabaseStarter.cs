@@ -7,7 +7,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 	/// Starts the database if enabled.
 	/// </summary>
 	[InitializeOnLoad]
-	public static class SVNLockPromptDatabaseStarter
+	internal static class SVNLockPromptDatabaseStarter
 	{
 		// HACK: If this was the SVNAutoLockingDatabase itself it causes exceptions on assembly reload.
 		//		 The static constructor gets called during reload because the instance exists.

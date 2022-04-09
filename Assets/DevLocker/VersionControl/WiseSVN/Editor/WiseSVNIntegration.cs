@@ -1410,6 +1410,101 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 
+		/// <summary>
+		/// Performs propget operation based on the provided parameters.
+		/// Example property names: "svn:ignore", "svn:mergeinfo", "tsvn:logminsize"
+		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
+		/// </summary>
+		public static PropgetOperationResult Propget(string assetPath, string property, bool recursive, List<PropgetEntry> resultEntries, int timeout = COMMAND_TIMEOUT, IShellMonitor shellMonitor = null)
+		{
+			var depth = recursive ? "infinity" : "empty";
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"propget {property} --depth={depth} -v \"{SVNFormatPath(assetPath)}\"", timeout, shellMonitor);
+
+			if (!string.IsNullOrEmpty(result.Error)) {
+
+				// URL or local path not found (or invalid working copy path).
+				// svn: E200005: 'D:\Workspace\Unity\WiseSVN-SVN\trunk\sdasdas' is not under version control
+				// svn: warning: W155010: The node '...' was not found.
+				// svn: E155007: '...' is not a working copy
+				// svn: warning: W160013: URL 'https://...' non-existent in revision 59280
+				// svn: E200009: Could not list all targets because some targets don't exist
+				if (result.Error.Contains("W155010") || result.Error.Contains("E155007") || result.Error.Contains("W160013") || result.Error.Contains("E200009") || result.Error.Contains("E200005"))
+					return PropgetOperationResult.NotFound;
+
+				return PropgetOperationResult.UnknownError;
+			}
+
+			/* Example output format:
+				Properties on '.':
+				  svn:ignore
+					.vs
+					Assembly-CSharp-Editor.csproj
+					Assembly-CSharp.csproj
+					DevLocker.VersionControl.WiseSVN.csproj
+
+				Properties on 'Assets':
+				  svn:ignore
+					AssetStoreTools
+					AssetStoreTools.meta
+
+				Properties on 'Foo - Bar':
+				  svn:ignore
+					Food - Bar.txt
+					Food2.txt
+
+			*/
+
+			if (string.IsNullOrWhiteSpace(result.Output))
+				return PropgetOperationResult.Success;
+
+			var outputLines = result.Output.Trim().Split('\n');
+
+			var entry = new PropgetEntry();
+			var value = new StringBuilder();
+
+			for(int i = 0; i < outputLines.Length; ++i) {
+				var line = outputLines[i].Trim();
+
+				if (line.StartsWith("Properties on ", StringComparison.OrdinalIgnoreCase)) {
+					int pathStartIndex = line.IndexOf('\'') + 1;
+					entry.Path = line.Substring(pathStartIndex, line.LastIndexOf('\'') - pathStartIndex);
+
+					++i;	// Skip the next line as well - it's the name of the property.
+					continue;
+				}
+
+				value.AppendLine(line);	// It will be trimmed if empty, no worry.
+
+				if (i + 1 >= outputLines.Length || (line.Length == 0 && outputLines[i + 1].StartsWith("Properties on ", StringComparison.OrdinalIgnoreCase))) {
+					entry.Value = value.ToString().Replace("\r", "").Trim(); // Because StringBuilder inserts \r :(
+					resultEntries.Add(entry);
+
+					entry = new PropgetEntry();
+					value.Clear();
+					continue;
+				}
+			}
+
+			return PropgetOperationResult.Success;
+		}
+
+		/// <summary>
+		/// Performs propget operation based on the provided parameters.
+		/// Example property names: "svn:ignore", "svn:mergeinfo", "tsvn:logminsize"
+		/// </summary>
+		public static SVNAsyncOperation<PropgetOperationResult> PropgetAsync(string assetPath, string property, bool recursive, List<PropgetEntry> resultEntries, int timeout = -1)
+		{
+			var threadResults = new List<PropgetEntry>();
+			var operation = SVNAsyncOperation<PropgetOperationResult>.Start(op => Propget(assetPath, property, recursive, resultEntries, timeout, op));
+			operation.Completed += (op) => {
+				resultEntries.AddRange(threadResults);
+			};
+
+			return operation;
+		}
+
+
 
 		/// <summary>
 		/// Convert Unity asset path to svn URL. Works with files and folders.
@@ -1427,7 +1522,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		/// <summary>
 		/// Convert Unity asset path to relative repo URL. Works with files and folders.
-		/// Example: ^/trunk/YourProject/Assets/Foo.cs
+		/// Example: /trunk/YourProject/Assets/Foo.cs
 		/// </summary>
 		public static string AssetPathToRelativeURL(string assetPathOrUrl)
 		{

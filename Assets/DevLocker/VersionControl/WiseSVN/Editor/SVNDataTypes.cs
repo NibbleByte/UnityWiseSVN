@@ -104,6 +104,13 @@ namespace DevLocker.VersionControl.WiseSVN
 		UnknownError,			// Failed for some reason.
 	}
 
+	public enum PropgetOperationResult
+	{
+		Success,				// Operation succeeded.
+		NotFound,				// URL target was not found.
+		UnknownError,			// Failed for some reason.
+	}
+
 	public enum CommitOperationResult
 	{
 		Success,				// Operation succeeded.
@@ -295,6 +302,23 @@ namespace DevLocker.VersionControl.WiseSVN
 		public override string ToString()
 		{
 			return $"{Change.ToString()[0]} {Path}";
+		}
+	}
+
+	/// <summary>
+	/// Data containing results for single entry of SVN propget operation.
+	/// </summary>
+	[Serializable]
+	public struct PropgetEntry
+	{
+		public string Path;
+		public string Value;
+
+		public string[] Lines => Value.Split('\n');
+
+		public override string ToString()
+		{
+			return $"Propget: \"{Path}\" = \"{Value}\"";
 		}
 	}
 
