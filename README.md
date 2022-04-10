@@ -24,7 +24,8 @@ Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https:/
 * Provides assets context menu for manual SVN operations like commit, update, revert etc.
 * **Show overlay svn status icons**
   * Show server changes that you need to update.
-  * Show locked files by you and your colleges. 
+  * Show locked files by you and your colleges.
+  * Show "svn:ignore" and "svn:global-ignores" icons.
 * Displays warning in the SceneView when the current scene or edited prefab is out of date or locked.
 * Lock prompt on modifying assets by path and type (perforce checkout like)
   * If asset or its meta becomes modified a pop-up window will prompt the user to lock or ignore it.
