@@ -508,10 +508,10 @@ namespace DevLocker.VersionControl.WiseSVN
 
 
 				if (statusData.Status == VCFileStatus.Normal) {
-					
+
 					var knownStatusBind = m_Data.FirstOrDefault(b => b.Key == guid) ?? new GuidStatusDatasBind();
 					var knownMergedData = knownStatusBind.MergedStatusData;
-					
+
 					// Check if just switched to normal from something else.
 					// Normal might be present in the database if it is locked.
 					if (knownMergedData.Status != VCFileStatus.None && knownMergedData.Status != VCFileStatus.Normal) {
@@ -521,7 +521,7 @@ namespace DevLocker.VersionControl.WiseSVN
 							bool knownIsMeta = knownStatusBind.AssetStatusData.Status == VCFileStatus.Normal;	// Meta, not asset.
 							knownMergedData = knownIsMeta ? knownStatusBind.MetaStatusData : knownStatusBind.AssetStatusData;
 							knownMergedData.Status = VCFileStatus.Normal;
-							
+
 							SetStatusData(guid, knownMergedData, true, false, knownIsMeta);
 						}
 
@@ -532,6 +532,11 @@ namespace DevLocker.VersionControl.WiseSVN
 					continue;
 				}
 
+				// Files inside ignored folder are returned as Unversioned. Check if they are ignored and change the status.
+				if (statusData.Status == VCFileStatus.Unversioned) {
+					statusData.Status = CheckForIgnoredOrExcludedStatus(statusData.Status, path);
+				}
+
 				// Every time the user saves a file it will get reimported. If we already know it is modified, don't refresh every time.
 				bool changed = SetStatusData(guid, statusData, true, false, isMeta);
 
@@ -540,6 +545,29 @@ namespace DevLocker.VersionControl.WiseSVN
 					return;
 				}
 			}
+		}
+
+		private VCFileStatus CheckForIgnoredOrExcludedStatus(VCFileStatus originalStatus, string path)
+		{
+			foreach (string excludedPath in m_ProjectCachedPrefs.Exclude) {
+				if (path.StartsWith(excludedPath, StringComparison.OrdinalIgnoreCase)) {
+					return VCFileStatus.Excluded;
+				}
+			}
+
+			foreach (string ignoredPath in m_IgnoredEntries) {
+				if (path.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase)) {
+					return VCFileStatus.Ignored;
+				}
+			}
+
+			foreach (string ignoredPath in m_GlobalIgnoredEntries) {
+				if (path.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase)) {
+					return VCFileStatus.Ignored;
+				}
+			}
+
+			return originalStatus;
 		}
 
 		#endregion
@@ -668,7 +696,7 @@ namespace DevLocker.VersionControl.WiseSVN
 							return false;
 						}
 					}
-					
+
 					// Merged should always display lock and remote status.
 					if (statusData.LockStatus == VCLockStatus.NoLock) {
 						statusData.LockStatus = bind.MergedStatusData.LockStatus;
