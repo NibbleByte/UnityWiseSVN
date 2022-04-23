@@ -64,6 +64,17 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 		{
 			if (SVNPreferencesManager.Instance.PersonalPrefs.AutoLockOnModified) {
 				SVNLockPromptDatabase.Instance.LockEntries(shouldLockEntries, false);
+
+				string notificationMessage = $"Auto-Locking {shouldLockEntries.Count()} Assets in SVN";
+
+				if (focusedWindow && !(focusedWindow is SceneView)) {
+					focusedWindow.ShowNotification(new GUIContent(notificationMessage));
+				}
+
+				foreach(SceneView sceneView in SceneView.sceneViews) {
+					sceneView.ShowNotification(new GUIContent(notificationMessage));
+				}
+
 				shouldLockEntries = new List<SVNStatusData>();
 
 				if (!lockedByOtherEntries.Any()) {
