@@ -1,4 +1,5 @@
 using DevLocker.VersionControl.WiseSVN.ContextMenus;
+using DevLocker.VersionControl.WiseSVN.Preferences;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,18 +53,31 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 		private bool m_WhatAreLocksHintShown = false;
 		private bool m_WhatIsForceLocksHintShown = false;
 
+		private SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
+		private SVNPreferencesManager.ProjectPreferences m_ProjectPrefs => SVNPreferencesManager.Instance.ProjectPrefs;
+
 		private bool m_AllowStealingLocks = false;
 		private List<LockEntryData> m_LockEntries = new List<LockEntryData>();
 		private Vector2 m_LockEntriesScroll;
 
 		public static void PromptLock(IEnumerable<SVNStatusData> shouldLockEntries, IEnumerable<SVNStatusData> lockedByOtherEntries)
 		{
+			if (SVNPreferencesManager.Instance.PersonalPrefs.AutoLockOnModified) {
+				SVNLockPromptDatabase.Instance.LockEntries(shouldLockEntries, false);
+				shouldLockEntries = new List<SVNStatusData>();
+
+				if (!lockedByOtherEntries.Any()) {
+					return;
+				}
+			}
+
 			var window = GetWindow<SVNLockPromptWindow>(true, "SVN Lock Modified Assets");
 			window.minSize = new Vector2(584, 500f);
 			var center = new Vector2(Screen.currentResolution.width, Screen.currentResolution.height) / 2f;
 			window.position = new Rect(center - window.position.size / 2, window.position.size);
 			window.AppendEntriesToLock(lockedByOtherEntries);
 			window.AppendEntriesToLock(shouldLockEntries);
+
 		}
 
 		private void AppendEntriesToLock(IEnumerable<SVNStatusData> entries)
@@ -101,6 +115,12 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 					                        "Coordinate with the locks' owner and select which assets you want to lock by force.",
 						MessageType.Info, true);
 				}
+			}
+
+			bool autoLock = EditorGUILayout.Toggle(new GUIContent("Auto lock when possible", SVNPreferencesManager.PersonalPreferences.AutoLockOnModifiedHint + "\n\nCan be changed in the SVN Preferences window."), m_PersonalPrefs.AutoLockOnModified);
+			if (m_PersonalPrefs.AutoLockOnModified != autoLock) {
+				m_PersonalPrefs.AutoLockOnModified = autoLock;
+				SVNPreferencesManager.Instance.SavePreferences(m_PersonalPrefs, m_ProjectPrefs);
 			}
 
 			EditorGUILayout.HelpBox(
