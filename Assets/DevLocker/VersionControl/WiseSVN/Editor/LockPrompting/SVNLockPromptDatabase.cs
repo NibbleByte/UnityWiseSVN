@@ -261,7 +261,11 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			var targetsFileToUse = FileUtil.GetUniqueTempPathInProject();   // Not thread safe - call in main thread only.
 			EnqueueOperation(op => WiseSVNIntegration.LockFiles(entriesList.Select(sd => sd.Path), forceLock, lockMessage, "", targetsFileToUse))
 			.Completed += (op) => {
-				if (op.Result == LockOperationResult.RemoteHasChanges) {
+				if (op.Result == LockOperationResult.NotSupported) {
+					Debug.LogError($"Locking failed, because server repository doesn't support locking. Assets failed to lock:\n{string.Join("\n", entriesList.Select(sd => sd.Path))}");
+					EditorUtility.DisplayDialog("SVN Lock Prompt", "Lock failed. Check the logs for more info.", "I will!");
+
+				} else if (op.Result == LockOperationResult.RemoteHasChanges) {
 					foreach (var failedStatusData in entriesList) {
 						RemoveKnownStatusData(failedStatusData);
 					}
