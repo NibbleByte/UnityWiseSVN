@@ -617,6 +617,12 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
 					return LockOperationResult.UnableToConnectError;
 
+				// Locking is not supported by the repository (for example, it is a github emulated svn).
+				// svn: warning: W160042: Path 'package.json' doesn't exist in HEAD revision (405 Method Not Allowed)
+				// svn: E200009: One or more locks could not be obtained
+				if (result.Error.Contains("405 Method Not Allowed"))
+					return LockOperationResult.NotSupported;
+
 				// Unable to connect to repository indicating some network or server problems.
 				//svn: warning: W160042: Lock failed: newer version of '...' exists
 				if (result.Error.Contains("W160042"))
