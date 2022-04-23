@@ -22,6 +22,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 	/// </summary>
 	public static class SVNContextMenusManager
 	{
+		public const int MenuItemPriorityStart = -2000;
+
 		private static SVNContextMenusBase m_Integration;
 
 		internal static void SetupContextType(ContextMenusClient client)
@@ -98,26 +100,26 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			return Selection.assetGUIDs.Select(AssetDatabase.GUIDToAssetPath);
 		}
 
-		[MenuItem("Assets/SVN/Diff \u2044 Resolve", true, -1000)]
+		[MenuItem("Assets/SVN/Diff \u2044 Resolve", true, MenuItemPriorityStart)]
 		public static bool DiffResolveValidate()
 		{
 			// Might be cool to return false if SVN status is normal or unversioned, but that might slow down the context menu.
 			return Selection.assetGUIDs.Length == 1;
 		}
 
-		[MenuItem("Assets/SVN/Diff \u2044 Resolve", false, -1000)]
+		[MenuItem("Assets/SVN/Diff \u2044 Resolve", false, MenuItemPriorityStart)]
 		public static void DiffResolve()
 		{
 			CheckChangesSelected();
 		}
 
-		[MenuItem("Assets/SVN/Check Changes All", false, -990)]
+		[MenuItem("Assets/SVN/Check Changes All", false, MenuItemPriorityStart + 5)]
 		public static void CheckChangesAll()
 		{
 			m_Integration?.CheckChanges(GetRootAssetPath(), false);
 		}
 
-		[MenuItem("Assets/SVN/Check Changes", false, -990)]
+		[MenuItem("Assets/SVN/Check Changes", false, MenuItemPriorityStart + 5)]
 		public static void CheckChangesSelected()
 		{
 			if (Selection.assetGUIDs.Length > 1) {
@@ -164,7 +166,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Update All", false, -950)]
+		[MenuItem("Assets/SVN/Update All", false, MenuItemPriorityStart + 20)]
 		public static void UpdateAll()
 		{
 			// It is recommended to freeze Unity while updating.
@@ -189,13 +191,13 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Commit All", false, -900)]
+		[MenuItem("Assets/SVN/Commit All", false, MenuItemPriorityStart + 40)]
 		public static void CommitAll()
 		{
 			m_Integration?.Commit(GetRootAssetPath(), false);
 		}
 
-		[MenuItem("Assets/SVN/Commit", false, -900)]
+		[MenuItem("Assets/SVN/Commit", false, MenuItemPriorityStart + 40)]
 		public static void CommitSelected()
 		{
 			var paths = GetSelectedAssetPaths().ToList();
@@ -226,7 +228,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Add", false, -900)]
+		[MenuItem("Assets/SVN/Add", false, MenuItemPriorityStart + 40)]
 		public static void AddSelected()
 		{
 			m_Integration?.Add(GetSelectedAssetPaths(), true);
@@ -239,13 +241,13 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Revert All", false, -800)]
+		[MenuItem("Assets/SVN/Revert All", false, MenuItemPriorityStart + 60)]
 		public static void RevertAll()
 		{
 			m_Integration?.Revert(GetRootAssetPath(), false, true);
 		}
 
-		[MenuItem("Assets/SVN/Revert", false, -800)]
+		[MenuItem("Assets/SVN/Revert", false, MenuItemPriorityStart + 60)]
 		public static void RevertSelected()
 		{
 			var paths = GetSelectedAssetPaths().ToList();
@@ -276,7 +278,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Resolve All", false, -800)]
+		[MenuItem("Assets/SVN/Resolve All", false, MenuItemPriorityStart + 60)]
 		private static void ResolveAllMenu()
 		{
 			m_Integration?.ResolveAll(false);
@@ -333,7 +335,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			return false;
 		}
 
-		[MenuItem("Assets/SVN/Get Locks", false, -700)]
+		[MenuItem("Assets/SVN/Get Locks", false, MenuItemPriorityStart + 80)]
 		public static void GetLocksSelected()
 		{
 			if (m_Integration != null) {
@@ -352,7 +354,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Release Locks", false, -700)]
+		[MenuItem("Assets/SVN/Release Locks", false, MenuItemPriorityStart + 80)]
 		public static void ReleaseLocksSelected()
 		{
 			if (m_Integration != null) {
@@ -369,13 +371,13 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Show Log All", false, -500)]
+		[MenuItem("Assets/SVN/Show Log All", false, MenuItemPriorityStart + 100)]
 		public static void ShowLogAll()
 		{
 			m_Integration?.ShowLog(GetRootAssetPath().First());
 		}
 
-		[MenuItem("Assets/SVN/Show Log", false, -500)]
+		[MenuItem("Assets/SVN/Show Log", false, MenuItemPriorityStart + 100)]
 		public static void ShowLogSelected()
 		{
 			m_Integration?.ShowLog(GetSelectedAssetPaths().FirstOrDefault());
@@ -388,7 +390,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Blame", false, -500)]
+		[MenuItem("Assets/SVN/Blame", false, MenuItemPriorityStart + 100)]
 		public static void BlameSelected()
 		{
 			m_Integration?.Blame(GetSelectedAssetPaths().FirstOrDefault());
@@ -401,7 +403,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Cleanup", false, -500)]
+		[MenuItem("Assets/SVN/Cleanup", false, MenuItemPriorityStart + 100)]
 		public static void Cleanup()
 		{
 			m_Integration?.Cleanup(true);
