@@ -40,11 +40,14 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 			// When populating the database, should it check for server changes as well (locks & modified files).
 			public BoolPreference DownloadRepositoryChanges = BoolPreference.SameAsProjectPreference;
+			public bool AutoLockOnModified = false;
 			public bool WarnForPotentialConflicts = true;
 
 			public int AutoRefreshDatabaseInterval = 60;    // seconds; Less than 0 will disable it.
 			public ContextMenusClient ContextMenusClient = ContextMenusClient.TortoiseSVN;
 			public SVNTraceLogs TraceLogs = SVNTraceLogs.SVNOperations;
+
+			public const string AutoLockOnModifiedHint = "Will automatically lock assets if possible when they become modified, instead of prompting the user.\nIf assets have newer version or are locked by someone else, prompt will still be displayed.";
 
 			public PersonalPreferences Clone()
 			{
