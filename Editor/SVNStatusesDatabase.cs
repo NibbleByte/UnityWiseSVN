@@ -313,6 +313,12 @@ namespace DevLocker.VersionControl.WiseSVN
 			// This is why we need to collect actual ignored files, as there is no good other way to recognize them.
 			foreach (PropgetEntry propget in propgets) {
 				foreach (string line in propget.Lines) {
+
+					// Skip hidden folders starting with ".". Some people put comments starting with "#".
+					// Example: # ---------------[ Unity generated ]------------------ #
+					if (line.StartsWith(".", StringComparison.OrdinalIgnoreCase) || line.StartsWith("#", StringComparison.OrdinalIgnoreCase) || line.StartsWith("/", StringComparison.OrdinalIgnoreCase) || line.StartsWith(":", StringComparison.OrdinalIgnoreCase))
+						continue;
+
 					var matchedEntries = Directory.EnumerateFileSystemEntries(propget.Path, line, SearchOption.TopDirectoryOnly);
 					foundIgnoredEntries.AddRange(matchedEntries);
 				}
@@ -337,12 +343,24 @@ namespace DevLocker.VersionControl.WiseSVN
 					// Enumerating the root folder would be too expensive (Library is huge). Just enumerate meaningful folders.
 					// "svn:global-ignores" are applied recursively to all sub-folders.
 					foreach (string line in propget.Lines) {
+
+						// Skip hidden folders starting with ".". Some people put comments starting with "#".
+						// Example: # ---------------[ Unity generated ]------------------ #
+						if (line.StartsWith(".", StringComparison.OrdinalIgnoreCase) || line.StartsWith("#", StringComparison.OrdinalIgnoreCase) || line.StartsWith("/", StringComparison.OrdinalIgnoreCase) || line.StartsWith(":", StringComparison.OrdinalIgnoreCase))
+							continue;
+
 						var matchedEntries = Directory.EnumerateFileSystemEntries("Assets", line, SearchOption.AllDirectories);
 						foundIgnoredEntries.AddRange(matchedEntries);
 					}
 
 #if UNITY_2018_4_OR_NEWER
 					foreach (string line in propget.Lines) {
+
+						// Skip hidden folders starting with ".". Some people put comments starting with "#".
+						// Example: # ---------------[ Unity generated ]------------------ #
+						if (line.StartsWith(".", StringComparison.OrdinalIgnoreCase) || line.StartsWith("#", StringComparison.OrdinalIgnoreCase) || line.StartsWith("/", StringComparison.OrdinalIgnoreCase) || line.StartsWith(":", StringComparison.OrdinalIgnoreCase))
+							continue;
+
 						var matchedEntries = Directory.EnumerateFileSystemEntries("Packages", line, SearchOption.AllDirectories);
 						foundIgnoredEntries.AddRange(matchedEntries);
 					}
@@ -352,6 +370,12 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 
 				foreach (string line in propget.Lines) {
+
+					// Skip hidden folders starting with ".". Some people put comments starting with "#".
+					// Example: # ---------------[ Unity generated ]------------------ #
+					if (line.StartsWith(".", StringComparison.OrdinalIgnoreCase) || line.StartsWith("#", StringComparison.OrdinalIgnoreCase) || line.StartsWith("/", StringComparison.OrdinalIgnoreCase) || line.StartsWith(":", StringComparison.OrdinalIgnoreCase))
+						continue;
+
 					var matchedEntries = Directory.EnumerateFileSystemEntries(propget.Path, line, SearchOption.AllDirectories);
 					foundIgnoredEntries.AddRange(matchedEntries);
 				}
