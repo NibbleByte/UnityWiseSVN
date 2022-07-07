@@ -84,6 +84,10 @@ namespace DevLocker.VersionControl.WiseSVN
 		// Any assets contained in these folders are considered unversioned.
 		private string[] m_UnversionedFolders = new string[0];
 
+		// Nested SVN repositories (that have ".svn" in them). NOTE: These are not external, just check-out inside check-out.
+		public IReadOnlyCollection<string> NestedRepositories => Array.AsReadOnly(m_NestedRepositories);
+		private string[] m_NestedRepositories = new string[0];
+
 		// SVN-Ignored files and folders.
 		private string[] m_IgnoredEntries = new string[0];
 		// SVN-Global-ignored entries are stored separately as they are checked only once, because they are much slower.
@@ -143,6 +147,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			List<SVNStatusData> statuses = new List<SVNStatusData>();
 			List<string> unversionedFolders = new List<string>();
+			List<string> nestedRepositories = new List<string>();
 			List<string> ignoredEntries = new List<string>();
 			List<string> globalIgnoredEntries = new List<string>();
 
@@ -150,9 +155,9 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-			GatherStatusDataInThreadRecursive("Assets", statuses, unversionedFolders);
+			GatherStatusDataInThreadRecursive("Assets", statuses, unversionedFolders, nestedRepositories);
 #if UNITY_2018_4_OR_NEWER
-			GatherStatusDataInThreadRecursive("Packages", statuses, unversionedFolders);
+			GatherStatusDataInThreadRecursive("Packages", statuses, unversionedFolders, nestedRepositories);
 #endif
 
 			// Add excluded items explicitly so their icon shows even when "Normal status green icon" is disabled.
@@ -234,6 +239,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			m_UnversionedFolders = unversionedFolders.ToArray();
+			m_NestedRepositories = nestedRepositories.ToArray();
 
 			timings.AppendLine("Gather Processing Data - " + (stopwatch.ElapsedMilliseconds / 1000f));
 			stopwatch.Restart();
@@ -245,7 +251,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			return pendingData;
 		}
 
-		private void GatherStatusDataInThreadRecursive(string repositoryPath, List<SVNStatusData> foundStatuses, List<string> foundUnversionedFolders)
+		private void GatherStatusDataInThreadRecursive(string repositoryPath, List<SVNStatusData> foundStatuses, List<string> foundUnversionedFolders, List<string> nestedRepositories)
 		{
 			var statusOptions = new SVNStatusDataOptions() {
 				Depth = SVNStatusDataOptions.SearchDepth.Infinity,
@@ -270,7 +276,10 @@ namespace DevLocker.VersionControl.WiseSVN
 					// Nested repositories return unknown status, but are hidden in the TortoiseSVN commit window.
 					// Add their statuses to support them. Also removing this folder data should display it as normal status.
 					if (Directory.Exists($"{statusData.Path}/.svn")) {
-						GatherStatusDataInThreadRecursive(statusData.Path, foundStatuses, foundUnversionedFolders);
+
+						nestedRepositories.Add(statusData.Path);
+
+						GatherStatusDataInThreadRecursive(statusData.Path, foundStatuses, foundUnversionedFolders, nestedRepositories);
 
 						// Folder meta file could also be unversioned. This will force unversioned overlay icon to show, even though the folder status is removed.
 						// Remove the meta file status as well.

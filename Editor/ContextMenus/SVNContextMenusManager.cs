@@ -171,7 +171,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		{
 			// It is recommended to freeze Unity while updating.
 			// If SVN downloads files while Unity is crunching assets, GUID database may get corrupted.
-			m_Integration?.Update(GetRootAssetPath(), false, wait: true);
+			// TortoiseSVN handles nested repositories gracefully and updates them one after another. SnailSVN - not so much. :(
+			m_Integration?.Update(GetRootAssetPath().Concat(SVNStatusesDatabase.Instance.NestedRepositories), false, wait: true);
 		}
 
 		// It is recommended to freeze Unity while updating.
