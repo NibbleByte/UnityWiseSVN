@@ -116,7 +116,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		[MenuItem("Assets/SVN/Check Changes All", false, MenuItemPriorityStart + 5)]
 		public static void CheckChangesAll()
 		{
-			m_Integration?.CheckChanges(GetRootAssetPath(), false);
+			// TortoiseSVN handles nested repositories gracefully. SnailSVN - not so much. :(
+			m_Integration?.CheckChanges(GetRootAssetPath().Concat(SVNStatusesDatabase.Instance.NestedRepositories), false);
 		}
 
 		[MenuItem("Assets/SVN/Check Changes", false, MenuItemPriorityStart + 5)]
@@ -195,7 +196,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		[MenuItem("Assets/SVN/Commit All", false, MenuItemPriorityStart + 40)]
 		public static void CommitAll()
 		{
-			m_Integration?.Commit(GetRootAssetPath(), false);
+			// TortoiseSVN handles nested repositories gracefully. SnailSVN - not so much. :(
+			m_Integration?.Commit(GetRootAssetPath().Concat(SVNStatusesDatabase.Instance.NestedRepositories), false);
 		}
 
 		[MenuItem("Assets/SVN/Commit", false, MenuItemPriorityStart + 40)]
@@ -245,7 +247,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		[MenuItem("Assets/SVN/Revert All", false, MenuItemPriorityStart + 60)]
 		public static void RevertAll()
 		{
-			m_Integration?.Revert(GetRootAssetPath(), false, true);
+			// TortoiseSVN handles nested repositories gracefully. SnailSVN - not so much. :(
+			m_Integration?.Revert(GetRootAssetPath().Concat(SVNStatusesDatabase.Instance.NestedRepositories), false, true);
 		}
 
 		[MenuItem("Assets/SVN/Revert", false, MenuItemPriorityStart + 60)]
