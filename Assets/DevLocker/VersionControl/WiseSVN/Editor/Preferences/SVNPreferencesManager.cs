@@ -17,7 +17,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			Disabled = 8,
 		}
 
-		private const string PERSONAL_PREFERENCES_KEY = "WiseSVN";
+		private const string LEGACY_PERSONAL_PREFERENCES_KEY = "WiseSVN";
+		private const string PERSONAL_PREFERENCES_PATH = "UserSettings/WiseSVN.prefs";
 		private const string PROJECT_PREFERENCES_PATH = "ProjectSettings/WiseSVN.prefs";
 
 		// Icons are stored in the database so we don't reload them every time.
@@ -143,7 +144,14 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				;
 
 			if (freshlyCreated || m_ProjectPrefsLastModifiedTime != lastModifiedDate) {
-				LoadPreferences();
+				try {
+					LoadPreferences();
+
+				} catch(Exception ex) {
+					Debug.LogException(ex);
+					PersonalPrefs = new PersonalPreferences();
+					ProjectPrefs = new ProjectPreferences();
+				}
 			}
 
 			if (freshlyCreated || m_RetryTextures) {
@@ -206,11 +214,13 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 		private void LoadPreferences()
 		{
-			var personalPrefsData = EditorPrefs.GetString(PERSONAL_PREFERENCES_KEY, string.Empty);
-			if (!string.IsNullOrEmpty(personalPrefsData)) {
-				PersonalPrefs = JsonUtility.FromJson<PersonalPreferences>(personalPrefsData);
+			if (File.Exists(PERSONAL_PREFERENCES_PATH)) {
+				PersonalPrefs = JsonUtility.FromJson<PersonalPreferences>(File.ReadAllText(PERSONAL_PREFERENCES_PATH));
+			} else if (EditorPrefs.HasKey(LEGACY_PERSONAL_PREFERENCES_KEY)) {
+				PersonalPrefs = JsonUtility.FromJson<PersonalPreferences>(EditorPrefs.GetString(LEGACY_PERSONAL_PREFERENCES_KEY, string.Empty));
 			} else {
 				PersonalPrefs = new PersonalPreferences();
+
 #if UNITY_EDITOR_WIN
 				PersonalPrefs.ContextMenusClient = ContextMenusClient.TortoiseSVN;
 #else
@@ -268,9 +278,21 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			PersonalPrefs = personalPrefs.Clone();
 			ProjectPrefs = projectPrefs.Clone();
 
-			EditorPrefs.SetString(PERSONAL_PREFERENCES_KEY, JsonUtility.ToJson(PersonalPrefs));
+			try {
+				Directory.CreateDirectory(Path.GetDirectoryName(PERSONAL_PREFERENCES_PATH));
+				File.WriteAllText(PERSONAL_PREFERENCES_PATH, JsonUtility.ToJson(PersonalPrefs, true));
+			}
+			catch (Exception ex) {
+				Debug.LogException(ex);
+			}
 
-			File.WriteAllText(PROJECT_PREFERENCES_PATH, JsonUtility.ToJson(ProjectPrefs, true));
+			try {
+				File.WriteAllText(PROJECT_PREFERENCES_PATH, JsonUtility.ToJson(ProjectPrefs, true));
+			}
+			catch (Exception ex) {
+				Debug.LogException(ex);
+				EditorUtility.DisplayDialog("Error", $"Failed to write file:\n\"{PROJECT_PREFERENCES_PATH}\"\n\nData not saved! Check the logs for more info.", "Ok");
+			}
 
 			SVNContextMenusManager.SetupContextType(PersonalPrefs.ContextMenusClient);
 
