@@ -48,11 +48,18 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			public ContextMenusClient ContextMenusClient = ContextMenusClient.TortoiseSVN;
 			public SVNTraceLogs TraceLogs = SVNTraceLogs.SVNOperations;
 
+#if UNITY_2020_2_OR_NEWER
+			[NonReorderable]
+#endif
+			public List<string> Exclude = new List<string>();
+
 			public const string AutoLockOnModifiedHint = "Will automatically lock assets if possible when they become modified, instead of prompting the user.\nIf assets have newer version or are locked by someone else, prompt will still be displayed.\n\nNotification will be displayed. Check the logs to know what was locked.";
 
 			public PersonalPreferences Clone()
 			{
-				return (PersonalPreferences) MemberwiseClone();
+				var clone = (PersonalPreferences) MemberwiseClone();
+				clone.Exclude = new List<string>(Exclude);
+				return clone;
 			}
 		}
 
