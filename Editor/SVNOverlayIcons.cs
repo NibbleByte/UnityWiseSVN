@@ -1,5 +1,6 @@
 using DevLocker.VersionControl.WiseSVN.Preferences;
 using System;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -38,7 +39,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				m_ShowNormalStatusIcons = SVNPreferencesManager.Instance.PersonalPrefs.ShowNormalStatusOverlayIcon;
 				m_ShowExcludeStatusIcons = SVNPreferencesManager.Instance.PersonalPrefs.ShowExcludedStatusOverlayIcon;
-				m_ExcludedPaths = SVNPreferencesManager.Instance.ProjectPrefs.Exclude.ToArray();
+				m_ExcludedPaths = SVNPreferencesManager.Instance.PersonalPrefs.Exclude.Concat(SVNPreferencesManager.Instance.ProjectPrefs.Exclude).ToArray();
 			} else {
 				EditorApplication.projectWindowItemOnGUI -= ItemOnGUI;
 			}
@@ -192,11 +193,8 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				if (m_ExcludedPaths.Length > 0) {
 					string path = AssetDatabase.GUIDToAssetPath(guid);
-					foreach (string excludedPath in m_ExcludedPaths) {
-						if (path.StartsWith(excludedPath, StringComparison.OrdinalIgnoreCase)) {
-							fileStatus = m_ShowExcludeStatusIcons ? VCFileStatus.Excluded : VCFileStatus.None;
-							break;
-						}
+					if (SVNPreferencesManager.ShouldExclude(m_ExcludedPaths, path)) {
+						fileStatus = m_ShowExcludeStatusIcons ? VCFileStatus.Excluded : VCFileStatus.None;
 					}
 				}
 			}

@@ -157,6 +157,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		{
 			m_ProjectPrefs.SvnCLIPath = SVNPreferencesManager.SanitizeUnityPath(m_ProjectPrefs.SvnCLIPath);
 			m_ProjectPrefs.SvnCLIPathMacOS = SVNPreferencesManager.SanitizeUnityPath(m_ProjectPrefs.SvnCLIPathMacOS);
+			m_PersonalPrefs.Exclude = SanitizePathsList(m_PersonalPrefs.Exclude);
 			m_ProjectPrefs.Exclude = SanitizePathsList(m_ProjectPrefs.Exclude);
 
 			if (m_ProjectPrefs.EnableLockPrompt) {
@@ -216,6 +217,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		{
 			EditorGUILayout.HelpBox("These are personal preferences stored in the registry.\nHint: check the the tooltips.", MessageType.Info);
 
+			var sp = m_SerializedObject.FindProperty("m_PersonalPrefs");
+
 			m_PersonalPrefs.EnableCoreIntegration = EditorGUILayout.Toggle("Enable SVN integration", m_PersonalPrefs.EnableCoreIntegration);
 
 			EditorGUI.BeginDisabledGroup(!m_PersonalPrefs.EnableCoreIntegration);
@@ -261,6 +264,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			}
 
 			m_PersonalPrefs.TraceLogs = (SVNTraceLogs)EditorGUILayout.EnumFlagsField(new GUIContent("Trace logs", "Logs for nerds and debugging."), m_PersonalPrefs.TraceLogs);
+
+			EditorGUILayout.PropertyField(sp.FindPropertyRelative("Exclude"), new GUIContent("Exclude Paths", "Relative path (contains '/') or asset name to be ignored by the SVN integrations. Use with caution.\n\nExample: \"Assets/Scenes/Baked\" or \"_deprecated\""), true);
 
 			EditorGUI.EndDisabledGroup();
 		}

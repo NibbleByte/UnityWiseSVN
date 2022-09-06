@@ -113,6 +113,10 @@ namespace DevLocker.VersionControl.WiseSVN
 			SVNPreferencesManager.Instance.PreferencesChanged += RefreshActive;
 			RefreshActive();
 
+			// Copy on init, RefreshActive() doesn't do it anymore.
+			m_PersonalCachedPrefs = m_PersonalPrefs.Clone();
+			m_ProjectCachedPrefs = m_ProjectPrefs.Clone();
+
 			base.Initialize(freshlyCreated);
 		}
 
@@ -125,8 +129,10 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			// Copy them so they can be safely accessed from the worker thread.
-			m_PersonalCachedPrefs = m_PersonalPrefs.Clone();
-			m_ProjectCachedPrefs = m_ProjectPrefs.Clone();
+			//m_PersonalCachedPrefs = m_PersonalPrefs.Clone();
+			//m_ProjectCachedPrefs = m_ProjectPrefs.Clone();
+			// Bad idea - can still be changed while thread is working causing bugs.
+
 			m_DownloadRepositoryChangesCached = SVNPreferencesManager.Instance.DownloadRepositoryChanges;
 		}
 
@@ -141,6 +147,15 @@ namespace DevLocker.VersionControl.WiseSVN
 		private const int SanityStatusesLimit = 600;
 		private const int SanityUnversionedFoldersLimit = 250;
 		private const int SanityIgnoresLimit = 250;
+
+		protected override void StartDatabaseUpdate()
+		{
+			// Copy them so they can be safely accessed from the worker thread.
+			m_PersonalCachedPrefs = m_PersonalPrefs.Clone();
+			m_ProjectCachedPrefs = m_ProjectPrefs.Clone();
+
+			base.StartDatabaseUpdate();
+		}
 
 		// Executed in a worker thread.
 		protected override GuidStatusDatasBind[] GatherDataInThread()
@@ -159,10 +174,13 @@ namespace DevLocker.VersionControl.WiseSVN
 #if UNITY_2018_4_OR_NEWER
 			GatherStatusDataInThreadRecursive("Packages", statuses, unversionedFolders, nestedRepositories);
 #endif
+			var slashes = new char[] { '/', '\\' };
 
 			// Add excluded items explicitly so their icon shows even when "Normal status green icon" is disabled.
-			foreach(string excludedPath in m_ProjectCachedPrefs.Exclude) {
-				statuses.Add(new SVNStatusData() { Path = excludedPath, Status = VCFileStatus.Excluded, LockDetails = LockDetails.Empty });
+			foreach(string excludedPath in m_PersonalCachedPrefs.Exclude.Concat(m_ProjectCachedPrefs.Exclude)) {
+				if (excludedPath.IndexOfAny(slashes) != -1) {	// Only paths
+					statuses.Add(new SVNStatusData() { Path = excludedPath, Status = VCFileStatus.Excluded, LockDetails = LockDetails.Empty });
+				}
 			}
 
 			timings.AppendLine("Gather Status Data - " + (stopwatch.ElapsedMilliseconds / 1000f));
@@ -261,9 +279,11 @@ namespace DevLocker.VersionControl.WiseSVN
 				FetchLockOwner = true,
 			};
 
+			var excludes = m_PersonalCachedPrefs.Exclude.Concat(m_ProjectCachedPrefs.Exclude);
+
 			// Will get statuses of all added / modified / deleted / conflicted / unversioned files. Only normal files won't be listed.
 			var statuses = WiseSVNIntegration.GetStatuses(repositoryPath, statusOptions)
-				.Where(s => !m_ProjectCachedPrefs.Exclude.Any(e => s.Path.StartsWith(e, StringComparison.OrdinalIgnoreCase)))
+				.Where(s => !SVNPreferencesManager.ShouldExclude(excludes, s.Path))	// TODO: This will skip overlay icons for excludes by filename.
 				.Where(s => s.Status != VCFileStatus.Missing)
 				.ToList();
 
@@ -582,11 +602,8 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private VCFileStatus CheckForIgnoredOrExcludedStatus(VCFileStatus originalStatus, string path)
 		{
-			foreach (string excludedPath in m_ProjectCachedPrefs.Exclude) {
-				if (path.StartsWith(excludedPath, StringComparison.OrdinalIgnoreCase)) {
-					return VCFileStatus.Excluded;
-				}
-			}
+			if (SVNPreferencesManager.ShouldExclude(m_PersonalCachedPrefs.Exclude.Concat(m_ProjectCachedPrefs.Exclude), path))
+				return VCFileStatus.Excluded;
 
 			foreach (string ignoredPath in m_IgnoredEntries) {
 				if (path.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase)) {

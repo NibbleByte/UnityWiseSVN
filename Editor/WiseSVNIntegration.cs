@@ -1687,7 +1687,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private static AssetDeleteResult OnWillDeleteAsset(string path, RemoveAssetOptions option)
 		{
-			if (!Enabled || TemporaryDisabled || SVNPreferencesManager.ShouldExclude(m_ProjectPrefs.Exclude, path))
+			if (!Enabled || TemporaryDisabled || SVNPreferencesManager.ShouldExclude(m_PersonalPrefs.Exclude.Concat(m_ProjectPrefs.Exclude), path))
 				return AssetDeleteResult.DidNotDelete;
 
 			var oldStatus = GetStatus(path).Status;
@@ -1720,7 +1720,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private static AssetMoveResult OnWillMoveAsset(string oldPath, string newPath)
 		{
-			if (!Enabled || TemporaryDisabled || SVNPreferencesManager.ShouldExclude(m_ProjectPrefs.Exclude, oldPath))
+			if (!Enabled || TemporaryDisabled || SVNPreferencesManager.ShouldExclude(m_PersonalPrefs.Exclude.Concat(m_ProjectPrefs.Exclude), oldPath))
 				return AssetMoveResult.DidNotMove;
 
 			var oldStatusData = GetStatus(oldPath);
