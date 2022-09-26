@@ -97,7 +97,28 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 		private static IEnumerable<string> GetSelectedAssetPaths()
 		{
-			return Selection.assetGUIDs.Select(AssetDatabase.GUIDToAssetPath);
+			string[] guids = Selection.assetGUIDs;
+			for (int i = 0; i < guids.Length; ++i) {
+				string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+
+				if (string.IsNullOrEmpty(path))
+					continue;
+
+				// All direct folders in packages (the package folder) are returned with ToLower() by Unity.
+				// If you have a custom package in development and your folder has upper case letters, they need to be restored.
+				if (path.StartsWith("Packages/", StringComparison.OrdinalIgnoreCase)) {
+					path = Path.GetFullPath(path)
+						.Replace("\\", "/")
+						.Replace(WiseSVNIntegration.ProjectRootUnity + "/", "")
+						;
+
+					// If this is a normal package (not a custom one in development), returned path points to the "Library" folder.
+					if (!path.StartsWith("Packages", StringComparison.OrdinalIgnoreCase))
+						continue;
+				}
+
+				yield return path;
+			}
 		}
 
 		[MenuItem("Assets/SVN/Diff \u2044 Resolve", true, MenuItemPriorityStart)]
