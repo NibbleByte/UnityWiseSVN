@@ -472,7 +472,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		private void AddModifiedFolders(SVNStatusData statusData)
 		{
 			var status = statusData.Status;
-			if (status == VCFileStatus.Unversioned || status == VCFileStatus.Ignored || status == VCFileStatus.Normal)
+			if (status == VCFileStatus.Unversioned || status == VCFileStatus.Ignored || status == VCFileStatus.Normal || status == VCFileStatus.Excluded)
 				return;
 
 			if (statusData.IsConflicted) {
