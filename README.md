@@ -66,7 +66,24 @@ This is an issue with how Unity works, not the plugin iteself. Unity says its by
 npm install -g openupm-cli
 openupm add devlocker.versioncontrol.wisesvn
 ```
-* Github upm package - merge this to your `Packages/manifest.json`
+... or merge this to your `Packages/manifest.json` (replace the package version **XXXXX** with current):
+```
+{
+    "scopedRegistries": [
+        {
+            "name": "package.openupm.com",
+            "url": "https://package.openupm.com",
+            "scopes": [
+                "devlocker.versioncontrol.wisesvn"
+            ]
+        }
+    ],
+    "dependencies": {
+        "devlocker.versioncontrol.wisesvn": "1.4.XXXXX"
+    }
+}
+```
+* Github upm package (**DO NOT RECOMMEND** as you need git installed) - merge this to your `Packages/manifest.json`
 ```
 {
   "dependencies": {
