@@ -1,3 +1,5 @@
+// MIT License Copyright(c) 2022 Filip Slavov, https://github.com/NibbleByte/UnityWiseSVN
+
 using DevLocker.VersionControl.WiseSVN.Shell;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,7 +36,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			string pathsArg = AssetPathToContextPaths(assetPath, false);
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
-			
+
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:diff /path:\"{pathsArg}\"", wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
@@ -45,7 +47,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (!assetPaths.Any())
 				return;
-			
+
 			string pathsArg = AssetPathsToContextPaths(assetPaths, includeMeta);
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
@@ -60,7 +62,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (!assetPaths.Any())
 				return;
-			
+
 			string pathsArg = AssetPathsToContextPaths(assetPaths, includeMeta);
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
@@ -103,7 +105,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (!assetPaths.Any())
 				return;
-			
+
 			string pathsArg = AssetPathsToContextPaths(assetPaths, includeMeta);
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
@@ -147,7 +149,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (!assetPaths.Any())
 				return;
-			
+
 			string pathsArg = AssetPathsToContextPaths(assetPaths, includeMeta);
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
@@ -162,7 +164,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (!assetPaths.Any())
 				return;
-			
+
 			string pathsArg = AssetPathsToContextPaths(assetPaths, includeMeta);
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
@@ -177,7 +179,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (string.IsNullOrEmpty(assetPath))
 				return;
-			
+
 			string pathsArg = AssetPathToContextPaths(assetPath, false);
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
@@ -194,7 +196,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (string.IsNullOrEmpty(assetPath))
 				return;
-			
+
 			string pathsArg = AssetPathToContextPaths(assetPath, false);
 			if (string.IsNullOrEmpty(pathsArg))
 				return;

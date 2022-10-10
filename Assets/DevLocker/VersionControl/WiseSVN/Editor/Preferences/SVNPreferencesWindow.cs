@@ -1,3 +1,5 @@
+// MIT License Copyright(c) 2022 Filip Slavov, https://github.com/NibbleByte/UnityWiseSVN
+
 using DevLocker.VersionControl.WiseSVN.LockPrompting;
 using DevLocker.VersionControl.WiseSVN.Branches;
 using DevLocker.VersionControl.WiseSVN.ContextMenus;

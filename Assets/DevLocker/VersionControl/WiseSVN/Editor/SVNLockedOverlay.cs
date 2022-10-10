@@ -1,3 +1,5 @@
+// MIT License Copyright(c) 2022 Filip Slavov, https://github.com/NibbleByte/UnityWiseSVN
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -190,7 +192,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 
 			}
-			
+
 			m_PrefabMessageWidth = GetMessageStyle().CalcSize(new GUIContent(m_PrefabMessage)).x;
 		}
 
@@ -237,7 +239,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				//		 when unity starts and displays it immediately.
 				var prevColor = GUI.color;
 				GUI.color = Color.white;
-				
+
 				if (GUI.Button(closeRect, "X")) {
 					if (string.IsNullOrEmpty(m_PrefabMessage)) {
 						m_SceneMessage = string.Empty;

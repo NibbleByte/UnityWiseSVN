@@ -1,3 +1,5 @@
+// MIT License Copyright(c) 2022 Filip Slavov, https://github.com/NibbleByte/UnityWiseSVN
+
 using DevLocker.VersionControl.WiseSVN.Preferences;
 using System.Collections.Generic;
 using System.IO;
@@ -143,11 +145,11 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 				var opResult = WiseSVNIntegration.ListURL(url, false, listEntries);
 
 				if (opResult != ListOperationResult.Success) {
-					
+
 					if (opResult == ListOperationResult.NotFound) {
 						Debug.LogError($"{GetType().Name} failed to find url: \"{url}\".");
 					}
-					
+
 					m_LastError = opResult;
 					results.Clear();
 					return;
