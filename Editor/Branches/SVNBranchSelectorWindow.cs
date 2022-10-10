@@ -1,3 +1,5 @@
+// MIT License Copyright(c) 2022 Filip Slavov, https://github.com/NibbleByte/UnityWiseSVN
+
 using DevLocker.VersionControl.WiseSVN.ContextMenus;
 using System.Collections.Generic;
 using System.Linq;
