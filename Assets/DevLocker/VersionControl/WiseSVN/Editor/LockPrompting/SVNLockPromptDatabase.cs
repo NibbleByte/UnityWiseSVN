@@ -55,148 +55,180 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			// All flags are set, skip checks.
 			if ((int)assetTypeMask == ~0)
 				return true;
+			
+			if (assetPath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
 
-			if (assetTypeMask.HasFlag(AssetType.Scene) && assetPath.EndsWith(".unity", StringComparison.OrdinalIgnoreCase))
-				return true;
+			    || assetPath.EndsWith(".c", StringComparison.OrdinalIgnoreCase) // For hard-core players
+			    || assetPath.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase) // For hard-core players
+			    || assetPath.EndsWith(".h", StringComparison.OrdinalIgnoreCase) // For hard-core players
+			    || assetPath.EndsWith(".hpp", StringComparison.OrdinalIgnoreCase) // For hard-core players
 
-			if (assetTypeMask.HasFlag(AssetType.TerrainData) && AssetDatabase.LoadAssetAtPath<TerrainData>(assetPath))
-				return true;
-
-
-
-			if (assetTypeMask.HasFlag(AssetType.Prefab) || assetTypeMask.HasFlag(AssetType.Model)) {
-
-				var go = AssetDatabase.LoadMainAssetAtPath(assetPath) as GameObject;
-
-				if (go) {
-					bool match = false;
-
-#if UNITY_2018_1_OR_NEWER
-					var prefabType = PrefabUtility.GetPrefabAssetType(go);
-
-					if (assetTypeMask.HasFlag(AssetType.Prefab))
-						match |= prefabType == PrefabAssetType.Regular || prefabType == PrefabAssetType.Variant;
-
-					if (assetTypeMask.HasFlag(AssetType.Model))
-						match |= prefabType == PrefabAssetType.Model;
-#else
-					var prefabType = PrefabUtility.GetPrefabType(go);
-					if (assetTypeMask.HasFlag(AssetType.Prefab))
-						match |= prefabType == PrefabType.Prefab;
-
-					if (assetTypeMask.HasFlag(AssetType.Model))
-						match |= prefabType == PrefabType.ModelPrefab;
-#endif
-
-					return match;
-				}
-
-				if (isDeleted) {
-					if (assetTypeMask.HasFlag(AssetType.Prefab) && assetPath.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
-						return true;
-
-					// Most popular models?
-					if (assetTypeMask.HasFlag(AssetType.Model) && assetPath.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase))
-						return true;
-					if (assetTypeMask.HasFlag(AssetType.Model) && assetPath.EndsWith(".dae", StringComparison.OrdinalIgnoreCase))
-						return true;
-					if (assetTypeMask.HasFlag(AssetType.Model) && assetPath.EndsWith(".3ds", StringComparison.OrdinalIgnoreCase))
-						return true;
-					if (assetTypeMask.HasFlag(AssetType.Model) && assetPath.EndsWith(".obj", StringComparison.OrdinalIgnoreCase))
-						return true;
-				}
+			    || assetPath.EndsWith(".js", StringComparison.OrdinalIgnoreCase) // No one uses this!
+			    || assetPath.EndsWith(".boo", StringComparison.OrdinalIgnoreCase) // No one uses this!
+			   ) {
+				return assetTypeMask.HasFlag(AssetType.Script);
 			}
 
-			if (assetTypeMask.HasFlag(AssetType.Mesh) && AssetDatabase.LoadAssetAtPath<Mesh>(assetPath))
-				return true;
+			if (assetPath.EndsWith(".shader", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".shadergraph", StringComparison.OrdinalIgnoreCase)
+			    ) {
+				return assetTypeMask.HasFlag(AssetType.Shader);
+			}
+			
+			
 
+			if (assetPath.EndsWith(".unity", StringComparison.OrdinalIgnoreCase)) {
+				return assetTypeMask.HasFlag(AssetType.Scene);
+			}
+			
+			if (assetPath.EndsWith(".mat", StringComparison.OrdinalIgnoreCase)) {
+				return assetTypeMask.HasFlag(AssetType.Material);
+			}
 
-			if (assetTypeMask.HasFlag(AssetType.Material) && assetPath.EndsWith(".mat", StringComparison.OrdinalIgnoreCase))
-				return true;
-
-			if (assetTypeMask.HasFlag(AssetType.Texture) && AssetDatabase.LoadAssetAtPath<Texture>(assetPath))
-				return true;
-
+			// Shortcut.
+			if (assetPath.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase)) {
+				return assetTypeMask.HasFlag(AssetType.Prefab);
+			}
+			
+			// Most popular models?
+			if (assetPath.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".dae", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".mb", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".ma", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".max", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".blend", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".obj", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".3ds", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".dxf", StringComparison.OrdinalIgnoreCase)
+			   ) {
+				return assetTypeMask.HasFlag(AssetType.Model);
+			}
+			
+			
 			// Most popular extensions?
-			if (assetTypeMask.HasFlag(AssetType.Texture) && isDeleted && assetPath.EndsWith(".psd", StringComparison.OrdinalIgnoreCase))
-				return true;
-			if (assetTypeMask.HasFlag(AssetType.Texture) && isDeleted && assetPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
-				return true;
-			if (assetTypeMask.HasFlag(AssetType.Texture) && isDeleted && assetPath.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase))
-				return true;
-			if (assetTypeMask.HasFlag(AssetType.Texture) && isDeleted && assetPath.EndsWith(".tga", StringComparison.OrdinalIgnoreCase))
-				return true;
-			if (assetTypeMask.HasFlag(AssetType.Texture) && isDeleted && assetPath.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase))
-				return true;
-			if (assetTypeMask.HasFlag(AssetType.Texture) && isDeleted && assetPath.EndsWith(".iff", StringComparison.OrdinalIgnoreCase))
-				return true;
+			if (assetPath.EndsWith(".psd", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".tga", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".tif", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".iff", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".dds", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".exr", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".pict", StringComparison.OrdinalIgnoreCase)
+			   ) {
+				return assetTypeMask.HasFlag(AssetType.Texture);
+			}
 
+			// Shortcut.
+			if (assetPath.EndsWith(".anim", StringComparison.OrdinalIgnoreCase)) {
+				return assetTypeMask.HasFlag(AssetType.Animation);
+			}
+			
+			if (assetPath.EndsWith(".controller", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".overrideController", StringComparison.OrdinalIgnoreCase)
+			    ) {
+				return assetTypeMask.HasFlag(AssetType.Animator);
+			}
+			
+			// Won't be able to load the asset to check the type - treat it as others.
+			if (isDeleted) {
+				return assetPath.EndsWith(".asset", StringComparison.OrdinalIgnoreCase)
+						? assetTypeMask.HasFlag(AssetType.ScriptableObject)
+						: assetTypeMask.HasFlag(AssetType.OtherTypes)
+					;
+			}
 
+			//
+			// Don't know the extension... load the asset and check the actual type.
+			//
+			UnityEngine.Object[] objects = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+			
+			// Unknown type of model...
+			if (objects.OfType<GameObject>().Any()) {
+				return assetTypeMask.HasFlag(AssetType.Model);
+			}
+			/* 
+			if (objects.OfType<GameObject>().Any()) {
+				var go = objects[0];
+				
+				bool match = false;
 
+#if UNITY_2018_1_OR_NEWER
+				var prefabType = PrefabUtility.GetPrefabAssetType(go);
 
-			if (assetTypeMask.HasFlag(AssetType.Animation) && AssetDatabase.LoadAssetAtPath<AnimationClip>(assetPath))
-				return true;
-			if (assetTypeMask.HasFlag(AssetType.Animation) && isDeleted && assetPath.EndsWith(".anim", StringComparison.OrdinalIgnoreCase))
-				return true;
+				if (assetTypeMask.HasFlag(AssetType.Prefab))
+					match |= prefabType == PrefabAssetType.Regular || prefabType == PrefabAssetType.Variant;
 
-			if (assetTypeMask.HasFlag(AssetType.Animator) && AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(assetPath))
-				return true;
-			if (assetTypeMask.HasFlag(AssetType.Animator) && isDeleted && assetPath.EndsWith(".controller", StringComparison.OrdinalIgnoreCase))
-				return true;
-			if (assetTypeMask.HasFlag(AssetType.Animator) && isDeleted && assetPath.EndsWith(".overrideController", StringComparison.OrdinalIgnoreCase))
-				return true;
+				if (assetTypeMask.HasFlag(AssetType.Model))
+					match |= prefabType == PrefabAssetType.Model;
+#else
+				var prefabType = PrefabUtility.GetPrefabType(go);
+				if (assetTypeMask.HasFlag(AssetType.Prefab))
+					match |= prefabType == PrefabType.Prefab;
 
+				if (assetTypeMask.HasFlag(AssetType.Model))
+					match |= prefabType == PrefabType.ModelPrefab;
+#endif
 
+				return match;
+			}
+			*/
 
-
-			if (assetTypeMask.HasFlag(AssetType.Script) && (
-					assetPath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
-
-					|| assetPath.EndsWith(".c", StringComparison.OrdinalIgnoreCase)		// For hard-core players
-					|| assetPath.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase)	// For hard-core players
-					|| assetPath.EndsWith(".h", StringComparison.OrdinalIgnoreCase)		// For hard-core players
-					|| assetPath.EndsWith(".hpp", StringComparison.OrdinalIgnoreCase)	// For hard-core players
-
-					|| assetPath.EndsWith(".js", StringComparison.OrdinalIgnoreCase)	// No one uses this!
-					|| assetPath.EndsWith(".boo", StringComparison.OrdinalIgnoreCase)	// No one uses this!
-					)
-				)
-				return true;
+			if (objects.OfType<TerrainData>().Any()) {
+				return assetTypeMask.HasFlag(AssetType.TerrainData);
+			}
+			
+			if (objects.OfType<Mesh>().Any()) {
+				return assetTypeMask.HasFlag(AssetType.Mesh);
+			}
+			
+			// Unknown type of texture...
+			if (objects.OfType<Texture>().Any()) {
+				return assetTypeMask.HasFlag(AssetType.Texture);
+			}
+			
+			if (objects.OfType<AnimationClip>().Any()) {
+				return assetTypeMask.HasFlag(AssetType.Animation);
+			}
+			
 
 #if UNITY_2019_3_OR_NEWER
-			if (assetTypeMask.HasFlag(AssetType.UIElementsAssets) && AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.StyleSheet>(assetPath))
-				return true;
-
-			if (assetTypeMask.HasFlag(AssetType.UIElementsAssets) && AssetDatabase.LoadAssetAtPath<UnityEngine.UIElements.VisualTreeAsset>(assetPath))
-				return true;
+			if (objects.OfType<UnityEngine.UIElements.StyleSheet>().Any()) {
+				return assetTypeMask.HasFlag(AssetType.UIElementsAssets);
+			}
+			
+			if (objects.OfType<UnityEngine.UIElements.VisualTreeAsset>().Any()) {
+				return assetTypeMask.HasFlag(AssetType.UIElementsAssets);
+			}
 #endif
-			if (assetTypeMask.HasFlag(AssetType.Shader) && assetPath.EndsWith(".shader", StringComparison.OrdinalIgnoreCase))
-				return true;
 
-			if (assetTypeMask.HasFlag(AssetType.ScriptableObject) && AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath))
-				return true;
-			if (assetTypeMask.HasFlag(AssetType.ScriptableObject) && isDeleted && assetPath.EndsWith(".asset", StringComparison.OrdinalIgnoreCase))
-				return true;
-
-
-
-
-			if (assetTypeMask.HasFlag(AssetType.Audio) && AssetDatabase.LoadAssetAtPath<AudioClip>(assetPath))
-				return true;
-
-			if (assetTypeMask.HasFlag(AssetType.Video) && AssetDatabase.LoadAssetAtPath<UnityEngine.Video.VideoClip>(assetPath))
-				return true;
+			if (objects.OfType<AudioClip>().Any()) {
+				return assetTypeMask.HasFlag(AssetType.Audio);
+			}
+			if (objects.OfType<UnityEngine.Video.VideoClip>().Any()) {
+				return assetTypeMask.HasFlag(AssetType.Video);
+			}
 
 #if UNITY_2018_4 || USE_TIMELINE
-			if (assetTypeMask.HasFlag(AssetType.TimeLineAssets) && AssetDatabase.LoadAssetAtPath<UnityEngine.Timeline.TimelineAsset>(assetPath))
-				return true;
-			if (assetTypeMask.HasFlag(AssetType.TimeLineAssets) && AssetDatabase.LoadAssetAtPath<UnityEngine.Timeline.TrackAsset>(assetPath))
-				return true;
-			if (assetTypeMask.HasFlag(AssetType.TimeLineAssets) && AssetDatabase.LoadAssetAtPath<UnityEngine.Playables.PlayableAsset>(assetPath))
-				return true;
+			if (objects.OfType<UnityEngine.Timeline.TimelineAsset>().Any()) {
+				return assetTypeMask.HasFlag(AssetType.TimeLineAssets);
+			}
+			if (objects.OfType<UnityEngine.Timeline.TrackAsset>().Any()) {
+				return assetTypeMask.HasFlag(AssetType.TimeLineAssets);
+			}
+			if (objects.OfType<UnityEngine.Playables.PlayableAsset>().Any()) {
+				return assetTypeMask.HasFlag(AssetType.TimeLineAssets);
+			}
 #endif
+			
+			if (objects.OfType<ScriptableObject>().Any()) {
+				return assetTypeMask.HasFlag(AssetType.ScriptableObject);
+			}
 
-			return false;
+			return assetTypeMask.HasFlag(AssetType.OtherTypes);
 		}
 
 		private bool AddOrUpdateKnowsStatusData(SVNStatusData statusData)
@@ -341,7 +373,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 					continue;
 
 				bool matched = IsAssetOfType(assetPath, lockPromptParam.TargetTypes, statusData.Status == VCFileStatus.Deleted);
-				if (!matched && !lockPromptParam.TargetTypes.HasFlag(AssetType.OtherTypes))
+				if (!matched)
 					continue;
 
 				if (statusData.LockStatus == VCLockStatus.NoLock && statusData.RemoteStatus == VCRemoteFileStatus.None) {
@@ -374,7 +406,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 						continue;
 
 					bool matched = IsAssetOfType(assetPath, lockPromptParam.TargetTypes, false);
-					if (!matched && !lockPromptParam.TargetTypes.HasFlag(AssetType.OtherTypes))
+					if (!matched)
 						continue;
 
 					if (statusData.LockStatus != VCLockStatus.NoLock && statusData.LockStatus != VCLockStatus.LockedOther) {
