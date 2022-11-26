@@ -1709,6 +1709,14 @@ namespace DevLocker.VersionControl.WiseSVN
 						return AssetDeleteResult.DidNotDelete;
 					}
 
+					// svn: E155007: '...' is not a working copy
+					// Unversioned file in unversioned sub folder. Whatever the reason, we don't care about it - skip it.
+					// NOTE: This should not happen, as status above should be unversioned, but it does while baking unversioned scene.
+					if (result.Error.Contains("E155007")) {
+						reporter.ClearLogsAndErrorFlag();
+						return AssetDeleteResult.DidNotDelete;
+					}
+
 					return AssetDeleteResult.FailedDelete;
 				}
 
