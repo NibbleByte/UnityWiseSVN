@@ -243,6 +243,22 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			}
 
 			GUI.backgroundColor = prevBackgroundColor;
+			if (m_LockEntries.Count == 1 && GUILayout.Button("Revert")) {
+				WiseSVNIntegration.Revert(m_LockEntries.Select(e => e.StatusData.Path), false, false, false);
+				AssetDatabase.Refresh();
+				//SVNStatusesDatabase.Instance.InvalidateDatabase();	// Change will trigger this automatically.
+				SVNLockPromptDatabase.Instance.ClearKnowledge();
+				Close();
+			}
+			
+			if (m_LockEntries.Count > 1 && GUILayout.Button("Revert All")) {
+				SVNContextMenusManager.RevertAll();
+				AssetDatabase.Refresh();
+				//SVNStatusesDatabase.Instance.InvalidateDatabase();	// Change will trigger this automatically.
+				SVNLockPromptDatabase.Instance.ClearKnowledge();
+				Close();
+			}
+			
 			if (GUILayout.Button("Skip All")) {
 				Close();
 			}

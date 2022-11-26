@@ -51,7 +51,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		public const string InvalidateDatabaseMenuText = "Assets/SVN/Refresh Overlay Icons";
 		[MenuItem(InvalidateDatabaseMenuText, false, ContextMenus.SVNContextMenusManager.MenuItemPriorityStart + 125)]
-		private static void InvalidateDatabaseMenu()
+		public static void InvalidateDatabaseMenu()
 		{
 			SVNStatusesDatabase.Instance.m_GlobalIgnoresCollected = false;
 			SVNStatusesDatabase.Instance.InvalidateDatabase();
