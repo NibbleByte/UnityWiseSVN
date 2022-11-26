@@ -290,7 +290,12 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 				// Don't specify the .meta unless really needed to.
 				var statusData = WiseSVNIntegration.GetStatus(paths[0] + ".meta");
 				if (statusData.Status == VCFileStatus.Normal && !statusData.IsConflicted) {
-					m_Integration?.Revert(paths, false);
+					if (Directory.Exists(paths[0])) {
+						m_Integration?.Revert(paths, false);
+					} else {
+						WiseSVNIntegration.Revert(paths, false, true, false);
+						AssetDatabase.Refresh();
+					}
 					return;
 				}
 			}
