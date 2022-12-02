@@ -420,9 +420,22 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			m_Integration?.ShowLog(assetPath, wait);
 		}
 
+		[MenuItem("Assets/SVN/Repo Browser", false, MenuItemPriorityStart + 102)]
+		public static void RepoBrowserSelected()
+		{
+			m_Integration?.RepoBrowser(GetSelectedAssetPaths().Select(WiseSVNIntegration.AssetPathToURL).FirstOrDefault());
+		}
+
+		/// <summary>
+		/// Open Repo-Browser at url location. You can get url from local working copy by using WiseSVNIntegration.AssetPathToURL(path);
+		/// </summary>
+		public static void RepoBrowser(string url, bool wait = false)
+		{
+			m_Integration?.RepoBrowser(url, wait);
+		}
 
 
-		[MenuItem("Assets/SVN/Blame", false, MenuItemPriorityStart + 100)]
+		[MenuItem("Assets/SVN/Blame", false, MenuItemPriorityStart + 104)]
 		public static void BlameSelected()
 		{
 			m_Integration?.Blame(GetSelectedAssetPaths().FirstOrDefault());
@@ -435,7 +448,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Cleanup", false, MenuItemPriorityStart + 100)]
+		[MenuItem("Assets/SVN/Cleanup", false, MenuItemPriorityStart + 106)]
 		public static void Cleanup()
 		{
 			m_Integration?.Cleanup(true);
@@ -445,14 +458,6 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		public static void CleanupAndDontWait()
 		{
 			m_Integration?.Cleanup(false);
-		}
-
-		/// <summary>
-		/// Open Repo-Browser at url location. You can get url from local working copy by using WiseSVNIntegration.AssetPathToURL(path);
-		/// </summary>
-		public static void RepoBrowser(string url, bool wait = false)
-		{
-			m_Integration?.RepoBrowser(url, wait);
 		}
 
 		/// <summary>
