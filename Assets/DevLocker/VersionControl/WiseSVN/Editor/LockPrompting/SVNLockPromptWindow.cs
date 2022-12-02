@@ -121,6 +121,8 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			MiniIconButtonlessStyle.normal.scaledBackgrounds = null;
 			MiniIconButtonlessStyle.padding = new RectOffset();
 			MiniIconButtonlessStyle.margin = new RectOffset();
+			
+			SVNPreferencesWindow.MigrateButtonStyleToUIElementsIfNeeded(MiniIconButtonlessStyle);
 
 			wantsMouseMove = true;  // Needed for the hover effects.
 		}
@@ -176,7 +178,12 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 			const float LockColumnSize = 34;
 			const float OwnerSize = 140f;
+			
+			#if UNITY_2019_4_OR_NEWER
+			const float RevertSize = 20f;
+			#else
 			const float RevertSize = 18f;
+			#endif
 
 			bool needsUpdate = false;
 
@@ -200,12 +207,14 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 					shouldDisableRow = shouldDisableRow || lockEntry.LockedByOther;
 				}
 
+				// NOTE: This is copy-pasted below.
 				EditorGUI.BeginDisabledGroup(shouldDisableRow);
 
 				const float LockCheckBoxWidth = 14;
 				GUILayout.Space(LockColumnSize - LockCheckBoxWidth);
 				lockEntry.ShouldLock = EditorGUILayout.Toggle(lockEntry.ShouldLock, GUILayout.Width(LockCheckBoxWidth)) && !shouldDisableRow;
 
+				// NOTE: This is copy-pasted below.
 				EditorGUI.BeginDisabledGroup(!lockEntry.ShouldLock);
 
 				if (lockEntry.TargetObject == null || lockEntry.IsMeta) {
@@ -226,6 +235,8 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 				}
 
 				EditorGUI.EndDisabledGroup();
+				
+				EditorGUI.EndDisabledGroup();
 
 				if (GUILayout.Button(m_RevertContent, MiniIconButtonlessStyle, GUILayout.Width(RevertSize), GUILayout.Height(RevertSize))) {
 					using (var reporter = WiseSVNIntegration.CreateReporter()) {
@@ -244,6 +255,8 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 					GUIUtility.ExitGUI();
 				}
 
+				EditorGUI.BeginDisabledGroup(shouldDisableRow);
+				
 				EditorGUI.BeginDisabledGroup(!lockEntry.ShouldLock);
 
 				if (lockEntry.StatusData.RemoteStatus == VCRemoteFileStatus.None) {

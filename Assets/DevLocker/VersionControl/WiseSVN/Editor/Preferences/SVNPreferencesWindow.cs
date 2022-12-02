@@ -492,5 +492,142 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			return attributes.Length > 0 ? attributes[0].tooltip : string.Empty;
 		}
 
+
+		#region UIElements Background HACKS!
+
+		//[MenuItem("TEMP/Generate Background Textures ")]
+		private static void GenerateBackgroundTextures()
+		{
+			// This method was used to generate the needed images for button hover effects etc (read below).
+			// Creating textures on the fly didn't work as they get destroyed on assembly reload (alternatively they could leak).
+
+			// As 2019 & 2020 incorporates the UIElements framework, background textures are now null / empty.
+			// Because this was written in the old IMGUI style using 2018, this quick and dirty hack was created.
+			// Manually create background textures imitating the real buttons ones.
+
+			AssetDatabase.CreateAsset(MakeButtonBackgroundTexture(new Color(0.404f, 0.404f, 0.404f, 1.0f)), "Assets/SVN_Button_Hover_Dark.asset");
+			AssetDatabase.CreateAsset(MakeButtonBackgroundTexture(new Color(0.925f, 0.925f, 0.925f, 1.0f)), "Assets/SVN_Button_Hover_Light.asset");
+
+			AssetDatabase.CreateAsset(MakeButtonBackgroundTexture(new Color(0.455f, 0.455f, 0.455f, 1.0f)), "Assets/SVN_Button_Active_Dark.asset");
+			AssetDatabase.CreateAsset(MakeButtonBackgroundTexture(new Color(0.694f, 0.694f, 0.694f, 1.0f)), "Assets/SVN_Button_Active_Light.asset");
+
+			AssetDatabase.CreateAsset(MakeBoxBackgroundTexture(new Color(0.290f, 0.290f, 0.290f, 1.0f)), "Assets/SVN_Border_Normal_Dark.asset");
+			AssetDatabase.CreateAsset(MakeBoxBackgroundTexture(new Color(0.740f, 0.740f, 0.740f, 1.0f)), "Assets/SVN_Border_Normal_Light.asset");
+		}
+
+		internal static void MigrateButtonStyleToUIElementsIfNeeded(GUIStyle style)
+		{
+			// As 2019 & 2020 incorporates the UIElements framework, background textures are now null / empty.
+			// Because this was written in the old IMGUI style using 2018, this quick and dirty hack was created.
+			// Manually create background textures imitating the real buttons ones.
+
+			style.name = "";	// UIElements matches button styles by name and overrides everything.
+
+			if (style.hover.background == null) {
+				var path = EditorGUIUtility.isProSkin ? "Editor/SVNElementsUI/SVN_Button_Hover_Dark" : "Editor/SVNElementsUI/SVN_Button_Hover_Light";
+				style.hover.background = Resources.Load<Texture2D>(path);
+
+			}
+
+			if (style.active.background == null) {
+				var path = EditorGUIUtility.isProSkin ? "Editor/SVNElementsUI/SVN_Button_Active_Dark" : "Editor/SVNElementsUI/SVN_Button_Active_Light";
+				style.active.background = Resources.Load<Texture2D>(path);
+
+			}
+		}
+
+		internal static void MigrateBorderStyleToUIElementsIfNeeded(GUIStyle style)
+		{
+			// As 2019 & 2020 incorporates the UIElements framework, background textures are now null / empty.
+			// Because this was written in the old IMGUI style using 2018, this quick and dirty hack was created.
+			// Manually create background textures imitating the real buttons ones.
+
+			style.name = "";	// UIElements matches button styles by name and overrides everything.
+			if (style.normal.background == null) {
+				var path = EditorGUIUtility.isProSkin ? "Editor/SVNElementsUI/SVN_Border_Normal_Dark" : "Editor/SVNElementsUI/SVN_Border_Normal_Light";
+				style.normal.background = Resources.Load<Texture2D>(path);
+			}
+		}
+
+		private static Texture2D MakeButtonBackgroundTexture(Color color)
+		{
+			const int width = 16;
+			const int height = 16;
+
+			var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+
+			var pixels = new Color[width * height];
+			for (int y = 0; y < height; ++y) {
+				for (int x = 0; x < width; ++x) {
+					var index = x + y * width;
+					pixels[index] = color;
+
+					if (y == 0) {
+						pixels[index] *= 0.7f;
+						pixels[index].a = 1f;
+					}
+
+					if (y == height - 1) {
+						pixels[index] *= 1.02f;
+						pixels[index].a = 1f;
+					}
+
+					if (x == 0 || x == width - 1) {
+						pixels[index] *= 0.95f;
+						pixels[index].a = 1f;
+					}
+				}
+			}
+
+			texture.SetPixels(pixels);
+
+			texture.SetPixel(0, 0, new Color());
+			texture.SetPixel(1, 0, new Color());
+			texture.SetPixel(0, 1, new Color());
+
+
+			texture.SetPixel(width - 1, 0, new Color());
+			texture.SetPixel(width - 2, 0, new Color());
+			texture.SetPixel(width - 1, 1, new Color());
+
+			texture.SetPixel(0, height - 1, new Color());
+			texture.SetPixel(0, height - 2, new Color());
+			texture.SetPixel(1, height - 1, new Color());
+
+			texture.SetPixel(width - 1, height - 1, new Color());
+			texture.SetPixel(width - 2, height - 1, new Color());
+			texture.SetPixel(width - 1, height - 2, new Color());
+
+			texture.Apply();
+
+			return texture;
+		}
+
+		private static Texture2D MakeBoxBackgroundTexture(Color color)
+		{
+			const int width = 16;
+			const int height = 16;
+
+			var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+
+			var pixels = new Color[width * height];
+			for (int y = 0; y < height; ++y) {
+				for (int x = 0; x < width; ++x) {
+					var index = x + y * width;
+					pixels[index] = color;
+
+					if (y == 0 || y == height - 1 || x == 0 || x == width - 1) {
+						pixels[index] *= 0.5f;
+						pixels[index].a = 1f;
+					}
+				}
+			}
+
+			texture.SetPixels(pixels);
+			texture.Apply();
+
+			return texture;
+		}
+		#endregion
 	}
 }
