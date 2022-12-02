@@ -169,7 +169,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		#region Logging
 
 		// Used to track the shell commands output for errors and log them on Dispose().
-		private class ResultReporter : IShellMonitor, IDisposable
+		public class ResultConsoleReporter : IShellMonitor, IDisposable
 		{
 			private readonly ConcurrentQueue<string> m_CombinedOutput = new ConcurrentQueue<string>();
 
@@ -179,7 +179,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			private bool m_Silent;
 
 
-			public ResultReporter(bool logOutput, bool silent, string initialText = "")
+			public ResultConsoleReporter(bool logOutput, bool silent, string initialText = "")
 			{
 				m_LogOutput = logOutput;
 				m_Silent = silent;
@@ -261,9 +261,9 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 		}
 
-		private static ResultReporter CreateReporter()
+		public static ResultConsoleReporter CreateReporter()
 		{
-			var logger = new ResultReporter((TraceLogs & SVNTraceLogs.SVNOperations) != 0, Silent, "SVN Operations:");
+			var logger = new ResultConsoleReporter((TraceLogs & SVNTraceLogs.SVNOperations) != 0, Silent, "SVN Operations:");
 
 			return logger;
 		}
@@ -1871,7 +1871,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 		}
 
-		private static bool MoveAssetByAddDeleteOperations(string oldPath, string newPath, ResultReporter reporter)
+		private static bool MoveAssetByAddDeleteOperations(string oldPath, string newPath, ResultConsoleReporter reporter)
 		{
 			reporter.AppendTraceLine($"Moving file \"{oldPath}\" to \"{newPath}\" without SVN history...");
 
