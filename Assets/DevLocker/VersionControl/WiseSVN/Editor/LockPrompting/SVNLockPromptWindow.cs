@@ -52,6 +52,8 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			}
 		}
 
+		private bool m_Initialized = false;
+
 		private bool m_WhatAreLocksHintShown = false;
 		private bool m_WhatIsForceLocksHintShown = false;
 
@@ -61,6 +63,9 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 		private bool m_AllowStealingLocks = false;
 		private List<LockEntryData> m_LockEntries = new List<LockEntryData>();
 		private Vector2 m_LockEntriesScroll;
+
+		private GUIContent m_RevertContent;
+		private GUIStyle MiniIconButtonlessStyle;
 
 		public static void PromptLock(IEnumerable<SVNStatusData> shouldLockEntries, IEnumerable<SVNStatusData> lockedByOtherEntries)
 		{
@@ -103,8 +108,36 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			m_LockEntries.AddRange(toAdd);
 		}
 
+		private void InitializeStyles()
+		{
+			m_RevertContent = SVNPreferencesManager.LoadTexture("Editor/BranchesIcons/SVN-Revert", "Revert asset");
+
+			// Copied from SVNBranchSelectorWindow.
+			MiniIconButtonlessStyle = new GUIStyle(GUI.skin.button);
+			MiniIconButtonlessStyle.hover.background = MiniIconButtonlessStyle.normal.background;
+			MiniIconButtonlessStyle.hover.scaledBackgrounds = MiniIconButtonlessStyle.normal.scaledBackgrounds;
+			MiniIconButtonlessStyle.hover.textColor = GUI.skin.label.hover.textColor;
+			MiniIconButtonlessStyle.normal.background = null;
+			MiniIconButtonlessStyle.normal.scaledBackgrounds = null;
+			MiniIconButtonlessStyle.padding = new RectOffset();
+			MiniIconButtonlessStyle.margin = new RectOffset();
+
+			wantsMouseMove = true;  // Needed for the hover effects.
+		}
+
 		void OnGUI()
 		{
+			if (!m_Initialized) {
+				InitializeStyles();
+
+				m_Initialized = true;
+			}
+
+			// For hover effects to work.
+			if (Event.current.type == EventType.MouseMove) {
+				Repaint();
+			}
+
 			EditorGUILayout.LabelField("Lock Modified Assets", EditorStyles.boldLabel);
 
 			m_WhatAreLocksHintShown = EditorGUILayout.Foldout(m_WhatAreLocksHintShown, "What are locks?");
@@ -143,6 +176,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 			const float LockColumnSize = 34;
 			const float OwnerSize = 140f;
+			const float RevertSize = 18f;
 
 			bool needsUpdate = false;
 
@@ -150,6 +184,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 			GUILayout.Label("Lock", EditorStyles.boldLabel, GUILayout.Width(LockColumnSize));
 			GUILayout.Label("Asset", EditorStyles.boldLabel, GUILayout.ExpandWidth(true));
+			GUILayout.Label("Revert", EditorStyles.boldLabel, GUILayout.Width(RevertSize + 28f));
 			GUILayout.Label("Owner", EditorStyles.boldLabel, GUILayout.Width(OwnerSize));
 
 			EditorGUILayout.EndHorizontal();
@@ -189,6 +224,27 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 							false, GUILayout.ExpandWidth(true));
 					}
 				}
+
+				EditorGUI.EndDisabledGroup();
+
+				if (GUILayout.Button(m_RevertContent, MiniIconButtonlessStyle, GUILayout.Width(RevertSize), GUILayout.Height(RevertSize))) {
+					using (var reporter = WiseSVNIntegration.CreateReporter()) {
+						WiseSVNIntegration.Revert(new string[] { lockEntry.StatusData.Path }, false, true, false, "", -1, reporter);
+					}
+
+					AssetDatabase.Refresh();
+					//SVNStatusesDatabase.Instance.InvalidateDatabase();	// Change will trigger this automatically.
+
+					m_LockEntries.Remove(lockEntry);
+
+					if (m_LockEntries.Count == 0) {
+						Close();
+					}
+
+					GUIUtility.ExitGUI();
+				}
+
+				EditorGUI.BeginDisabledGroup(!lockEntry.ShouldLock);
 
 				if (lockEntry.StatusData.RemoteStatus == VCRemoteFileStatus.None) {
 					if (lockEntry.LockedByOther) {
@@ -243,22 +299,15 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			}
 
 			GUI.backgroundColor = prevBackgroundColor;
-			if (m_LockEntries.Count == 1 && GUILayout.Button("Revert")) {
-				WiseSVNIntegration.Revert(m_LockEntries.Select(e => e.StatusData.Path), false, false, false);
-				AssetDatabase.Refresh();
-				//SVNStatusesDatabase.Instance.InvalidateDatabase();	// Change will trigger this automatically.
-				SVNLockPromptDatabase.Instance.ClearKnowledge();
-				Close();
-			}
-			
-			if (m_LockEntries.Count > 1 && GUILayout.Button("Revert All")) {
+
+			if (GUILayout.Button("Revert All Window")) {
 				SVNContextMenusManager.RevertAll();
 				AssetDatabase.Refresh();
 				//SVNStatusesDatabase.Instance.InvalidateDatabase();	// Change will trigger this automatically.
 				SVNLockPromptDatabase.Instance.ClearKnowledge();
 				Close();
 			}
-			
+
 			if (GUILayout.Button("Skip All")) {
 				Close();
 			}
