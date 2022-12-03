@@ -495,7 +495,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 		#region UIElements Background HACKS!
 
-		//[MenuItem("TEMP/Generate Background Textures ")]
+		/*
+		[MenuItem("TEMP/Generate Background Textures ")]
 		private static void GenerateBackgroundTextures()
 		{
 			// This method was used to generate the needed images for button hover effects etc (read below).
@@ -504,16 +505,16 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			// As 2019 & 2020 incorporates the UIElements framework, background textures are now null / empty.
 			// Because this was written in the old IMGUI style using 2018, this quick and dirty hack was created.
 			// Manually create background textures imitating the real buttons ones.
+			System.IO.File.WriteAllBytes("Assets/SVN_Button_Hover_Dark.png", MakeButtonBackgroundTexture(new Color(0.404f, 0.404f, 0.404f, 1.0f)).EncodeToPNG());
+			System.IO.File.WriteAllBytes("Assets/SVN_Button_Hover_Light.png", MakeButtonBackgroundTexture(new Color(0.925f, 0.925f, 0.925f, 1.0f)).EncodeToPNG());
 
-			AssetDatabase.CreateAsset(MakeButtonBackgroundTexture(new Color(0.404f, 0.404f, 0.404f, 1.0f)), "Assets/SVN_Button_Hover_Dark.asset");
-			AssetDatabase.CreateAsset(MakeButtonBackgroundTexture(new Color(0.925f, 0.925f, 0.925f, 1.0f)), "Assets/SVN_Button_Hover_Light.asset");
+			System.IO.File.WriteAllBytes("Assets/SVN_Button_Active_Dark.png", MakeButtonBackgroundTexture(new Color(0.455f, 0.455f, 0.455f, 1.0f)).EncodeToPNG());
+			System.IO.File.WriteAllBytes("Assets/SVN_Button_Active_Light.png", MakeButtonBackgroundTexture(new Color(0.694f, 0.694f, 0.694f, 1.0f)).EncodeToPNG());
 
-			AssetDatabase.CreateAsset(MakeButtonBackgroundTexture(new Color(0.455f, 0.455f, 0.455f, 1.0f)), "Assets/SVN_Button_Active_Dark.asset");
-			AssetDatabase.CreateAsset(MakeButtonBackgroundTexture(new Color(0.694f, 0.694f, 0.694f, 1.0f)), "Assets/SVN_Button_Active_Light.asset");
-
-			AssetDatabase.CreateAsset(MakeBoxBackgroundTexture(new Color(0.290f, 0.290f, 0.290f, 1.0f)), "Assets/SVN_Border_Normal_Dark.asset");
-			AssetDatabase.CreateAsset(MakeBoxBackgroundTexture(new Color(0.740f, 0.740f, 0.740f, 1.0f)), "Assets/SVN_Border_Normal_Light.asset");
+			System.IO.File.WriteAllBytes("Assets/SVN_Border_Normal_Dark.png", MakeBoxBackgroundTexture(new Color(0.290f, 0.290f, 0.290f, 1.0f)).EncodeToPNG());
+			System.IO.File.WriteAllBytes("Assets/SVN_Border_Normal_Light.png", MakeBoxBackgroundTexture(new Color(0.740f, 0.740f, 0.740f, 1.0f)).EncodeToPNG());
 		}
+		*/
 
 		internal static void MigrateButtonStyleToUIElementsIfNeeded(GUIStyle style)
 		{
