@@ -55,7 +55,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			// All flags are set, skip checks.
 			if ((int)assetTypeMask == ~0)
 				return true;
-			
+
 			if (assetPath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
 
 			    || assetPath.EndsWith(".c", StringComparison.OrdinalIgnoreCase) // For hard-core players
@@ -74,13 +74,13 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			    ) {
 				return assetTypeMask.HasFlag(AssetType.Shader);
 			}
-			
-			
+
+
 
 			if (assetPath.EndsWith(".unity", StringComparison.OrdinalIgnoreCase)) {
 				return assetTypeMask.HasFlag(AssetType.Scene);
 			}
-			
+
 			if (assetPath.EndsWith(".mat", StringComparison.OrdinalIgnoreCase)) {
 				return assetTypeMask.HasFlag(AssetType.Material);
 			}
@@ -89,7 +89,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			if (assetPath.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase)) {
 				return assetTypeMask.HasFlag(AssetType.Prefab);
 			}
-			
+
 			// Most popular models?
 			if (assetPath.EndsWith(".fbx", StringComparison.OrdinalIgnoreCase)
 			    || assetPath.EndsWith(".dae", StringComparison.OrdinalIgnoreCase)
@@ -103,8 +103,8 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			   ) {
 				return assetTypeMask.HasFlag(AssetType.Model);
 			}
-			
-			
+
+
 			// Most popular extensions?
 			if (assetPath.EndsWith(".psd", StringComparison.OrdinalIgnoreCase)
 			    || assetPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
@@ -126,13 +126,13 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			if (assetPath.EndsWith(".anim", StringComparison.OrdinalIgnoreCase)) {
 				return assetTypeMask.HasFlag(AssetType.Animation);
 			}
-			
+
 			if (assetPath.EndsWith(".controller", StringComparison.OrdinalIgnoreCase)
 			    || assetPath.EndsWith(".overrideController", StringComparison.OrdinalIgnoreCase)
 			    ) {
 				return assetTypeMask.HasFlag(AssetType.Animator);
 			}
-			
+
 			// Won't be able to load the asset to check the type - treat it as others.
 			if (isDeleted) {
 				return assetPath.EndsWith(".asset", StringComparison.OrdinalIgnoreCase)
@@ -145,15 +145,15 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			// Don't know the extension... load the asset and check the actual type.
 			//
 			UnityEngine.Object[] objects = AssetDatabase.LoadAllAssetsAtPath(assetPath);
-			
+
 			// Unknown type of model...
 			if (objects.OfType<GameObject>().Any()) {
 				return assetTypeMask.HasFlag(AssetType.Model);
 			}
-			/* 
+			/*
 			if (objects.OfType<GameObject>().Any()) {
 				var go = objects[0];
-				
+
 				bool match = false;
 
 #if UNITY_2018_1_OR_NEWER
@@ -180,26 +180,26 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			if (objects.OfType<TerrainData>().Any()) {
 				return assetTypeMask.HasFlag(AssetType.TerrainData);
 			}
-			
+
 			if (objects.OfType<Mesh>().Any()) {
 				return assetTypeMask.HasFlag(AssetType.Mesh);
 			}
-			
+
 			// Unknown type of texture...
 			if (objects.OfType<Texture>().Any()) {
 				return assetTypeMask.HasFlag(AssetType.Texture);
 			}
-			
+
 			if (objects.OfType<AnimationClip>().Any()) {
 				return assetTypeMask.HasFlag(AssetType.Animation);
 			}
-			
+
 
 #if UNITY_2019_3_OR_NEWER
 			if (objects.OfType<UnityEngine.UIElements.StyleSheet>().Any()) {
 				return assetTypeMask.HasFlag(AssetType.UIElementsAssets);
 			}
-			
+
 			if (objects.OfType<UnityEngine.UIElements.VisualTreeAsset>().Any()) {
 				return assetTypeMask.HasFlag(AssetType.UIElementsAssets);
 			}
@@ -223,7 +223,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 				return assetTypeMask.HasFlag(AssetType.TimeLineAssets);
 			}
 #endif
-			
+
 			if (objects.OfType<ScriptableObject>().Any()) {
 				return assetTypeMask.HasFlag(AssetType.ScriptableObject);
 			}
@@ -236,7 +236,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			for(int i = 0; i < m_KnownData.Count; ++i) {
 				var knownData = m_KnownData[i];
 				if (knownData.Path == statusData.Path) {
-					if (knownData.Equals(statusData, false)) {
+					if (knownData.EqualStatuses(statusData, false)) {
 						return false;
 					} else {
 						m_KnownData[i] = statusData;

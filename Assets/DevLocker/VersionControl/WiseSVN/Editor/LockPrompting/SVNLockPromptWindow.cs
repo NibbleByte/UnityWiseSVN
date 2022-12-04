@@ -108,6 +108,12 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			m_LockEntries.AddRange(toAdd);
 		}
 
+		void OnEnable()
+		{
+			// Resets on assembly reload.
+			wantsMouseMove = true;  // Needed for the hover effects.
+		}
+
 		private void InitializeStyles()
 		{
 			m_RevertContent = SVNPreferencesManager.LoadTexture("Editor/BranchesIcons/SVN-Revert", "Revert asset");
@@ -121,10 +127,8 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			MiniIconButtonlessStyle.normal.scaledBackgrounds = null;
 			MiniIconButtonlessStyle.padding = new RectOffset();
 			MiniIconButtonlessStyle.margin = new RectOffset();
-			
-			SVNPreferencesWindow.MigrateButtonStyleToUIElementsIfNeeded(MiniIconButtonlessStyle);
 
-			wantsMouseMove = true;  // Needed for the hover effects.
+			SVNPreferencesWindow.MigrateButtonStyleToUIElementsIfNeeded(MiniIconButtonlessStyle);
 		}
 
 		void OnGUI()
@@ -178,7 +182,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 			const float LockColumnSize = 34;
 			const float OwnerSize = 140f;
-			
+
 			#if UNITY_2019_4_OR_NEWER
 			const float RevertSize = 20f;
 			#else
@@ -200,9 +204,11 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 			foreach (var lockEntry in m_LockEntries) {
 
+				SVNStatusData statusData = lockEntry.StatusData;
+
 				EditorGUILayout.BeginHorizontal();
 
-				bool shouldDisableRow = lockEntry.StatusData.RemoteStatus != VCRemoteFileStatus.None;
+				bool shouldDisableRow = statusData.RemoteStatus != VCRemoteFileStatus.None;
 				if (!m_AllowStealingLocks) {
 					shouldDisableRow = shouldDisableRow || lockEntry.LockedByOther;
 				}
@@ -218,11 +224,24 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 				EditorGUI.BeginDisabledGroup(!lockEntry.ShouldLock);
 
 				if (lockEntry.TargetObject == null || lockEntry.IsMeta) {
-					var assetComment = (lockEntry.StatusData.Status == VCFileStatus.Deleted) ? "deleted" : "meta";
+					var assetComment = (statusData.Status == VCFileStatus.Deleted) ? "deleted" : "meta";
+					EditorGUILayout.BeginHorizontal();
 					EditorGUILayout.TextField($"({assetComment}) {lockEntry.AssetName}", GUILayout.ExpandWidth(true));
+
+					if (statusData.IsMovedFile) {
+						UnityEngine.Object movedToObject = AssetDatabase.LoadMainAssetAtPath(statusData.MovedTo);
+
+						GUILayout.Label(new GUIContent("=>", "Moved to..."), GUILayout.ExpandWidth(false));
+						if (movedToObject) {
+							EditorGUILayout.ObjectField(movedToObject, movedToObject.GetType(), false, GUILayout.MaxWidth(100f));
+						} else {
+							EditorGUILayout.TextField(statusData.MovedTo, GUILayout.MaxWidth(100f));
+						}
+					}
+					EditorGUILayout.EndHorizontal();
 				}
 
-				if (lockEntry.StatusData.Status != VCFileStatus.Deleted) {
+				if (statusData.Status != VCFileStatus.Deleted) {
 					if (lockEntry.IsMeta) {
 						EditorGUILayout.ObjectField(lockEntry.TargetObject,
 							lockEntry.TargetObject ? lockEntry.TargetObject.GetType() : typeof(UnityEngine.Object),
@@ -235,12 +254,47 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 				}
 
 				EditorGUI.EndDisabledGroup();
-				
+
 				EditorGUI.EndDisabledGroup();
 
 				if (GUILayout.Button(m_RevertContent, MiniIconButtonlessStyle, GUILayout.Width(RevertSize), GUILayout.Height(RevertSize))) {
+					if (statusData.Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase) && (statusData.Status == VCFileStatus.Added || statusData.Status == VCFileStatus.Deleted)) {
+						if (!EditorUtility.DisplayDialog("Revert meta", "Reverting meta files directly for Added or Deleted assets is usually a bad idea. Are you sure?", "Revert .meta", "Cancel")) {
+							GUIUtility.ExitGUI();
+						}
+					}
+
 					using (var reporter = WiseSVNIntegration.CreateReporter()) {
-						WiseSVNIntegration.Revert(new string[] { lockEntry.StatusData.Path }, false, true, false, "", -1, reporter);
+
+						if (statusData.Status == VCFileStatus.Deleted
+							&& !string.IsNullOrEmpty(statusData.MovedTo)
+							&& !statusData.Path.EndsWith(".meta", StringComparison.OrdinalIgnoreCase)) {
+
+							int choice = EditorUtility.DisplayDialogComplex(
+								"Revert Moved Asset",
+								$"This asset was moved to\n\"{statusData.MovedTo}\"\n\nDo you want to move it back instead?",
+								"Move it back", "Cancel", "Revert deleted"
+								);
+
+							if (choice == 0) {
+								string error = AssetDatabase.ValidateMoveAsset(statusData.MovedTo, statusData.Path);
+								if (!string.IsNullOrEmpty(error)) {
+									EditorUtility.DisplayDialog("Revert Error", $"Couldn't move asset back:\n\"{error}\"", "Ok");
+									GUIUtility.ExitGUI();
+								}
+								AssetDatabase.MoveAsset(statusData.MovedTo, statusData.Path);
+
+								m_LockEntries.Remove(lockEntry);
+								m_LockEntries.RemoveAll(e => e.StatusData.Path == statusData.Path + ".meta");
+
+								GUIUtility.ExitGUI();
+							}
+
+							if (choice == 1) {
+								GUIUtility.ExitGUI();
+							}
+						}
+						WiseSVNIntegration.Revert(new string[] { statusData.Path }, false, true, false, "", -1, reporter);
 					}
 
 					AssetDatabase.Refresh();
@@ -256,10 +310,10 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 				}
 
 				EditorGUI.BeginDisabledGroup(shouldDisableRow);
-				
+
 				EditorGUI.BeginDisabledGroup(!lockEntry.ShouldLock);
 
-				if (lockEntry.StatusData.RemoteStatus == VCRemoteFileStatus.None) {
+				if (statusData.RemoteStatus == VCRemoteFileStatus.None) {
 					if (lockEntry.LockedByOther) {
 						EditorGUILayout.TextField(lockEntry.Owner, GUILayout.Width(OwnerSize));
 					} else {

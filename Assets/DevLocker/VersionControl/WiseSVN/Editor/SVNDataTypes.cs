@@ -175,6 +175,10 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		public string Path;
 
+		public string MovedTo;		// Displays where asset was moved to. Should have Deleted status.
+		public string MovedFrom;    // Displays where asset was moved from. Should have Added status.
+		public bool IsMovedFile => !string.IsNullOrEmpty(MovedTo) || !string.IsNullOrEmpty(MovedFrom);
+
 		public LockDetails LockDetails;
 
 		public bool IsValid => !string.IsNullOrEmpty(Path);
@@ -184,7 +188,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			PropertiesStatus == VCPropertiesStatus.Conflicted ||
 			TreeConflictStatus == VCTreeConflictStatus.TreeConflict;
 
-		public bool Equals(SVNStatusData other, bool skipOnline)
+		public bool EqualStatuses(SVNStatusData other, bool skipOnline)
 		{
 			return Status == other.Status
 				&& PropertiesStatus == other.PropertiesStatus

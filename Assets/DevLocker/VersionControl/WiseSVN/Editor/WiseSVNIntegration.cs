@@ -1964,8 +1964,15 @@ namespace DevLocker.VersionControl.WiseSVN
 		private static IEnumerable<SVNStatusData> ExtractStatuses(string output, SVNStatusDataOptions options, IShellMonitor shellMonitor = null)
 		{
 			using (var sr = new StringReader(output)) {
-				string line;
-				while ((line = sr.ReadLine()) != null) {
+				string line = string.Empty;
+				string nextLine = sr.ReadLine();
+
+				while (true) {
+					line = nextLine;
+					if (line == null)	// End of reader reached.
+						break;
+
+					nextLine = sr.ReadLine();
 
 					var lineLen = line.Length;
 
@@ -2008,6 +2015,19 @@ namespace DevLocker.VersionControl.WiseSVN
 					statusData.LockStatus = m_LockStatusMap[line[5]];
 					statusData.TreeConflictStatus = m_ConflictStatusMap[line[6]];
 					statusData.LockDetails = LockDetails.Empty;
+
+					// Last status was deleted / added+, so this is telling us where it moved to / from.
+					if (nextLine != null && nextLine.Length > 8 && nextLine[8] == '>') {
+
+						if (statusData.Status == VCFileStatus.Deleted) {
+							int movedPathStartIndex = "        > moved to ".Length;
+							statusData.MovedTo = nextLine.Substring(movedPathStartIndex).Replace('\\', '/');
+						}
+						if (statusData.Status == VCFileStatus.Added) {
+							int movedPathStartIndex = "        > moved from ".Length;
+							statusData.MovedFrom = nextLine.Substring(movedPathStartIndex).Replace('\\', '/');
+						}
+					}
 
 					// 7 columns statuses + space;
 					int pathStart = 7 + 1;
