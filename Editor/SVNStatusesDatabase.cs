@@ -712,10 +712,10 @@ namespace DevLocker.VersionControl.WiseSVN
 			foreach (var bind in m_Data) {
 				if (bind.Key.Equals(guid, StringComparison.Ordinal)) {
 
-					if (!isMeta && bind.AssetStatusData.Equals(statusData, !compareOnlineStatuses))
+					if (!isMeta && bind.AssetStatusData.EqualStatuses(statusData, !compareOnlineStatuses))
 						return false;
 
-					if (isMeta && bind.MetaStatusData.Equals(statusData, !compareOnlineStatuses))
+					if (isMeta && bind.MetaStatusData.EqualStatuses(statusData, !compareOnlineStatuses))
 						return false;
 
 					if (!isMeta) {
