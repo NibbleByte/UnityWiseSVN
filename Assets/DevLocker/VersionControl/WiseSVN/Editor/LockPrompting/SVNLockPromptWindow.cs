@@ -90,7 +90,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			}
 
 			var window = GetWindow<SVNLockPromptWindow>(true, "SVN Lock Modified Assets");
-			window.minSize = new Vector2(584, 500f);
+			window.minSize = new Vector2(600f, 500f);
 			var center = new Vector2(Screen.currentResolution.width, Screen.currentResolution.height) / 2f;
 			window.position = new Rect(center - window.position.size / 2, window.position.size);
 			window.AppendEntriesToLock(lockedByOtherEntries);
@@ -199,6 +199,10 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			GUILayout.Label("Owner", EditorStyles.boldLabel, GUILayout.Width(OwnerSize));
 
 			EditorGUILayout.EndHorizontal();
+
+			if (m_LockEntries.Count == 0) {
+				GUILayout.Label("Scanning for changes...");
+			}
 
 			m_LockEntriesScroll = EditorGUILayout.BeginScrollView(m_LockEntriesScroll);
 
@@ -352,6 +356,12 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 					lockEntry.ShouldLock = !lockEntry.ShouldLock && !lockConflict;
 				}
+			}
+
+			if (GUILayout.Button("Refresh All")) {
+				SVNStatusesDatabase.Instance.InvalidateDatabase();
+				SVNLockPromptDatabase.Instance.ClearKnowledge();
+				m_LockEntries.Clear();
 			}
 
 			GUILayout.FlexibleSpace();
