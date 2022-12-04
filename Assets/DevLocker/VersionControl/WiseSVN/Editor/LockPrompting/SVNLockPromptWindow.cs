@@ -177,7 +177,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 			EditorGUILayout.HelpBox(
 				"If you skip locking assets, you won't be prompted again unless the assets status change or Unity restarts.\n" +
-				$"To force re-evaluate all of the locks, select the \"{SVNOverlayIcons.InvalidateDatabaseMenuText}\" menu.",
+				$"To force re-evaluate all of the locks, select the \"{SVNOverlayIcons.InvalidateDatabaseMenuText.Replace("&&", "&")}\" menu.",
 				MessageType.Warning, true);
 
 			const float LockColumnSize = 34;

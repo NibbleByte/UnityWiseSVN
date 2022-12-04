@@ -49,7 +49,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			OnDatabaseChanged();
 		}
 
-		public const string InvalidateDatabaseMenuText = "Assets/SVN/Refresh Overlay Icons";
+		public const string InvalidateDatabaseMenuText = "Assets/SVN/Refresh Icons && Locks";
 		[MenuItem(InvalidateDatabaseMenuText, false, ContextMenus.SVNContextMenusManager.MenuItemPriorityStart + 125)]
 		public static void InvalidateDatabaseMenu()
 		{
