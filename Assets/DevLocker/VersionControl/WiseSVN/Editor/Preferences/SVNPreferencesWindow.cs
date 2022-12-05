@@ -290,6 +290,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			}
 			EditorGUI.BeginDisabledGroup(!m_PersonalPrefs.PopulateStatusesDatabase);
 
+			bool prevLockPrompt = m_ProjectPrefs.EnableLockPrompt;
 			m_ProjectPrefs.EnableLockPrompt = EditorGUILayout.Toggle(new GUIContent("Enable Lock Prompts", "Prompt user to lock assets when it or its meta becomes modified."), m_ProjectPrefs.EnableLockPrompt);
 			if (m_ProjectPrefs.EnableLockPrompt) {
 				EditorGUI.indentLevel++;
@@ -316,6 +317,15 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				EditorGUILayout.PropertyField(sp.FindPropertyRelative("LockPromptMessage"), new GUIContent("Lock Message", SVNPreferencesManager.ProjectPreferences.LockMessageHint));
 
 				EditorGUILayout.PropertyField(sp.FindPropertyRelative("AutoUnlockIfUnmodified"));
+
+				if (!prevLockPrompt && m_ProjectPrefs.LockPromptParameters.Count == 0) {
+					m_ProjectPrefs.LockPromptParameters.Add(new LockPromptParameters() {
+						TargetFolder = "Assets",
+						TargetTypes = (AssetType)~0,
+						IncludeTargetMetas = true,
+						Exclude = new string[0],
+					});
+				}
 
 				// HACK: PropertyDrawers are not drawn in EditorWindow! Draw everything manually to have custom stuff!
 				var alProperty = sp.FindPropertyRelative("LockPromptParameters").Copy();
@@ -346,6 +356,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 			EditorGUI.EndDisabledGroup();
 
+			bool prevBranchesDatabase = m_ProjectPrefs.EnableBranchesDatabase;
 			const string branchesEnableHint = "Scans the SVN repository for Unity projects in branches and keeps them in a simple database.\n\nSingle scan may take up to a few minutes, depending on your network connection and the complexity of your repository.";
 			m_ProjectPrefs.EnableBranchesDatabase = EditorGUILayout.Toggle(new GUIContent("Enable Branches Database", branchesEnableHint), m_ProjectPrefs.EnableBranchesDatabase);
 			if (m_ProjectPrefs.EnableBranchesDatabase) {
@@ -372,6 +383,27 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 					GUILayout.Space((EditorGUI.indentLevel + 1) * 16f);
 					GUILayout.Label(branchesHint, EditorStyles.helpBox);
 					EditorGUILayout.EndHorizontal();
+				}
+
+				if (!prevBranchesDatabase && m_ProjectPrefs.BranchesDatabaseScanParameters.Count == 0) {
+					string url = WiseSVNIntegration.AssetPathToURL("Assets");
+
+					// Guess where scan should start at...
+					int urlEndIndex = url.IndexOf("/trunk");
+					if (urlEndIndex != -1) {
+						url = url.Remove(urlEndIndex);
+					}
+
+					urlEndIndex = url.IndexOf("/branches");
+					if (urlEndIndex != -1) {
+						url = url.Remove(urlEndIndex);
+					}
+
+					m_ProjectPrefs.BranchesDatabaseScanParameters.Add(new BranchScanParameters() {
+						EntryPointURL = url,
+						BranchSignatureRootEntries = new string[] { "Assets", "ProjectSettings", "Packages" },
+						ExcludesFolderNames = new string[0],
+					});
 				}
 
 				EditorGUILayout.PropertyField(sp.FindPropertyRelative("BranchesDatabaseScanParameters"), new GUIContent("Branches Scan Parameters", "Must have at least one entry to work properly."), true);
