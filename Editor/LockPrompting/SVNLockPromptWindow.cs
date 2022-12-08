@@ -65,6 +65,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 		private Vector2 m_LockEntriesScroll;
 
 		private GUIContent m_RevertContent;
+		private GUIContent m_DiffContent;
 		private GUIStyle MiniIconButtonlessStyle;
 
 		public static void PromptLock(IEnumerable<SVNStatusData> shouldLockEntries, IEnumerable<SVNStatusData> lockedByOtherEntries)
@@ -117,6 +118,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 		private void InitializeStyles()
 		{
 			m_RevertContent = SVNPreferencesManager.LoadTexture("Editor/BranchesIcons/SVN-Revert", "Revert asset");
+			m_DiffContent = SVNPreferencesManager.LoadTexture("Editor/BranchesIcons/SVN-ConflictsScan-Pending", "Check changes");
 
 			// Copied from SVNBranchSelectorWindow.
 			MiniIconButtonlessStyle = new GUIStyle(GUI.skin.button);
@@ -195,7 +197,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 			GUILayout.Label("Lock", EditorStyles.boldLabel, GUILayout.Width(LockColumnSize));
 			GUILayout.Label("Asset", EditorStyles.boldLabel, GUILayout.ExpandWidth(true));
-			GUILayout.Label("Revert", EditorStyles.boldLabel, GUILayout.Width(RevertSize + 28f));
+			GUILayout.Label("Revert", EditorStyles.boldLabel, GUILayout.Width(RevertSize * 2 + 12f));
 			GUILayout.Label("Owner", EditorStyles.boldLabel, GUILayout.Width(OwnerSize));
 
 			EditorGUILayout.EndHorizontal();
@@ -312,6 +314,21 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 					GUIUtility.ExitGUI();
 				}
+
+				GUILayout.Space(4f);
+
+				MiniIconButtonlessStyle.contentOffset = new Vector2(0f, -2f);
+				if (GUILayout.Button(m_DiffContent, MiniIconButtonlessStyle, GUILayout.Width(RevertSize), GUILayout.Height(RevertSize))) {
+					if (!string.IsNullOrEmpty(statusData.MovedTo)) {
+						SVNContextMenusManager.DiffAsset(statusData.MovedTo);
+					} else {
+						SVNContextMenusManager.DiffAsset(statusData.Path);
+					}
+				}
+				MiniIconButtonlessStyle.contentOffset = new Vector2(0f, 0f);
+
+				GUILayout.Space(4f);
+
 
 				EditorGUI.BeginDisabledGroup(shouldDisableRow);
 

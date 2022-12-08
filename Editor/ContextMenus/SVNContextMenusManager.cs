@@ -160,7 +160,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			}
 		}
 
-		private static bool DiffAsset(string assetPath)
+		public static bool DiffAsset(string assetPath)
 		{
 			var statusData = WiseSVNIntegration.GetStatus(assetPath);
 
