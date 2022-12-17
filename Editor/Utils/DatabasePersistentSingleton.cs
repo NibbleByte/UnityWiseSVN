@@ -43,8 +43,12 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 		private double m_LastUpdateStart;
 
 		#region Thread Work Related Data
+
+		// Use this name when logging in threads.
+		protected string m_Name;
+
 		// Filled in by a worker thread.
-		[NonSerialized] private DataType[] m_PendingData;
+		[NonSerialized] private volatile DataType[] m_PendingData;
 
 		private System.Threading.Thread m_WorkerThread;
 
@@ -52,6 +56,10 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 		// If last update didn't make it, this flag will still be true.
 		// Useful if assembly reload happens and stops the work of the database update.
 		[SerializeField] private bool m_PendingUpdate = false;
+
+		// Indicates that while update was happening, another one was requested, hinting that newer data is available,
+		// so discard the currently collected one and repeat the gather process.
+		protected volatile bool m_RepeatUpdateRequested = false;
 		#endregion
 
 
@@ -64,6 +72,7 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 			}
 
 			AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+			m_Name = name;
 
 			// Assembly reload might have killed the working thread leaving pending update.
 			// Do it again.
@@ -142,14 +151,30 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 		private void GatherData()
 		{
 			try {
-				var pendingData = GatherDataInThread();
+				do {
+					var pendingData = GatherDataInThread();
 
-				if (m_PendingUpdate == false) {
-					// GetType() instead of just "name" since we're in another therad and Unity will blow!
-					throw new Exception($"{GetType().Name} thread finished work but the update is over?");
-				}
+					if (m_PendingUpdate == false) {
+						// GetType() instead of just "name" since we're in another therad and Unity will blow!
+						throw new Exception($"{GetType().Name} thread finished work but the update is over?");
+					}
 
-				m_PendingData = pendingData;
+					// If another update was requested it is a hint that there may be newer data.
+					// Discard the currently gathered one and start all over again.
+					if (m_RepeatUpdateRequested) {
+						m_RepeatUpdateRequested = false;
+
+						if (DoTraceLogs) {
+							Debug.Log($"Update redo started of {m_Name}. Discarding previously gathered data of {pendingData.Length} items.");
+						}
+
+					} else {
+
+						m_PendingData = pendingData;
+						break;
+					}
+
+				} while (true);
 			}
 			// Most probably the assembly got reloaded and the thread was aborted.
 			catch (System.Threading.ThreadAbortException) {
@@ -193,6 +218,7 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 
 			// Mark update as finished.
 			m_PendingUpdate = false;
+			m_RepeatUpdateRequested = false;	// Just in case.
 
 			// If preferences were changed while waiting.
 			if (!IsActive) {
@@ -221,7 +247,16 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 		/// </summary>
 		public void InvalidateDatabase()
 		{
-			if (!IsActive || m_PendingUpdate || TemporaryDisabled)
+			if (m_PendingUpdate) {
+				m_RepeatUpdateRequested = true;
+
+				if (DoTraceLogs) {
+					Debug.Log($"Update redo requested of {name} at {m_LastUpdateStart:0.00}");
+				}
+				return;
+			}
+
+			if (!IsActive || TemporaryDisabled)
 				return;
 
 			// Will be done on assembly reload.
