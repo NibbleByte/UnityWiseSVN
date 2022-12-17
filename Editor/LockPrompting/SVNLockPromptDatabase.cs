@@ -58,6 +58,9 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 			if (assetPath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
 
+			    || assetPath.EndsWith(".asmdef", StringComparison.OrdinalIgnoreCase)  // It's for coders, so bundle it with script.
+			    || assetPath.EndsWith(".asmref", StringComparison.OrdinalIgnoreCase)  // It's for coders, so bundle it with script.
+
 			    || assetPath.EndsWith(".c", StringComparison.OrdinalIgnoreCase) // For hard-core players
 			    || assetPath.EndsWith(".cpp", StringComparison.OrdinalIgnoreCase) // For hard-core players
 			    || assetPath.EndsWith(".h", StringComparison.OrdinalIgnoreCase) // For hard-core players
