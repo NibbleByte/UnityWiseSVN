@@ -135,6 +135,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		public PersonalPreferences PersonalPrefs;
 		public ProjectPreferences ProjectPrefs;
 
+		public bool TemporarySilenceLockPrompts = false;
+
 		[SerializeField] private long m_ProjectPrefsLastModifiedTime = 0;
 
 		public event Action PreferencesChanged;
