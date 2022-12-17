@@ -70,6 +70,9 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 		public static void PromptLock(IEnumerable<SVNStatusData> shouldLockEntries, IEnumerable<SVNStatusData> lockedByOtherEntries)
 		{
+			if (SVNPreferencesManager.Instance.TemporarySilenceLockPrompts)
+				return;
+
 			if (SVNPreferencesManager.Instance.PersonalPrefs.AutoLockOnModified) {
 				SVNLockPromptDatabase.Instance.LockEntries(shouldLockEntries, false);
 
@@ -146,7 +149,22 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 				Repaint();
 			}
 
+			EditorGUILayout.BeginHorizontal();
+
 			EditorGUILayout.LabelField("Lock Modified Assets", EditorStyles.boldLabel);
+
+			GUILayout.FlexibleSpace();
+
+			var silenceContent = new GUIContent("Silence!", $"Suppress all lock prompts and auto-lock actions until Unity is restarted or by selecting \"{SVNOverlayIcons.InvalidateDatabaseMenuText.Replace("&&", "&")}\"");
+			if (GUILayout.Button(silenceContent, EditorStyles.toolbarButton)) {
+				if (EditorUtility.DisplayDialog("Silence Lock Prompts?", $"{silenceContent.tooltip}\n\nUseful if you want to test stuff locally without committing later.\n\nAre you sure?", "Yes", "No")) {
+					SVNPreferencesManager.Instance.TemporarySilenceLockPrompts = true;
+					SVNLockPromptDatabase.Instance.ClearKnowledge();
+					Close();
+				}
+			}
+
+			EditorGUILayout.EndHorizontal();
 
 			m_WhatAreLocksHintShown = EditorGUILayout.Foldout(m_WhatAreLocksHintShown, "What are locks?");
 			if (m_WhatAreLocksHintShown) {
