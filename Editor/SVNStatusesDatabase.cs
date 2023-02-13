@@ -350,6 +350,10 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (line.StartsWith(".", StringComparison.OrdinalIgnoreCase) || line.StartsWith("#", StringComparison.OrdinalIgnoreCase) || line.StartsWith("/", StringComparison.OrdinalIgnoreCase) || line.StartsWith(":", StringComparison.OrdinalIgnoreCase))
 						continue;
 
+					// SVN ignores don't support folder paths - only names to direct files and names.
+					if (line.Contains('/') || line.Contains('\\'))
+						continue;
+
 					var matchedEntries = Directory.EnumerateFileSystemEntries(propget.Path, line, SearchOption.TopDirectoryOnly);
 					foundIgnoredEntries.AddRange(matchedEntries);
 				}
@@ -380,6 +384,10 @@ namespace DevLocker.VersionControl.WiseSVN
 						if (line.StartsWith(".", StringComparison.OrdinalIgnoreCase) || line.StartsWith("#", StringComparison.OrdinalIgnoreCase) || line.StartsWith("/", StringComparison.OrdinalIgnoreCase) || line.StartsWith(":", StringComparison.OrdinalIgnoreCase))
 							continue;
 
+						// SVN ignores don't support folder paths - only names to direct files and names.
+						if (line.Contains('/') || line.Contains('\\'))
+							continue;
+
 						var matchedEntries = Directory.EnumerateFileSystemEntries("Assets", line, SearchOption.AllDirectories);
 						foundIgnoredEntries.AddRange(matchedEntries);
 					}
@@ -390,6 +398,10 @@ namespace DevLocker.VersionControl.WiseSVN
 						// Skip hidden folders starting with ".". Some people put comments starting with "#".
 						// Example: # ---------------[ Unity generated ]------------------ #
 						if (line.StartsWith(".", StringComparison.OrdinalIgnoreCase) || line.StartsWith("#", StringComparison.OrdinalIgnoreCase) || line.StartsWith("/", StringComparison.OrdinalIgnoreCase) || line.StartsWith(":", StringComparison.OrdinalIgnoreCase))
+							continue;
+
+						// SVN ignores don't support folder paths - only names to direct files and names.
+						if (line.Contains('/') || line.Contains('\\'))
 							continue;
 
 						var matchedEntries = Directory.EnumerateFileSystemEntries("Packages", line, SearchOption.AllDirectories);
@@ -405,6 +417,10 @@ namespace DevLocker.VersionControl.WiseSVN
 					// Skip hidden folders starting with ".". Some people put comments starting with "#".
 					// Example: # ---------------[ Unity generated ]------------------ #
 					if (line.StartsWith(".", StringComparison.OrdinalIgnoreCase) || line.StartsWith("#", StringComparison.OrdinalIgnoreCase) || line.StartsWith("/", StringComparison.OrdinalIgnoreCase) || line.StartsWith(":", StringComparison.OrdinalIgnoreCase))
+						continue;
+
+					// SVN ignores don't support folder paths - only names to direct files and names.
+					if (line.Contains('/') || line.Contains('\\'))
 						continue;
 
 					var matchedEntries = Directory.EnumerateFileSystemEntries(propget.Path, line, SearchOption.AllDirectories);
