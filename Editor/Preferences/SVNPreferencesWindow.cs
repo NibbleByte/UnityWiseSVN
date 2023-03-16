@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using System.IO;
 
 namespace DevLocker.VersionControl.WiseSVN.Preferences
 {
@@ -73,6 +74,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		private bool m_FoldBranchesDatabaseHint = true;
 
 		private SerializedObject m_SerializedObject;
+
+		private static string m_Version = "";
 
 		private void OnEnable()
 		{
@@ -418,6 +421,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 		public static void DrawHelpAbout()
 		{
+			EditorGUILayout.LabelField("Version: " + GetVersion(), EditorStyles.boldLabel);
 			EditorGUILayout.LabelField("Help:", EditorStyles.boldLabel);
 
 			if (GUILayout.Button("Documentation", GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
@@ -506,6 +510,29 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 					m_RandomVideoIndex = (m_RandomVideoIndex + 1) % m_RandomVideos.Count;
 				}
 			}
+		}
+
+		private static string GetVersion()
+		{
+			if (!string.IsNullOrEmpty(m_Version))
+				return m_Version;
+
+			string pathToCode = AssetDatabase.FindAssets(nameof(WiseSVNIntegration)).Select(AssetDatabase.GUIDToAssetPath).FirstOrDefault();
+			if (!string.IsNullOrEmpty(pathToCode)) {
+
+				string pathToPackage = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(pathToCode)), "package.json");
+				if (File.Exists(pathToPackage)) {
+
+					string versionLine = File.ReadAllLines(pathToPackage).Where(l => l.Contains("\"version\": ")).FirstOrDefault();
+					if (!string.IsNullOrEmpty(versionLine)) {
+						m_Version = "WiseSVN " + System.Text.RegularExpressions.Regex.Match(versionLine, @"\d\.\d\.\d").Value;
+						return m_Version;
+					}
+				}
+			}
+
+			m_Version = "Unknown";
+			return m_Version;
 		}
 
 		private static string GetSerializedPropertyTooltip<Type>(SerializedProperty serializedProperty, bool inherit)
