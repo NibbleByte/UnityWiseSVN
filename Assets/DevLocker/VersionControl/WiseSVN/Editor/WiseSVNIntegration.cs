@@ -1721,8 +1721,25 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 
 				result = ShellUtils.ExecuteCommand(SVN_Command, $"delete --force \"{SVNFormatPath(path + ".meta")}\"", COMMAND_TIMEOUT, reporter);
-				if (result.HasErrors)
+				if (result.HasErrors) {
+
+					// svn: E125001: '...' does not exist
+					// Unversioned file got deleted or is missing. Let someone else show the error if any.
+					if (result.Error.Contains("E125001")) {
+						reporter.ClearLogsAndErrorFlag();
+						return AssetDeleteResult.DidNotDelete;
+					}
+
+					// svn: E155007: '...' is not a working copy
+					// Unversioned file in unversioned sub folder. Whatever the reason, we don't care about it - skip it.
+					// NOTE: This should not happen, as status above should be unversioned, but it does while baking unversioned scene.
+					if (result.Error.Contains("E155007")) {
+						reporter.ClearLogsAndErrorFlag();
+						return AssetDeleteResult.DidNotDelete;
+					}
+
 					return AssetDeleteResult.FailedDelete;
+				}
 
 				return AssetDeleteResult.DidDelete;
 			}
