@@ -17,7 +17,8 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 	// revert, switch, unlock, update (up)
 	internal class SnailSVNContextMenus : SVNContextMenusBase
 	{
-		private const string ClientCommand = "/Applications/SnailSVNLite.app/Contents/Resources/snailsvn.sh";
+		private const string ClientLightCommand =	"/Applications/SnailSVNLite.app/Contents/Resources/snailsvn.sh";
+		private const string ClientPremiumCommand = "/Applications/SnailSVN.app/Contents/Resources/snailsvn.sh";
 
 		protected override string FileArgumentsSeparator => " ";
 		protected override bool FileArgumentsSurroundQuotes => true;
@@ -30,7 +31,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		private ShellUtils.ShellResult ExecuteCommand(string command, string fileArgument, string workingFolder, bool waitForOutput)
 		{
 			return ShellUtils.ExecuteCommand(new ShellUtils.ShellArgs() {
-				Command = ClientCommand,
+				Command = File.Exists(ClientPremiumCommand) ? ClientPremiumCommand : ClientLightCommand,
 				Args = string.IsNullOrEmpty(fileArgument) ? command : $"{command} {fileArgument}",
 				WorkingDirectory = workingFolder,
 				WaitForOutput = waitForOutput,
