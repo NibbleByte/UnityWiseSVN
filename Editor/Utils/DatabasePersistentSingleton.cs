@@ -144,8 +144,20 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 			EditorApplication.update -= WaitAndFinishDatabaseUpdate;
 			EditorApplication.update += WaitAndFinishDatabaseUpdate;
 
-			m_WorkerThread = new System.Threading.Thread(GatherData);
-			m_WorkerThread.Start();
+			try {
+				m_WorkerThread = new System.Threading.Thread(GatherData);
+				m_WorkerThread.Start();
+
+			} catch (Exception ex) {
+				// Starting the thread once threw exception like this:
+				// [Exception] ExecutionEngineException: Couldn't create thread. Error 0x5af
+
+				EditorApplication.update -= WaitAndFinishDatabaseUpdate;
+
+				m_PendingUpdate = false;
+
+				Debug.LogException(ex);
+			}
 		}
 
 		private void GatherData()
