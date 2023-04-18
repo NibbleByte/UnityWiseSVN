@@ -336,7 +336,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		{
 			return path
 				.Trim()
-				.Trim('\\', '/')
+				.TrimEnd('\\', '/')
 				.Replace('\\', '/')
 				;
 		}
