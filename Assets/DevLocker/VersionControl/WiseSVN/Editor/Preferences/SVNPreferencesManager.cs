@@ -381,6 +381,11 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 						// SnailSVN comes with bundled up svn binaries. Use those if needed, starting with the higher version. Premium and free.
 						//
 
+						// Arm64
+						"/Applications/SnailSVN.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/arm64/1.14.x/svn",
+						"/Applications/SnailSVNLite.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/arm64/1.14.x/svn",
+
+						// Intel x64
 						"/Applications/SnailSVN.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/x86_64/1.14.x/svn",
 						"/Applications/SnailSVN.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/x86_64/1.11.x/svn",
 						"/Applications/SnailSVN.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/x86_64/1.10.x/svn",
@@ -391,10 +396,6 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 						"/Applications/SnailSVNLite.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/x86_64/1.11.x/svn",
 						"/Applications/SnailSVNLite.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/x86_64/1.10.x/svn",
 						"/Applications/SnailSVNLite.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/x86_64/1.9.x/svn",
-
-						// Arm64
-						"/Applications/SnailSVN.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/arm64/1.14.x/svn",
-						"/Applications/SnailSVNLite.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/arm64/1.14.x/svn",
 					};
 
 					foreach(string osxPath in osxDefaultBinariesPaths) {
