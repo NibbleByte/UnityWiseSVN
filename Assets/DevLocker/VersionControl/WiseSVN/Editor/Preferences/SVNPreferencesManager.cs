@@ -375,6 +375,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 						"/usr/bin/svn",
 						"/Applications/Xcode.app/Contents/Developer/usr/bin/svn",
 						"/opt/subversion/bin/svn",
+						"/opt/local/bin/svn",
 					};
 
 					foreach(string osxPath in osxDefaultBinariesPaths) {
@@ -404,7 +405,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 				Debug.LogError($"SVN CLI (Command Line Interface) not found. You need to install it in order for the SVN integration to work properly. Disabling WiseSVN integration. Please fix the error and restart Unity.\n\n{svnError}");
 #if UNITY_EDITOR_OSX
-				Debug.LogError($"If you installed SVN via Brew or similar, you may need to add \"/usr/local/bin\" (or wherever svn binaries can be found) to your PATH environment variable and restart. Example:\nsudo launchctl config user path /usr/local/bin\nAlternatively, you may add relative SVN CLI path in your WiseSVN preferences at:\n{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}");
+				Debug.LogError($"If you installed SVN via Brew or similar, you may need to add \"/usr/local/bin\" (or wherever svn binaries can be found) to your PATH environment variable and restart. Example:\nsudo launchctl config user path /usr/local/bin\nAlternatively, you may add SVN CLI path in your WiseSVN preferences at:\n{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}");
 #endif
 				return;
 			}

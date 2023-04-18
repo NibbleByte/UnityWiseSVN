@@ -1959,7 +1959,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			// This is allowed only if there isn't ProjectPreference specified CLI path.
 			if (error.Contains("0x80004005") && string.IsNullOrEmpty(userPath)) {
 				displayMessage = $"SVN CLI (Command Line Interface) not found. " +
-					$"Please install it or specify path to a valid svn.exe in the svn preferences at:\n{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
+					$"Please install it or specify path to a valid \"svn\" executable in the svn preferences at menu:\n\"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n\n" +
 					$"You can also disable the SVN integration.";
 
 				return false;
@@ -1967,8 +1967,8 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			// Same as above but the specified svn.exe in the project preferences is missing.
 			if (error.Contains("0x80004005") && !string.IsNullOrEmpty(userPath)) {
-				displayMessage = $"Cannot find the specified in the svn project preferences svn.exe:\n{userPath}\n\n" +
-					$"You can reconfigure the svn preferences at:\n{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\n\n" +
+				displayMessage = $"Cannot find the \"svn\" executable specified in the svn preferences:\n\"{userPath}\"\n\n" +
+					$"You can reconfigure it in the menu:\n\"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n\n" +
 					$"You can also disable the SVN integration.";
 
 				return false;
