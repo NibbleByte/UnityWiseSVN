@@ -160,10 +160,23 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 		private void SanitizeBeforeSave()
 		{
+			m_PersonalPrefs.SvnCLIPath = SVNPreferencesManager.SanitizeUnityPath(m_PersonalPrefs.SvnCLIPath);
+			m_PersonalPrefs.Exclude = SanitizePathsList(m_PersonalPrefs.Exclude);
+
 			m_ProjectPrefs.SvnCLIPath = SVNPreferencesManager.SanitizeUnityPath(m_ProjectPrefs.SvnCLIPath);
 			m_ProjectPrefs.SvnCLIPathMacOS = SVNPreferencesManager.SanitizeUnityPath(m_ProjectPrefs.SvnCLIPathMacOS);
-			m_PersonalPrefs.Exclude = SanitizePathsList(m_PersonalPrefs.Exclude);
 			m_ProjectPrefs.Exclude = SanitizePathsList(m_ProjectPrefs.Exclude);
+
+
+			string userPath = m_PersonalPrefs.SvnCLIPath;
+
+			if (string.IsNullOrWhiteSpace(userPath)) {
+				userPath = m_ProjectPrefs.PlatformSvnCLIPath;
+			}
+
+			if (!string.IsNullOrWhiteSpace(userPath) && !File.Exists(userPath)) {
+				EditorUtility.DisplayDialog("SVN Binary Missing", $"Cannot find the \"svn\" executable specified in the svn preferences:\n\"{userPath}\"", "Ok");
+			}
 
 			if (m_ProjectPrefs.EnableLockPrompt) {
 
