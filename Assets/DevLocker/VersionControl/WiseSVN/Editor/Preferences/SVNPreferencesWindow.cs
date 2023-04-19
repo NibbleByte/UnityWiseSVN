@@ -124,6 +124,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 						SVNStatusesDatabase.Instance.InvalidateDatabase();
 						SVNBranchesDatabase.Instance.InvalidateDatabase();
 						SVNLockPromptDatabaseStarter.TryStartIfNeeded();
+
+						SVNPreferencesManager.Instance.CheckSVNSupport();
 					}
 				}
 				GUI.backgroundColor = prevColor;

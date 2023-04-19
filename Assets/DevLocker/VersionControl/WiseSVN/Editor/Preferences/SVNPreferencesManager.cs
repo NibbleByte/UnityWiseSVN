@@ -341,7 +341,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				;
 		}
 
-		private void CheckSVNSupport()
+		public void CheckSVNSupport()
 		{
 			string svnError;
 			try {

@@ -244,6 +244,17 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 			// If process is stuck, this will hang Unity on recompile / exit.
 			// Not calling Dispose() in that regard will leak some resources / processes, but that shouldn't be the normal case anyway.
 			if (process.HasExited) {
+
+				// If the process crashes, is killed or fails to start (on OSX) it won't have error output. Check the exit code for such cases.
+				// Example: x64 executable can't run on arm64 system.
+				if (string.IsNullOrEmpty(result.Error) && process.ExitCode != 0) {
+					result.Error = $"Process failed with exit code {process.ExitCode}.";
+
+					if (shellArgs.Monitor != null) {
+						shellArgs.Monitor.AppendErrorLine(result.Error);
+					}
+				}
+
 				// TODO: This still hangs sometimes. Last fix: added process.CancelOutputRead()
 				//		 Keep an eye if this keeps happening.
 				//		 Useful article: https://newbedev.com/process-sometimes-hangs-while-waiting-for-exit
