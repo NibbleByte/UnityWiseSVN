@@ -14,6 +14,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		None,
 		TortoiseSVN,	// Good for Windows
 		SnailSVN,		// Good for MacOS
+		CLI,			// Good for anything
 	}
 
 	/// <summary>
@@ -62,24 +63,55 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 					errorMsg = "SnailSVN is not supported on windows.";
 					return null;
 
+				case ContextMenusClient.CLI:
+					errorMsg = string.Empty;
+					return new CLIContextMenus();
+
 				default:
 					throw new NotImplementedException(client + " not implemented yet for this platform.");
 			}
-#else
+
+#elif UNITY_EDITOR_OSX
+
 			switch (client)
 			{
 
 				case ContextMenusClient.TortoiseSVN:
-					errorMsg = "TortoiseSVN is not supported on MacOS";
+					errorMsg = "TortoiseSVN is not supported on OSX";
 					return null;
 
 				case ContextMenusClient.SnailSVN:
 					errorMsg = string.Empty;
 					return new SnailSVNContextMenus();
 
+				case ContextMenusClient.CLI:
+					errorMsg = string.Empty;
+					return new CLIContextMenus();
+
 				default:
 					throw new NotImplementedException(client + " not implemented yet for this platform.");
 			}
+
+#else
+
+			switch (client) {
+
+				case ContextMenusClient.TortoiseSVN:
+					errorMsg = "TortoiseSVN is not supported on Linux";
+					return null;
+
+				case ContextMenusClient.SnailSVN:
+					errorMsg = "SnailSVN is not supported on Linux.";
+					return null;
+
+				case ContextMenusClient.CLI:
+					errorMsg = string.Empty;
+					return new CLIContextMenus();
+
+				default:
+					throw new NotImplementedException(client + " not implemented yet for this platform.");
+			}
+
 #endif
 		}
 

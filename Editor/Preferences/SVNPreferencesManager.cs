@@ -234,8 +234,10 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 #if UNITY_EDITOR_WIN
 				PersonalPrefs.ContextMenusClient = ContextMenusClient.TortoiseSVN;
-#else
+#elif UNITY_EDITOR_OSX
 				PersonalPrefs.ContextMenusClient = ContextMenusClient.SnailSVN;
+#else
+				PersonalPrefs.ContextMenusClient = ContextMenusClient.CLI;
 #endif
 			}
 
