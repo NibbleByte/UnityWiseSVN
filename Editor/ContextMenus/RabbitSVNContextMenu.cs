@@ -3,16 +3,19 @@
 using DevLocker.VersionControl.WiseSVN.Shell;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 {
-#if UNITY_EDITOR_WIN || UNITY_EDITOR_LINUX
-	//
-	internal class CLIContextMenus : SVNContextMenusBase
+#if UNITY_EDITOR_LINUX
+	// TortoiseSVN Commands: https://tortoisesvn.net/docs/release/TortoiseSVN_en/tsvn-automation.html
+	internal class RabbitSVNContextMenu : SVNContextMenusBase
 	{
-		protected override string FileArgumentsSeparator => "\n";
-		protected override bool FileArgumentsSurroundQuotes => true;
+		private const string ClientCommand = "rabbitvcs";
+
+		protected override string FileArgumentsSeparator => "*";
+		protected override bool FileArgumentsSurroundQuotes => false;
 
 		public override void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
@@ -23,7 +26,10 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			CLIContextWindow.Show($"diff \n{pathsArg}", true);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"changes \"{pathsArg}\"", wait);
+			if (MayHaveRabbitVCSError(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
 		}
 
 		public override void DiffChanges(string assetPath, bool wait = false)
@@ -32,7 +38,10 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			CLIContextWindow.Show($"diff \n{pathsArg}", true);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"diff \"{pathsArg}\"", wait);
+			if (MayHaveRabbitVCSError(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
 		}
 
 		public override void Update(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
@@ -40,14 +49,14 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (!assetPaths.Any())
 				return;
 
-			// NOTE: @ is added at the end of path, to avoid problems when file name contains @, and SVN mistakes that as "At revision" syntax".
-			//		https://stackoverflow.com/questions/757435/how-to-escape-characters-in-subversion-managed-file-names
-
 			string pathsArg = AssetPathsToContextPaths(assetPaths, includeMeta);
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			CLIContextWindow.Show($"update --depth infinity --accept postpone\n{pathsArg}", true);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"update \"{pathsArg}\"", wait);
+			if (MayHaveRabbitVCSError(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
 		}
 
 		public override void Commit(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
@@ -59,10 +68,11 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			CLIContextWindow.Show($"commit --depth infinity -m \"\"\n{pathsArg}", false);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"commit \"{pathsArg}\"", wait);
+			if (MayHaveRabbitVCSError(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
 		}
-
-
 
 		public override void Add(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
@@ -84,7 +94,10 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			CLIContextWindow.Show($"add --depth infinity\n{pathsArg}", true);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"add \"{pathsArg}\"", wait);
+			if (MayHaveRabbitVCSError(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
 		}
 
 		public override void Revert(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
@@ -96,22 +109,21 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			CLIContextWindow.Show($"revert --depth infinity\n{pathsArg}", false);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"revert \"{pathsArg}\"", wait);
+			if (MayHaveRabbitVCSError(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
 		}
-
-
 
 		public override void ResolveAll(bool wait = false)
 		{
-			CLIContextWindow.Show($"resolve --depth infinity --accept TYPE_IN_OPTION\n", false);
+			UnityEditor.EditorUtility.DisplayDialog("Not Supported", "RabbitSVN does not support Resolve All yet.", "OK");
 		}
 
 		public override void Resolve(string assetPath, bool wait = false)
 		{
-			DiffChanges(assetPath, wait);
+			UnityEditor.EditorUtility.DisplayDialog("Not Supported", "RabbitSVN does not support Resolve yet.", "OK");
 		}
-
-
 
 		public override void GetLocks(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
@@ -122,7 +134,10 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			CLIContextWindow.Show($"lock -m \"\"\n{pathsArg}", false);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"lock \"{pathsArg}\"", wait);
+			if (MayHaveRabbitVCSError(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
 		}
 
 		public override void ReleaseLocks(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
@@ -134,7 +149,10 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			CLIContextWindow.Show($"unlock\n{pathsArg}", true);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"unlock \"{pathsArg}\"", wait);
+			if (MayHaveRabbitVCSError(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
 		}
 
 		public override void ShowLog(string assetPath, bool wait = false)
@@ -146,46 +164,58 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			CLIContextWindow.Show($"log \n{pathsArg}", true);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"log \"{pathsArg}\"", wait);
+			if (MayHaveRabbitVCSError(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
 		}
-
-
 
 		public override void Blame(string assetPath, bool wait = false)
 		{
-			if (string.IsNullOrEmpty(assetPath))
-				return;
-
-			string pathsArg = AssetPathToContextPaths(assetPath, false);
-			if (string.IsNullOrEmpty(pathsArg))
-				return;
-
-			CLIContextWindow.Show($"blame \n{pathsArg}", true);
+			UnityEditor.EditorUtility.DisplayDialog("Not Supported", "RabbitSVN does not support Blame function yet.", "OK");
 		}
-
-
 
 		public override void Cleanup(bool wait = false)
 		{
-			CLIContextWindow.Show($"cleanup", true);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"cleanup \"{WiseSVNIntegration.ProjectRootNative}\"", wait);
+			if (MayHaveRabbitVCSError(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
 		}
-
 
 		public override void RepoBrowser(string url, bool wait = false)
 		{
 			if (string.IsNullOrEmpty(url))
 				return;
 
-			CLIContextWindow.Show($"list\n\"{url}\"", true);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"browser \"{url}\"", wait);
+			if (MayHaveRabbitVCSError(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
 		}
 
 		public override void Switch(string localPath, string url, bool wait = false)
 		{
-			if (string.IsNullOrEmpty(localPath) || string.IsNullOrEmpty(url))
+			if (string.IsNullOrEmpty(url))
 				return;
 
-			// TODO: Test?
-			CLIContextWindow.Show($"switch\n\"{url}\"\n\"{localPath}\"", false);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"switch \"{url}\"", wait);
+			if (MayHaveRabbitVCSError(result.Error)) {
+				Debug.LogError($"SVN Error: {result.Error}");
+			}
+			return;
+		}
+
+		private string[] possibleVcsErrorString = new[]{
+			"Exception: ",
+			"Error: "
+		};
+		private bool MayHaveRabbitVCSError(string src){
+			if(string.IsNullOrWhiteSpace(src)) return false;
+			foreach(string str in possibleVcsErrorString){
+				if(src.IndexOf(str, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+			}
+			return false;
 		}
 	}
 #endif
