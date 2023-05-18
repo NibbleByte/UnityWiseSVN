@@ -14,6 +14,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		None,
 		TortoiseSVN,	// Good for Windows
 		SnailSVN,		// Good for MacOS
+		RabbitVCS,		// Good for Linux
 		CLI,			// Good for anything
 	}
 
@@ -103,7 +104,9 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 				case ContextMenusClient.SnailSVN:
 					errorMsg = "SnailSVN is not supported on Linux.";
 					return null;
-
+				case ContextMenusClient.RabbitVCS:
+					errorMsg = string.Empty;
+					return new RabbitSVNContextMenu();
 				case ContextMenusClient.CLI:
 					errorMsg = string.Empty;
 					return new CLIContextMenus();
