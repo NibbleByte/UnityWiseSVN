@@ -206,13 +206,22 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			return;
 		}
 
-		private string[] possibleVcsErrorString = new[]{
+		private string[] possibleRvcsErrorString = new[]{
 			"Exception: ",
 			"Error: "
 		};
+
+		/// <summary>
+		///	Gtk most of the time dumps warning and possibly non-error messages to stderr, thus making
+		/// current implementation of error reporting reports those warnings even thought the app
+		/// is completing it's task just fine.
+		///
+		/// But luckily RabbitVCS have python backend, any exception should show up in stderr as
+		/// Python-style error that can be filtered.
+		/// </summary>
 		private bool MayHaveRabbitVCSError(string src){
 			if(string.IsNullOrWhiteSpace(src)) return false;
-			foreach(string str in possibleVcsErrorString){
+			foreach(string str in possibleRvcsErrorString){
 				if(src.IndexOf(str, StringComparison.OrdinalIgnoreCase) >= 0) return true;
 			}
 			return false;
