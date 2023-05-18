@@ -64,6 +64,10 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 					errorMsg = "SnailSVN is not supported on windows.";
 					return null;
 
+				case ContextMenusClient.RabbitVCS:
+					errorMsg = "RabbitVCS is not supported on Windows.";
+					return null;
+
 				case ContextMenusClient.CLI:
 					errorMsg = string.Empty;
 					return new CLIContextMenus();
@@ -85,6 +89,10 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 					errorMsg = string.Empty;
 					return new SnailSVNContextMenus();
 
+				case ContextMenusClient.RabbitVCS:
+					errorMsg = "RabbitVCS is not supported on OSX.";
+					return null;
+
 				case ContextMenusClient.CLI:
 					errorMsg = string.Empty;
 					return new CLIContextMenus();
@@ -95,7 +103,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 #else
 
-			switch (client) {
+            switch (client) {
 
 				case ContextMenusClient.TortoiseSVN:
 					errorMsg = "TortoiseSVN is not supported on Linux";
@@ -104,9 +112,11 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 				case ContextMenusClient.SnailSVN:
 					errorMsg = "SnailSVN is not supported on Linux.";
 					return null;
+
 				case ContextMenusClient.RabbitVCS:
 					errorMsg = string.Empty;
 					return new RabbitSVNContextMenu();
+
 				case ContextMenusClient.CLI:
 					errorMsg = string.Empty;
 					return new CLIContextMenus();
