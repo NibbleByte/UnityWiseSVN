@@ -166,6 +166,8 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private static HashSet<string> m_PendingErrorMessages = new HashSet<string>();
 
+		private static System.Threading.Thread m_MainThread;
+
 		#region Logging
 
 		// Used to track the shell commands output for errors and log them on Dispose().
@@ -249,7 +251,9 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (m_HasErrors) {
 						Debug.LogError(output);
 						if (!m_Silent) {
-							DisplayError("SVN error happened while processing the assets. Check the logs.");
+							if (m_MainThread == System.Threading.Thread.CurrentThread) {
+								DisplayError("SVN error happened while processing the assets. Check the logs.");
+							}
 						}
 					} else if (m_LogOutput && m_HasCommand) {
 						Debug.Log(output);
@@ -268,12 +272,19 @@ namespace DevLocker.VersionControl.WiseSVN
 			return logger;
 		}
 
+		internal static void ClearLastDisplayedError()
+		{
+			m_LastDisplayedError = string.Empty;
+		}
+
 		#endregion
 
 		static WiseSVNIntegration()
 		{
 			ProjectRootNative = Path.GetDirectoryName(Application.dataPath);
 			ProjectRootUnity = ProjectRootNative.Replace('\\', '/');
+
+			m_MainThread = System.Threading.Thread.CurrentThread;
 		}
 
 		/// <summary>
@@ -328,62 +339,75 @@ namespace DevLocker.VersionControl.WiseSVN
 		///		 If used with non-recursive option it will return single data with normal status (if non).
 		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
 		/// </summary>
-		public static IEnumerable<SVNStatusData> GetStatuses(string path, SVNStatusDataOptions options, IShellMonitor shellMonitor = null)
+		///
+		/// <param name="recursive">Should it get status for this entry only or all children recursively.</param>
+		/// <param name="offline">If false it will query the repository for additional data (like locks), hence it is slower.</param>
+		/// <param name="resultEntries">List of result statuses</param>
+		/// <param name="fetchLockDetails">If file is locked and this is true, another query (per locked file) will be made to the repository to find out the owner's user name.
+		///								   I.e. will execute "svn info [url]". Works only in <b>online</b> mode.</param>
+		public static StatusOperationResult GetStatuses(string path, bool recursive, bool offline, List<SVNStatusData> resultEntries, bool fetchLockDetails = false, int timeout = ONLINE_COMMAND_TIMEOUT, IShellMonitor shellMonitor = null)
 		{
-			// File can be missing, if it was deleted by svn.
-			//if (!File.Exists(path) && !Directory.Exists(path)) {
-			//	if (!Silent) {
-			//		EditorUtility.DisplayDialog("SVN Error", "SVN error happened while processing the assets. Check the logs.", "I will!");
-			//	}
-			//	throw new IOException($"Trying to get status for file {path} that does not exist!");
-			//}
-			var depth = options.Depth == SVNStatusDataOptions.SearchDepth.Empty ? "empty" : "infinity";
-			var offline = options.Offline ? string.Empty : "-u";
+			var depth = recursive ? "infinity" : "empty";
+			var offlineArg = offline ? string.Empty : "-u";
 
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth={depth} {offline} \"{SVNFormatPath(path)}\"", options.Timeout, shellMonitor);
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth={depth} {offlineArg} \"{SVNFormatPath(path)}\"", timeout, shellMonitor);
 
 			if (!string.IsNullOrEmpty(result.Error)) {
 
 				// svn: warning: W155010: The node '...' was not found.
 				// This can be returned when path is under unversioned directory. In that case we consider it is unversioned as well.
 				if (result.Error.Contains("W155010")) {
-					return new[] { new SVNStatusData() { Path = path, Status = VCFileStatus.Unversioned, LockDetails = LockDetails.Empty } };
+					resultEntries.Add(new SVNStatusData() { Path = path, Status = VCFileStatus.Unversioned, LockDetails = LockDetails.Empty });
+					return StatusOperationResult.Success;
 				}
 
-				if (!options.RaiseError)
-					return Enumerable.Empty<SVNStatusData>();
+				// svn: warning: W155007: '...' is not a working copy!
+				// This can be returned when project is not a valid svn checkout. (Probably)
+				if (result.Error.Contains("W155007"))
+					return StatusOperationResult.NotWorkingCopy;
 
-				string displayMessage;
-				bool isCritical = IsCriticalError(result.Error, out displayMessage);
+				// System.ComponentModel.Win32Exception (0x80004005): ApplicationName='...', CommandLine='...', Native error= The system cannot find the file specified.
+				// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
+				if (result.Error.Contains("0x80004005"))
+					return StatusOperationResult.ExecutableNotFound;
 
-				if (!string.IsNullOrEmpty(displayMessage) && !Silent && m_LastDisplayedError != displayMessage) {
-					Debug.LogError($"{displayMessage}\n\n{result.Error}");
-					m_LastDisplayedError = displayMessage;
-					DisplayError(displayMessage);
-				}
+				// User needs to log in using normal SVN client and save their authentication.
+				// svn: E170013: Unable to connect to a repository at URL '...'
+				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
+				// svn: E215004: No more credentials or we tried too many times.
+				// Authentication failed
+				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
+					return StatusOperationResult.AuthenticationFailed;
 
-				if (isCritical) {
-					throw new IOException($"Trying to get status for file {path} caused error:\n{result.Error}");
-				} else {
-					return Enumerable.Empty<SVNStatusData>();
-				}
+				// Unable to connect to repository indicating some network or server problems.
+				// svn: E170013: Unable to connect to a repository at URL '...'
+				// svn: E731001: No such host is known.
+				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
+					return StatusOperationResult.UnableToConnectError;
+
+				return StatusOperationResult.UnknownError;
+			}
+
+			// If -u is used, additional line is added at the end:
+			// Status against revision:     14
+			bool emptyOutput = (offline && string.IsNullOrWhiteSpace(result.Output)) ||
+							   (!offline && result.Output.StartsWith("Status", StringComparison.Ordinal));
+
+			// Empty result could also mean: file doesn't exist.
+			// Note: svn-deleted files still have svn status, so always check for status before files on disk.
+			if (emptyOutput) {
+				if (!File.Exists(path) && !Directory.Exists(path))
+					return StatusOperationResult.TargetPathNotFound;
 			}
 
 			// If no info is returned for path, the status is normal. Reflect this when searching for Empty depth.
-			if (options.Depth == SVNStatusDataOptions.SearchDepth.Empty) {
-
-				if (options.Offline && string.IsNullOrWhiteSpace(result.Output)) {
-					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path, LockDetails = LockDetails.Empty }, 1);
-				}
-
-				// If -u is used, additional line is added at the end:
-				// Status against revision:     14
-				if (!options.Offline && result.Output.StartsWith("Status", StringComparison.Ordinal)) {
-					return Enumerable.Repeat(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path, LockDetails = LockDetails.Empty }, 1);
-				}
+			if (!recursive && emptyOutput) {
+				resultEntries.Add(new SVNStatusData() { Status = VCFileStatus.Normal, Path = path, LockDetails = LockDetails.Empty });
+				return StatusOperationResult.Success;
 			}
 
-			return ExtractStatuses(result.Output, options, shellMonitor);
+			resultEntries.AddRange(ExtractStatuses(result.Output, recursive, offline, fetchLockDetails, timeout, shellMonitor));
+			return StatusOperationResult.Success;
 		}
 
 		/// <summary>
@@ -391,28 +415,21 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
 		///		 If used with non-recursive option it will return single data with normal status (if non).
 		/// </summary>
-		public static SVNAsyncOperation<IEnumerable<SVNStatusData>> GetStatusesAsync(string path, bool recursive, bool offline, bool fetchLockDetails = true, int timeout = -1)
+		///
+		/// <param name="recursive">Should it get status for this entry only or all children recursively.</param>
+		/// <param name="offline">If false it will query the repository for additional data (like locks), hence it is slower.</param>
+		/// <param name="resultEntries">List of result statuses</param>
+		/// <param name="fetchLockDetails">If file is locked and this is true, another query (per locked file) will be made to the repository to find out the owner's user name.
+		///								   I.e. will execute "svn info [url]". Works only in <b>online</b> mode.</param>
+		public static SVNAsyncOperation<StatusOperationResult> GetStatusesAsync(string path, bool recursive, bool offline, List<SVNStatusData> resultEntries, bool fetchLockDetails = false, int timeout = -1)
 		{
-			var options = new SVNStatusDataOptions() {
-				Depth = recursive ? SVNStatusDataOptions.SearchDepth.Infinity : SVNStatusDataOptions.SearchDepth.Empty,
-				Timeout = timeout,
-				RaiseError = false,
-				Offline = offline,
-				FetchLockOwner = fetchLockDetails,  // If offline, this is ignored.
+			var threadResults = new List<SVNStatusData>();
+			var operation = SVNAsyncOperation<StatusOperationResult>.Start(op => GetStatuses(path, recursive, offline, resultEntries, fetchLockDetails, timeout, op));
+			operation.Completed += (op) => {
+				resultEntries.AddRange(threadResults);
 			};
 
-			return GetStatusesAsync(path, options);
-		}
-
-		/// <summary>
-		/// Get statuses of files based on the options you provide.
-		/// NOTE: data is returned ONLY for folders / files that has something to show (has changes, locks or remote changes).
-		///		 If used with non-recursive option it will return single data with normal status (if non).
-		/// </summary>
-		public static SVNAsyncOperation<IEnumerable<SVNStatusData>> GetStatusesAsync(string path, SVNStatusDataOptions options)
-		{
-			// Do ToList() to enforce enumerate and fetch lock statuses as well.
-			return SVNAsyncOperation<IEnumerable<SVNStatusData>>.Start(op => GetStatuses(path, options, op).ToList());
+			return operation;
 		}
 
 
@@ -421,22 +438,23 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// Will return valid status even if the file has nothing to show (has no changes).
 		/// If error happened, invalid status data will be returned (check statusData.IsValid).
 		/// </summary>
-		public static SVNStatusData GetStatus(string path, IShellMonitor shellMonitor = null)
+		public static SVNStatusData GetStatus(string path, bool logErrorHint = true, IShellMonitor shellMonitor = null)
 		{
+
+			List<SVNStatusData> resultEntries = new List<SVNStatusData>();
+
 			// Optimization: empty depth will return nothing if status is normal.
 			// If path is modified, added, deleted, unversioned, it will return proper value.
-			var statusOptions = new SVNStatusDataOptions() {
-				Depth = SVNStatusDataOptions.SearchDepth.Empty,
-				RaiseError = true,
-				Timeout = COMMAND_TIMEOUT,
-				Offline = true,
-				FetchLockOwner = false,
-			};
+			StatusOperationResult result = GetStatuses(path, false, true, resultEntries, false, COMMAND_TIMEOUT, shellMonitor);
 
-			var statusData = GetStatuses(path, statusOptions, shellMonitor).FirstOrDefault();
+			if (logErrorHint) {
+				LogStatusErrorHint(result);
+			}
+
+			SVNStatusData statusData = resultEntries.FirstOrDefault();
 
 			// If no path was found, error happened.
-			if (!statusData.IsValid) {
+			if (!statusData.IsValid || result != StatusOperationResult.Success) {
 				// Fallback to unversioned as we don't touch them.
 				statusData.Status = VCFileStatus.Unversioned;
 			}
@@ -449,22 +467,23 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// Will return valid status even if the file has nothing to show (has no changes).
 		/// If error happened, invalid status data will be returned (check statusData.IsValid).
 		/// </summary>
-		public static SVNAsyncOperation<SVNStatusData> GetStatusAsync(string path, bool offline, bool fetchLockDetails = true, int timeout = -1)
+		public static SVNAsyncOperation<SVNStatusData> GetStatusAsync(string path, bool offline, bool fetchLockDetails = true, bool logErrorHint = true, int timeout = -1)
 		{
-			var options = new SVNStatusDataOptions() {
-				Depth = SVNStatusDataOptions.SearchDepth.Empty,
-				Timeout = timeout,
-				RaiseError = false,
-				Offline = offline,
-				FetchLockOwner = fetchLockDetails,  // If offline, this is ignored.
-			};
-
 			return SVNAsyncOperation<SVNStatusData>.Start(op => {
 
-				var statusData = GetStatuses(path, options, op).FirstOrDefault();
+				List<SVNStatusData> resultEntries = new List<SVNStatusData>();
+
+				// If offline, fetchLockDetails is ignored.
+				StatusOperationResult result = GetStatuses(path, false, offline, resultEntries, fetchLockDetails, timeout, op);
+
+				if (logErrorHint) {
+					LogStatusErrorHint(result);
+				}
+
+				var statusData = resultEntries.FirstOrDefault();
 
 				// If no path was found, error happened.
-				if (!statusData.IsValid) {
+				if (!statusData.IsValid || result != StatusOperationResult.Success) {
 					// Fallback to unversioned as we don't touch them.
 					statusData.Status = VCFileStatus.Unversioned;
 				}
@@ -478,7 +497,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// Ask the repository server for lock details of the specified file.
 		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
 		/// </summary>
-		public static LockDetails FetchLockDetails(string path, int timeout = ONLINE_COMMAND_TIMEOUT, bool raiseError = false, IShellMonitor shellMonitor = null)
+		public static LockDetails FetchLockDetails(string path, int timeout = ONLINE_COMMAND_TIMEOUT, IShellMonitor shellMonitor = null)
 		{
 			string url;
 			LockDetails lockDetails = LockDetails.Empty;
@@ -497,17 +516,28 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				if (!string.IsNullOrEmpty(result.Error) || string.IsNullOrEmpty(url)) {
 
-					if (!raiseError || Silent)
+					// svn: warning: W155010: The node '...' was not found.
+					// This can be returned when path is under unversioned directory. In that case we consider it is unversioned as well.
+					if (result.Error.Contains("W155010")) {
+						lockDetails.Path = path;    // LockDetails is still valid, just no lock.
 						return lockDetails;
-
-					var displayMessage = $"Failed to get info for \"{path}\".\n{result.Output}\n{result.Error}";
-					if (m_LastDisplayedError != displayMessage) {
-						Debug.LogError($"{displayMessage}\n\n{result.Error}");
-						m_LastDisplayedError = displayMessage;
-						DisplayError(displayMessage);
 					}
 
+					// svn: warning: W155007: '...' is not a working copy!
+					// This can be returned when project is not a valid svn checkout. (Probably)
+					if (result.Error.Contains("W155007")) {
+						lockDetails.OperationResult = StatusOperationResult.NotWorkingCopy;
+						return lockDetails;
+					}
 
+					// System.ComponentModel.Win32Exception (0x80004005): ApplicationName='...', CommandLine='...', Native error= The system cannot find the file specified.
+					// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
+					if (result.Error.Contains("0x80004005")) {
+						lockDetails.OperationResult = StatusOperationResult.ExecutableNotFound;
+						return lockDetails;
+					}
+
+					lockDetails.OperationResult = StatusOperationResult.UnknownError;
 					return lockDetails;
 				}
 			}
@@ -528,16 +558,25 @@ namespace DevLocker.VersionControl.WiseSVN
 						return lockDetails;
 					}
 
-					if (!raiseError || Silent)
+					// User needs to log in using normal SVN client and save their authentication.
+					// svn: E170013: Unable to connect to a repository at URL '...'
+					// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
+					// svn: E215004: No more credentials or we tried too many times.
+					// Authentication failed
+					if (result.Error.Contains("E230001") || result.Error.Contains("E215004")) {
+						lockDetails.OperationResult = StatusOperationResult.AuthenticationFailed;
 						return lockDetails;
-
-					var displayMessage = $"Failed to get lock details for \"{path}\".\n{result.Output}\n{result.Error}";
-					if (m_LastDisplayedError != displayMessage) {
-						Debug.LogError($"{displayMessage}\n\n{result.Error}");
-						m_LastDisplayedError = displayMessage;
-						DisplayError(displayMessage);
 					}
 
+					// Unable to connect to repository indicating some network or server problems.
+					// svn: E170013: Unable to connect to a repository at URL '...'
+					// svn: E731001: No such host is known.
+					if (result.Error.Contains("E170013") || result.Error.Contains("E731001")) {
+						lockDetails.OperationResult = StatusOperationResult.UnableToConnectError;
+						return lockDetails;
+					}
+
+					lockDetails.OperationResult = StatusOperationResult.UnknownError;
 					return lockDetails;
 				}
 
@@ -567,7 +606,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// </summary>
 		public static SVNAsyncOperation<LockDetails> FetchLockDetailsAsync(string path, int timeout = -1)
 		{
-			return SVNAsyncOperation<LockDetails>.Start(op => FetchLockDetails(path, timeout, false, op));
+			return SVNAsyncOperation<LockDetails>.Start(op => FetchLockDetails(path, timeout, op));
 		}
 
 
@@ -1145,18 +1184,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					return false;
 				}
 
-				string displayMessage;
-				bool isCritical = IsCriticalError(result.Error, out displayMessage);
-
-				if (!string.IsNullOrEmpty(displayMessage) && !Silent) {
-					DisplayError(displayMessage);
-				}
-
-				if (isCritical) {
-					throw new IOException($"Trying to get status for file {path} caused error:\n{result.Error}!");
-				} else {
-					return false;
-				}
+				throw new IOException($"Trying to get status for file {path} caused error:\n{result.Error}!");
 			}
 
 			return result.Output.Contains("Summary of conflicts:");
@@ -1666,7 +1694,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (isMeta) {
 						var mainAssetPath = path.Substring(0, path.Length - ".meta".Length);
 
-						var mainStatusData = GetStatus(mainAssetPath);
+						var mainStatusData = GetStatus(mainAssetPath, true, reporter);
 
 						// If asset came OUTSIDE of Unity, OnWillCreateAsset() will get called only for it's meta,
 						// leaving the main asset with Deleted svn status and existing file.
@@ -1939,46 +1967,55 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 
-		private static bool IsCriticalError(string error, out string displayMessage)
+		internal static void LogStatusErrorHint(StatusOperationResult result)
 		{
-			// svn: warning: W155007: '...' is not a working copy!
-			// This can be returned when project is not a valid svn checkout. (Probably)
-			if (error.Contains("W155007")) {
-				displayMessage = string.Empty;
-				return false;
+			if (result == StatusOperationResult.Success)
+				return;
+
+			string displayMessage;
+
+			switch(result) {
+				case StatusOperationResult.NotWorkingCopy:
+					displayMessage = string.Empty;
+					break;
+
+				case StatusOperationResult.TargetPathNotFound:
+					// We can be checking moved-to path, that shouldn't exist, so this is normal.
+					//displayMessage = "Target file/folder not found.";
+					displayMessage = string.Empty;
+					break;
+
+				case StatusOperationResult.ExecutableNotFound:
+					string userPath = m_PersonalPrefs.SvnCLIPath;
+
+					if (string.IsNullOrWhiteSpace(userPath)) {
+						userPath = m_ProjectPrefs.PlatformSvnCLIPath;
+					}
+
+					if (string.IsNullOrEmpty(userPath)) {
+						displayMessage = $"SVN CLI (Command Line Interface) not found. " +
+							$"Please install it or specify path to a valid \"svn\" executable in the svn preferences at menu:\n\"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n\n" +
+							$"You can also disable the SVN integration.";
+					} else {
+						displayMessage = $"Cannot find the \"svn\" executable specified in the svn preferences:\n\"{userPath}\"\n\n" +
+							$"You can reconfigure it in the menu:\n\"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n\n" +
+							$"You can also disable the SVN integration.";
+					}
+					break;
+
+				default:
+					displayMessage = "SVN error happened while processing the assets. Check the logs.";
+					break;
 			}
 
-			string userPath = m_PersonalPrefs.SvnCLIPath;
-
-			if (string.IsNullOrWhiteSpace(userPath)) {
-				userPath = m_ProjectPrefs.PlatformSvnCLIPath;
+			if (!string.IsNullOrEmpty(displayMessage) && !Silent && m_LastDisplayedError != displayMessage) {
+				Debug.LogError($"{displayMessage}");
+				m_LastDisplayedError = displayMessage;
+				//DisplayError(displayMessage);	// Not thread-safe.
 			}
-
-			// System.ComponentModel.Win32Exception (0x80004005): ApplicationName='...', CommandLine='...', Native error= The system cannot find the file specified.
-			// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
-			// This is allowed only if there isn't ProjectPreference specified CLI path.
-			if (error.Contains("0x80004005") && string.IsNullOrEmpty(userPath)) {
-				displayMessage = $"SVN CLI (Command Line Interface) not found. " +
-					$"Please install it or specify path to a valid \"svn\" executable in the svn preferences at menu:\n\"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n\n" +
-					$"You can also disable the SVN integration.";
-
-				return false;
-			}
-
-			// Same as above but the specified svn.exe in the project preferences is missing.
-			if (error.Contains("0x80004005") && !string.IsNullOrEmpty(userPath)) {
-				displayMessage = $"Cannot find the \"svn\" executable specified in the svn preferences:\n\"{userPath}\"\n\n" +
-					$"You can reconfigure it in the menu:\n\"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n\n" +
-					$"You can also disable the SVN integration.";
-
-				return false;
-			}
-
-			displayMessage = "SVN error happened while processing the assets. Check the logs.";
-			return true;
 		}
 
-		private static IEnumerable<SVNStatusData> ExtractStatuses(string output, SVNStatusDataOptions options, IShellMonitor shellMonitor = null)
+		private static IEnumerable<SVNStatusData> ExtractStatuses(string output, bool recursive, bool offline, bool fetchLockDetails, int timeout, IShellMonitor shellMonitor = null)
 		{
 			using (var sr = new StringReader(output)) {
 				string line = string.Empty;
@@ -2049,7 +2086,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					// 7 columns statuses + space;
 					int pathStart = 7 + 1;
 
-					if (!options.Offline) {
+					if (!offline) {
 						// + remote status + revision
 						pathStart += 13;
 						statusData.RemoteStatus = m_RemoteStatusMap[line[8]];
@@ -2068,9 +2105,9 @@ namespace DevLocker.VersionControl.WiseSVN
 						continue;
 
 
-					if (!options.Offline && options.FetchLockOwner) {
+					if (!offline && fetchLockDetails) {
 						if (statusData.LockStatus != VCLockStatus.NoLock && statusData.LockStatus != VCLockStatus.BrokenLock) {
-							statusData.LockDetails = FetchLockDetails(statusData.Path, options.Timeout, options.RaiseError, shellMonitor);
+							statusData.LockDetails = FetchLockDetails(statusData.Path, timeout, shellMonitor);
 						}
 					}
 
