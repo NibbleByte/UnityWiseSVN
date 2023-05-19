@@ -9,13 +9,15 @@ using UnityEngine;
 namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 {
 #if UNITY_EDITOR_LINUX
-	// TortoiseSVN Commands: https://tortoisesvn.net/docs/release/TortoiseSVN_en/tsvn-automation.html
+	// RabbitVCS subcommand (or module by their wording) list can be accessed by executing `rabbitvcs`
+	// command in terminal, and the subcommand usage reference by `rabbitvcs <module> -h`. Source code
+	// is available at https://github.com/rabbitvcs/rabbitvcs .
 	internal class RabbitSVNContextMenu : SVNContextMenusBase
 	{
 		private const string ClientCommand = "rabbitvcs";
 
-		protected override string FileArgumentsSeparator => "*";
-		protected override bool FileArgumentsSurroundQuotes => false;
+		protected override string FileArgumentsSeparator => " ";
+		protected override bool FileArgumentsSurroundQuotes => true;
 
 		public override void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
 		{
@@ -26,7 +28,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"changes \"{pathsArg}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"changes {pathsArg}", wait);
 			if (MayHaveRabbitVCSError(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -38,7 +40,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"diff \"{pathsArg}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"diff -s {pathsArg}", wait);
 			if (MayHaveRabbitVCSError(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -53,7 +55,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"update \"{pathsArg}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"update {pathsArg}", wait);
 			if (MayHaveRabbitVCSError(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -68,7 +70,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"commit \"{pathsArg}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"commit {pathsArg}", wait);
 			if (MayHaveRabbitVCSError(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -84,7 +86,6 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 					return;
 			}
 
-			// Don't give versioned metas, as tortoiseSVN doesn't like it.
 			var metas = assetPaths
 				.Select(path => path + ".meta")
 				.Where(path => WiseSVNIntegration.GetStatus(path).Status == VCFileStatus.Unversioned)
@@ -94,7 +95,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"add \"{pathsArg}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"add {pathsArg}", wait);
 			if (MayHaveRabbitVCSError(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -109,7 +110,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"revert \"{pathsArg}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"revert {pathsArg}", wait);
 			if (MayHaveRabbitVCSError(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -134,7 +135,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"lock \"{pathsArg}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"lock {pathsArg}", wait);
 			if (MayHaveRabbitVCSError(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -149,7 +150,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"unlock \"{pathsArg}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"unlock {pathsArg}", wait);
 			if (MayHaveRabbitVCSError(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -164,7 +165,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(pathsArg))
 				return;
 
-			var result = ShellUtils.ExecuteCommand(ClientCommand, $"log \"{pathsArg}\"", wait);
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"log {pathsArg}", wait);
 			if (MayHaveRabbitVCSError(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
