@@ -103,6 +103,11 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// </summary>
 		public bool DataIsIncomplete { get; private set; }
 
+		/// <summary>
+		/// Last error encountered. Will be set in a worker thread.
+		/// </summary>
+		public StatusOperationResult LastError { get; private set; }
+
 		//
 		//=============================================================================
 		//
@@ -135,8 +140,6 @@ namespace DevLocker.VersionControl.WiseSVN
 			//m_PersonalCachedPrefs = m_PersonalPrefs.Clone();
 			//m_ProjectCachedPrefs = m_ProjectPrefs.Clone();
 			// Bad idea - can still be changed while thread is working causing bugs.
-
-			m_DownloadRepositoryChangesCached = SVNPreferencesManager.Instance.DownloadRepositoryChanges;
 		}
 
 		#endregion
@@ -156,6 +159,10 @@ namespace DevLocker.VersionControl.WiseSVN
 			// Copy them so they can be safely accessed from the worker thread.
 			m_PersonalCachedPrefs = m_PersonalPrefs.Clone();
 			m_ProjectCachedPrefs = m_ProjectPrefs.Clone();
+
+			m_DownloadRepositoryChangesCached = SVNPreferencesManager.Instance.DownloadRepositoryChanges && !SVNPreferencesManager.Instance.NeedsToAuthenticate;
+
+			LastError = StatusOperationResult.Success;
 
 			base.StartDatabaseUpdate();
 		}
@@ -293,9 +300,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				s.Status == VCFileStatus.Missing);
 
 			if (result != StatusOperationResult.Success) {
-				if (DoTraceLogs) {
-					WiseSVNIntegration.LogStatusErrorHint(result);
-				}
+				LastError = result;
 				return;
 			}
 
@@ -445,6 +450,17 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		protected override void WaitAndFinishDatabaseUpdate(GuidStatusDatasBind[] pendingData)
 		{
+			// Handle error here, to avoid multi-threaded issues.
+			if (LastError != StatusOperationResult.Success) {
+
+				// Always log the error - if repeated it will be skipped inside.
+				WiseSVNIntegration.LogStatusErrorHint(LastError);
+
+				if (LastError == StatusOperationResult.AuthenticationFailed) {
+					SVNPreferencesManager.Instance.NeedsToAuthenticate = true;
+				}
+			}
+
 			// Sanity check!
 			if (pendingData.Length > SanityStatusesLimit) {
 				// No more logging, displaying an icon.

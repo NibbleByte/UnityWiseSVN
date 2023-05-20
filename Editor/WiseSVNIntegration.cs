@@ -467,7 +467,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// Will return valid status even if the file has nothing to show (has no changes).
 		/// If error happened, invalid status data will be returned (check statusData.IsValid).
 		/// </summary>
-		public static SVNAsyncOperation<SVNStatusData> GetStatusAsync(string path, bool offline, bool fetchLockDetails = true, bool logErrorHint = true, int timeout = -1)
+		public static SVNAsyncOperation<SVNStatusData> GetStatusAsync(string path, bool offline, bool fetchLockDetails = false, bool logErrorHint = true, int timeout = -1)
 		{
 			return SVNAsyncOperation<SVNStatusData>.Start(op => {
 
@@ -1637,6 +1637,20 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 		/// <summary>
+		/// Checks if SVN can authenticate properly.
+		/// This is asynchronous operation as it may take some time. Wait for the result.
+		/// </summary>
+		public static SVNAsyncOperation<StatusOperationResult> CheckForSVNAuthErrors()
+		{
+			return GetStatusesAsync(ProjectRootNative, false, false, new List<SVNStatusData>(), false, ONLINE_COMMAND_TIMEOUT * 2);
+		}
+
+		internal static void PromptForAuth(string path)
+		{
+			ShellUtils.ExecutePrompt(SVN_Command, $"status  --depth=empty -u \"{SVNFormatPath(path)}\"");
+		}
+
+		/// <summary>
 		/// Search for hidden files and folders starting with .
 		/// Basically search for any "/." or "\."
 		/// </summary>
@@ -1967,7 +1981,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 
-		internal static void LogStatusErrorHint(StatusOperationResult result)
+		internal static void LogStatusErrorHint(StatusOperationResult result, string suffix = null)
 		{
 			if (result == StatusOperationResult.Success)
 				return;
@@ -1985,6 +1999,14 @@ namespace DevLocker.VersionControl.WiseSVN
 					displayMessage = string.Empty;
 					break;
 
+				case StatusOperationResult.AuthenticationFailed:
+					displayMessage = $"SVN Error: Trying to reach server repository failed because authentication is needed!\nTo have working online features authenticate your svn once via CLI.\nGo to the WiseSVN preferences to do this:\"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\".";
+					break;
+
+				case StatusOperationResult.UnableToConnectError:
+					displayMessage = "SVN Error: Unable to connect to SVN repository server. Check your network connection. Overlay icons may not work correctly.";
+					break;
+
 				case StatusOperationResult.ExecutableNotFound:
 					string userPath = m_PersonalPrefs.SvnCLIPath;
 
@@ -1993,9 +2015,9 @@ namespace DevLocker.VersionControl.WiseSVN
 					}
 
 					if (string.IsNullOrEmpty(userPath)) {
-						displayMessage = $"SVN CLI (Command Line Interface) not found. " +
-							$"Please install it or specify path to a valid \"svn\" executable in the svn preferences at menu:\n\"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n\n" +
-							$"You can also disable the SVN integration.";
+						displayMessage = $"SVN CLI (Command Line Interface) not found by WiseSVN. " +
+							$"Please install it or specify path to a valid \"svn\" executable in the svn preferences at \"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"" +
+							$"You can also disable permanently the SVN integration.";
 					} else {
 						displayMessage = $"Cannot find the \"svn\" executable specified in the svn preferences:\n\"{userPath}\"\n\n" +
 							$"You can reconfigure it in the menu:\n\"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n\n" +
@@ -2009,7 +2031,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			if (!string.IsNullOrEmpty(displayMessage) && !Silent && m_LastDisplayedError != displayMessage) {
-				Debug.LogError($"{displayMessage}");
+				Debug.LogError($"{displayMessage} {suffix}\n");
 				m_LastDisplayedError = displayMessage;
 				//DisplayError(displayMessage);	// Not thread-safe.
 			}

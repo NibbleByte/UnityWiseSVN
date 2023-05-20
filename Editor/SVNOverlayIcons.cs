@@ -102,7 +102,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			var statusData = SVNStatusesDatabase.Instance.GetKnownStatusData(guid);
 
-			var downloadRepositoryChanges = SVNPreferencesManager.Instance.DownloadRepositoryChanges;
+			var downloadRepositoryChanges = SVNPreferencesManager.Instance.DownloadRepositoryChanges && !SVNPreferencesManager.Instance.NeedsToAuthenticate;
 			var lockPrompt = SVNPreferencesManager.Instance.ProjectPrefs.EnableLockPrompt;
 
 			//
