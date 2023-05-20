@@ -264,6 +264,17 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 										  m_PersonalPrefs.DownloadRepositoryChanges == SVNPreferencesManager.BoolPreference.SameAsProjectPreference && m_ProjectPrefs.DownloadRepositoryChanges;
 
 
+			Color prevColor = GUI.color;
+			GUI.color = Color.red;
+			if (SVNPreferencesManager.Instance.NeedsToAuthenticate && GUILayout.Button("Authenticate")) {
+				SVNPreferencesManager.Instance.TryToAuthenticate();
+
+				WiseSVNIntegration.ClearLastDisplayedError();
+				SVNStatusesDatabase.Instance.m_GlobalIgnoresCollected = false;
+				SVNStatusesDatabase.Instance.InvalidateDatabase();
+			}
+			GUI.color = prevColor;
+
 			EditorGUI.BeginDisabledGroup(!m_ProjectPrefs.EnableLockPrompt);
 			m_PersonalPrefs.AutoLockOnModified = EditorGUILayout.Toggle(new GUIContent("Auto lock when modified", SVNPreferencesManager.PersonalPreferences.AutoLockOnModifiedHint + "\n\nWorks only when lock prompts are enabled in the Project preferences tab."), m_PersonalPrefs.AutoLockOnModified);
 			EditorGUI.EndDisabledGroup();
