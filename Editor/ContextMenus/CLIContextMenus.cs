@@ -7,8 +7,9 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 {
-#if UNITY_EDITOR_WIN
-	//
+	/// <summary>
+	/// Fall-back context menus that pop an editor window with command to be executed. User can modify the command and see the output.
+	/// </summary>
 	internal class CLIContextMenus : SVNContextMenusBase
 	{
 		protected override string FileArgumentsSeparator => "\n";
@@ -188,5 +189,5 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			CLIContextWindow.Show($"switch\n\"{url}\"\n\"{localPath}\"", false);
 		}
 	}
-#endif
+
 }
