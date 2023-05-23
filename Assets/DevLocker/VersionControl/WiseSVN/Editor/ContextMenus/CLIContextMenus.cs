@@ -7,7 +7,6 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 {
-#if UNITY_EDITOR_WIN || UNITY_EDITOR_LINUX
 	//
 	internal class CLIContextMenus : SVNContextMenusBase
 	{
@@ -188,5 +187,4 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			CLIContextWindow.Show($"switch\n\"{url}\"\n\"{localPath}\"", false);
 		}
 	}
-#endif
 }
