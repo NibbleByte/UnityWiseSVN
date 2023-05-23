@@ -137,9 +137,12 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 		public bool TemporarySilenceLockPrompts = false;
 
+
 		[SerializeField] private long m_ProjectPrefsLastModifiedTime = 0;
 
 		public event Action PreferencesChanged;
+
+		public bool NeedsToAuthenticate { get; internal set; }
 
 		public bool DownloadRepositoryChanges =>
 			PersonalPrefs.DownloadRepositoryChanges == BoolPreference.SameAsProjectPreference
@@ -354,8 +357,12 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				svnError = ex.ToString();
 			}
 
-			if (string.IsNullOrEmpty(svnError))
+			if (string.IsNullOrEmpty(svnError)) {
+				if (DownloadRepositoryChanges || ProjectPrefs.EnableLockPrompt) {
+					WiseSVNIntegration.CheckForSVNAuthErrors().Completed += CheckForSVNAuthErrorsResponse;
+				}
 				return;
+			}
 
 			PersonalPrefs.EnableCoreIntegration = false;
 
@@ -425,9 +432,9 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				}
 #endif
 
-				Debug.LogError($"SVN CLI (Command Line Interface) not found. You need to install it in order for the SVN integration to work properly. Disabling WiseSVN integration. Please fix the error and restart Unity.\n\n{svnError}");
+				WiseSVNIntegration.LogStatusErrorHint(StatusOperationResult.ExecutableNotFound, $"\nTemporarily disabling WiseSVN integration. Please fix the error and restart Unity.\n\n{svnError}");
 #if UNITY_EDITOR_OSX
-				Debug.LogError($"If you installed SVN via Brew or similar, you may need to add \"/usr/local/bin\" (or wherever svn binaries can be found) to your PATH environment variable and restart. Example:\nsudo launchctl config user path /usr/local/bin\nAlternatively, you may add SVN CLI path in your WiseSVN preferences at:\n{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}");
+				Debug.LogError($"If you installed SVN via Homebrew or similar, you may need to add \"/usr/local/bin\" (or wherever svn binaries can be found) to your PATH environment variable and restart. Example:\nsudo launchctl config user path /usr/local/bin\nAlternatively, you may add SVN CLI path in your WiseSVN preferences at:\n{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}");
 #endif
 				return;
 			}
@@ -435,16 +442,44 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			// svn: warning: W155007: '...' is not a working copy!
 			// This can be returned when project is not a valid svn checkout. (Probably)
 			if (svnError.Contains("W155007")) {
-				Debug.LogError($"This project is NOT under version control (not a proper SVN checkout). Disabling WiseSVN integration.\n\n{svnError}");
+				Debug.LogError($"This project is NOT under version control (not a proper SVN checkout). Temporarily disabling WiseSVN integration.\n\n{svnError}");
 				return;
 			}
 
 			// Any other error.
 			if (!string.IsNullOrEmpty(svnError)) {
-				Debug.LogError($"Calling SVN CLI (Command Line Interface) caused fatal error!\nDisabling WiseSVN integration. Please fix the error and restart Unity.\n{svnError}\n\n");
+				Debug.LogError($"Calling SVN CLI (Command Line Interface) caused fatal error!\nTemporarily disabling WiseSVN integration. Please fix the error and restart Unity.\n{svnError}\n\n");
 			} else {
 				// Recovered from error, enable back integration.
 				PersonalPrefs.EnableCoreIntegration = true;
+			}
+		}
+
+		private void CheckForSVNAuthErrorsResponse(SVNAsyncOperation<StatusOperationResult> operation)
+		{
+			if (operation.Result == StatusOperationResult.AuthenticationFailed) {
+				NeedsToAuthenticate = true;
+			}
+
+			WiseSVNIntegration.LogStatusErrorHint(operation.Result);
+		}
+
+		internal void TryToAuthenticate()
+		{
+			if (EditorUtility.DisplayDialog("SVN Authenticate",
+				"This process will open terminal and start an online request to your SVN repository. It will ask you to authenticate.\n\nThis is part of the SVN CLI process. WiseSVN doesn't know or store your username and password.",
+				"Proceed",
+				"Cancel")) {
+
+				WiseSVNIntegration.PromptForAuth(WiseSVNIntegration.ProjectRootNative);
+
+				foreach(string repositoryPath in SVNStatusesDatabase.Instance.NestedRepositories) {
+					WiseSVNIntegration.PromptForAuth(repositoryPath);
+				}
+
+				NeedsToAuthenticate = false;
+
+				WiseSVNIntegration.CheckForSVNAuthErrors().Completed += CheckForSVNAuthErrorsResponse;
 			}
 		}
 	}

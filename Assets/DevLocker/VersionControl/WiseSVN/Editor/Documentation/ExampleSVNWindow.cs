@@ -19,7 +19,7 @@ namespace DevLocker.VersionControl.WiseSVN.Documentation
 		private string m_StateLabel = "Idle";
 		private Vector2 m_OutputScroll;
 
-		private SVNAsyncOperation<IEnumerable<SVNStatusData>> m_SVNOperation;
+		private SVNAsyncOperation<StatusOperationResult> m_SVNOperation;
 
 		//[MenuItem("Assets/SVN/Example Status Window")]
 		private static void Init()
@@ -74,7 +74,9 @@ namespace DevLocker.VersionControl.WiseSVN.Documentation
 				EditorGUI.BeginDisabledGroup(!isWorking);
 
 				if (GUILayout.Button("Get Status")) {
-					m_SVNOperation = WiseSVNIntegration.GetStatusesAsync(".", recursive: true, offline: false);
+					var resultEntries = new List<SVNStatusData>();
+
+					m_SVNOperation = WiseSVNIntegration.GetStatusesAsync(".", true, false, resultEntries, true);
 
 					m_SVNOperation.AnyOutput += (line) => { m_CombinedOutput += line + "\n"; };
 

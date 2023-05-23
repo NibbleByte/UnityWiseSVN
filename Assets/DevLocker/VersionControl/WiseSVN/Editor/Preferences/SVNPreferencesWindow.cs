@@ -120,6 +120,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 					// When turning on the integration do instant refresh.
 					// Works when editor started with disabled integration. Doing it here to avoid circle dependency.
 					if (m_PersonalPrefs.EnableCoreIntegration) {
+						WiseSVNIntegration.ClearLastDisplayedError();
 						SVNStatusesDatabase.Instance.m_GlobalIgnoresCollected = false;
 						SVNStatusesDatabase.Instance.InvalidateDatabase();
 						SVNBranchesDatabase.Instance.InvalidateDatabase();
@@ -262,6 +263,17 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			bool downloadChangesEnabled = m_PersonalPrefs.DownloadRepositoryChanges == SVNPreferencesManager.BoolPreference.Enabled ||
 										  m_PersonalPrefs.DownloadRepositoryChanges == SVNPreferencesManager.BoolPreference.SameAsProjectPreference && m_ProjectPrefs.DownloadRepositoryChanges;
 
+
+			Color prevColor = GUI.color;
+			GUI.color = Color.red;
+			if (SVNPreferencesManager.Instance.NeedsToAuthenticate && GUILayout.Button("Authenticate")) {
+				SVNPreferencesManager.Instance.TryToAuthenticate();
+
+				WiseSVNIntegration.ClearLastDisplayedError();
+				SVNStatusesDatabase.Instance.m_GlobalIgnoresCollected = false;
+				SVNStatusesDatabase.Instance.InvalidateDatabase();
+			}
+			GUI.color = prevColor;
 
 			EditorGUI.BeginDisabledGroup(!m_ProjectPrefs.EnableLockPrompt);
 			m_PersonalPrefs.AutoLockOnModified = EditorGUILayout.Toggle(new GUIContent("Auto lock when modified", SVNPreferencesManager.PersonalPreferences.AutoLockOnModifiedHint + "\n\nWorks only when lock prompts are enabled in the Project preferences tab."), m_PersonalPrefs.AutoLockOnModified);

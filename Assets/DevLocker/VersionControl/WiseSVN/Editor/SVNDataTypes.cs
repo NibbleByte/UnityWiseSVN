@@ -80,56 +80,65 @@ namespace DevLocker.VersionControl.WiseSVN
 
 	public enum LockOperationResult
 	{
-		Success,				// Operation succeeded.
+		Success = 0,			// Operation succeeded.
 		LockedByOther,			// File is locked by another working copy (may be the same user). Use Force to enforce the operation.
 		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
 		RemoteHasChanges,		// Newer version of the asset exists in the server repository. Update first.
 		NotSupported,			// Locking is not supported by the repository (for example, it is a github emulated svn).
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
-		UnknownError,			// Failed for some reason.
+		UnknownError = 100,		// Failed for some reason.
+	}
+
+	public enum LockDetailsOperationResult
+	{
+		Success = 0,			// Operation succeeded.
+		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
+		NotSupported,			// Locking is not supported by the repository (for example, it is a github emulated svn).
+		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
+		UnknownError = 100,		// Failed for some reason.
 	}
 
 	public enum ListOperationResult
 	{
-		Success,				// Operation succeeded.
+		Success = 0,			// Operation succeeded.
 		NotFound,				// URL target was not found.
 		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
-		UnknownError,			// Failed for some reason.
+		UnknownError = 100,		// Failed for some reason.
 	}
 
 	public enum LogOperationResult
 	{
-		Success,                // Operation succeeded.
+		Success = 0,			// Operation succeeded.
 		NotFound,				// URL target was not found.
 		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
-		UnknownError,			// Failed for some reason.
+		UnknownError = 100,		// Failed for some reason.
 	}
 
 	public enum PropgetOperationResult
 	{
-		Success,				// Operation succeeded.
+		Success = 0,			// Operation succeeded.
 		NotFound,				// URL target was not found.
-		UnknownError,			// Failed for some reason.
+		UnknownError = 100,		// Failed for some reason.
 	}
 
 	public enum CommitOperationResult
 	{
-		Success,				// Operation succeeded.
+		Success = 0,			// Operation succeeded.
 		OutOfDateError,			// Some folders/files have pending changes in the repository. Update them before trying to commit.
 		ConflictsError,			// Some folders/files have conflicts. Clear them before trying to commit.
 		UnversionedError,		// Can't commit unversioned files directly. Add them before trying to commit. Recursive skips unversioned files.
 		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
 		PrecommitHookError,		// Precommit hook denied the commit on the server side. Talk with your administrator about your commit company policies. Example: always commit with a valid message.
-		UnknownError,			// Failed for any other reason.
+		UnknownError = 100,		// Failed for any other reason.
 	}
 
 	public enum RevertOperationResult
 	{
-		Success,				// Operation succeeded.
-		UnknownError,			// Failed for any other reason.
+		Success = 0,			// Operation succeeded.
+		UnknownError = 100,		// Failed for any other reason.
 	}
 
 	// How conflicts should be auto-resolved.
@@ -152,11 +161,22 @@ namespace DevLocker.VersionControl.WiseSVN
 
 	public enum UpdateOperationResult
 	{
-		Success,				// Operation succeeded.
+		Success = 0,			// Operation succeeded.
 		SuccessWithConflicts,   // Update was successful, but some folders/files have conflicts.
 		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
-		UnknownError,			// Failed for any other reason.
+		UnknownError = 100,		// Failed for any other reason.
+	}
+
+	public enum StatusOperationResult
+	{
+		Success = 0,			// Operation succeeded.
+		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
+		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
+		NotWorkingCopy,			// This can be returned when project is not a valid svn checkout. (Probably)
+		ExecutableNotFound,		// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
+		TargetPathNotFound,		// File or directory not found on disk.
+		UnknownError = 100,		// Failed for any other reason.
 	}
 
 
@@ -217,9 +237,11 @@ namespace DevLocker.VersionControl.WiseSVN
 		public string Message;
 		public string Date;
 
-		public bool IsValid => !string.IsNullOrEmpty(Path);
+		public StatusOperationResult OperationResult;
 
-		public static LockDetails Empty => new LockDetails() {Path = string.Empty, Owner = string.Empty, Message = string.Empty, Date = string.Empty};
+		public bool IsValid => !string.IsNullOrEmpty(Path) && OperationResult == StatusOperationResult.Success;
+
+		public static LockDetails Empty => new LockDetails() {Path = string.Empty, Owner = string.Empty, Message = string.Empty, Date = string.Empty, OperationResult = StatusOperationResult.Success};
 
 		public bool Equals(LockDetails other)
 		{
@@ -227,25 +249,9 @@ namespace DevLocker.VersionControl.WiseSVN
 			       && Owner == other.Owner
 			       && Message == other.Message
 			       && Date == other.Date
+			       && OperationResult == other.OperationResult
 				;
 		}
-	}
-
-	public struct SVNStatusDataOptions
-	{
-		public enum SearchDepth
-		{
-			Empty,		// Only top level
-			Infinity,	// Recursively all children
-		}
-
-		public SearchDepth Depth;
-		public bool RaiseError;
-		public int Timeout;
-		public bool Offline;		// If false it will query the repository for additional data (like locks), hence it is slower.
-		public bool FetchLockOwner;	// If file is locked and this is true, another query (per locked file) will be made
-									// to the repository to find out the owner's user name. I.e. will execute "svn info [url]"
-									// Works only in online mode.
 	}
 
 	/// <summary>

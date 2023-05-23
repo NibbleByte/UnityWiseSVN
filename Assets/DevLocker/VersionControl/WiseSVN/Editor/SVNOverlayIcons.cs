@@ -53,6 +53,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		[MenuItem(InvalidateDatabaseMenuText, false, ContextMenus.SVNContextMenusManager.MenuItemPriorityStart + 125)]
 		public static void InvalidateDatabaseMenu()
 		{
+			WiseSVNIntegration.ClearLastDisplayedError();
 			SVNPreferencesManager.Instance.TemporarySilenceLockPrompts = false;
 			SVNStatusesDatabase.Instance.m_GlobalIgnoresCollected = false;
 			SVNStatusesDatabase.Instance.InvalidateDatabase();
@@ -101,7 +102,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			var statusData = SVNStatusesDatabase.Instance.GetKnownStatusData(guid);
 
-			var downloadRepositoryChanges = SVNPreferencesManager.Instance.DownloadRepositoryChanges;
+			var downloadRepositoryChanges = SVNPreferencesManager.Instance.DownloadRepositoryChanges && !SVNPreferencesManager.Instance.NeedsToAuthenticate;
 			var lockPrompt = SVNPreferencesManager.Instance.ProjectPrefs.EnableLockPrompt;
 
 			//

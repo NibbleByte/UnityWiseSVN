@@ -263,5 +263,18 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 
 			return result;
 		}
+
+		public static void ExecutePrompt(string command, string args, string workingDirectory = null)
+		{
+			ProcessStartInfo processStartInfo = new ProcessStartInfo(command, args);
+			processStartInfo.WindowStyle = ProcessWindowStyle.Normal;
+			processStartInfo.CreateNoWindow = false;
+			processStartInfo.UseShellExecute = true;
+			processStartInfo.WorkingDirectory = workingDirectory ?? string.Empty;
+
+			Process process = Process.Start(processStartInfo);
+			process.WaitForExit();
+			process.Dispose();
+		}
 	}
 }

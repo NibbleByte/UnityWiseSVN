@@ -7,7 +7,9 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 {
-	//
+	/// <summary>
+	/// Fall-back context menus that pop an editor window with command to be executed. User can modify the command and see the output.
+	/// </summary>
 	internal class CLIContextMenus : SVNContextMenusBase
 	{
 		protected override string FileArgumentsSeparator => "\n";
