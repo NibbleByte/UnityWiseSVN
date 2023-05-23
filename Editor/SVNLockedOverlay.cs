@@ -52,7 +52,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		private bool IsActive => m_PersonalPrefs.EnableCoreIntegration
 		                         && m_PersonalPrefs.PopulateStatusesDatabase
 		                         && SVNPreferencesManager.Instance.DownloadRepositoryChanges
-		                         && m_PersonalPrefs.WarnForPotentialConflicts;
+		                         && !SVNPreferencesManager.Instance.NeedsToAuthenticate
+								 && m_PersonalPrefs.WarnForPotentialConflicts;
 
 		public override void Initialize(bool freshlyCreated)
 		{
