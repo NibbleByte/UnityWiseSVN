@@ -325,8 +325,10 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 					if (Directory.Exists(paths[0])) {
 						m_Integration?.Revert(paths, false);
 					} else {
-						WiseSVNIntegration.Revert(paths, false, true, false);
-						AssetDatabase.Refresh();
+						if (EditorUtility.DisplayDialog("Revert File?", $"Are you sure you want to revert this file and it's meta?\n\"{paths[0]}\"", "Yes", "No", DialogOptOutDecisionType.ForThisSession, "WiseSVN.RevertConfirm")) {
+							WiseSVNIntegration.Revert(paths, false, true, false);
+							AssetDatabase.Refresh();
+						}
 					}
 					return;
 				}
