@@ -189,5 +189,4 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			CLIContextWindow.Show($"switch\n\"{url}\"\n\"{localPath}\"", false);
 		}
 	}
-
 }
