@@ -116,7 +116,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		UnknownError = 100,		// Failed for some reason.
 	}
 
-	public enum PropgetOperationResult
+	public enum PropOperationResult
 	{
 		Success = 0,			// Operation succeeded.
 		NotFound,				// URL target was not found.
@@ -327,7 +327,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		public string Path;
 		public string Value;
 
-		public string[] Lines => Value.Split('\n');
+		public string[] Lines => Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
 		public override string ToString()
 		{

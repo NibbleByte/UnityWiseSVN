@@ -1462,24 +1462,24 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// Example property names: "svn:ignore", "svn:mergeinfo", "tsvn:logminsize"
 		/// NOTE: This is synchronous operation. Better use the Async method version to avoid editor slow down.
 		/// </summary>
-		public static PropgetOperationResult Propget(string assetPath, string property, bool recursive, List<PropgetEntry> resultEntries, int timeout = COMMAND_TIMEOUT, IShellMonitor shellMonitor = null)
+		public static PropOperationResult Propget(string assetPath, string property, bool recursive, List<PropgetEntry> resultEntries, int timeout = COMMAND_TIMEOUT, IShellMonitor shellMonitor = null)
 		{
 			var depth = recursive ? "infinity" : "empty";
 
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"propget {property} --depth={depth} -v \"{SVNFormatPath(assetPath)}\"", timeout, shellMonitor);
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"propget \"{property}\" --depth={depth} -v \"{SVNFormatPath(assetPath)}\"", timeout, shellMonitor);
 
 			if (!string.IsNullOrEmpty(result.Error)) {
 
 				// URL or local path not found (or invalid working copy path).
-				// svn: E200005: 'D:\Workspace\Unity\WiseSVN-SVN\trunk\sdasdas' is not under version control
+				// svn: E200005: '...' is not under version control
 				// svn: warning: W155010: The node '...' was not found.
 				// svn: E155007: '...' is not a working copy
 				// svn: warning: W160013: URL 'https://...' non-existent in revision 59280
 				// svn: E200009: Could not list all targets because some targets don't exist
 				if (result.Error.Contains("W155010") || result.Error.Contains("E155007") || result.Error.Contains("W160013") || result.Error.Contains("E200009") || result.Error.Contains("E200005"))
-					return PropgetOperationResult.NotFound;
+					return PropOperationResult.NotFound;
 
-				return PropgetOperationResult.UnknownError;
+				return PropOperationResult.UnknownError;
 			}
 
 			/* Example output format:
@@ -1503,7 +1503,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			*/
 
 			if (string.IsNullOrWhiteSpace(result.Output))
-				return PropgetOperationResult.Success;
+				return PropOperationResult.Success;
 
 			var outputLines = result.Output.Trim().Split('\n');
 
@@ -1533,22 +1533,55 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 			}
 
-			return PropgetOperationResult.Success;
+			return PropOperationResult.Success;
 		}
 
 		/// <summary>
 		/// Performs propget operation based on the provided parameters.
 		/// Example property names: "svn:ignore", "svn:mergeinfo", "tsvn:logminsize"
 		/// </summary>
-		public static SVNAsyncOperation<PropgetOperationResult> PropgetAsync(string assetPath, string property, bool recursive, List<PropgetEntry> resultEntries, int timeout = -1)
+		public static SVNAsyncOperation<PropOperationResult> PropgetAsync(string assetPath, string property, bool recursive, List<PropgetEntry> resultEntries, int timeout = -1)
 		{
 			var threadResults = new List<PropgetEntry>();
-			var operation = SVNAsyncOperation<PropgetOperationResult>.Start(op => Propget(assetPath, property, recursive, resultEntries, timeout, op));
+			var operation = SVNAsyncOperation<PropOperationResult>.Start(op => Propget(assetPath, property, recursive, resultEntries, timeout, op));
 			operation.Completed += (op) => {
 				resultEntries.AddRange(threadResults);
 			};
 
 			return operation;
+		}
+
+		/// <summary>
+		/// Performs propset operation based on the provided parameters. Old prop value will be overridden.
+		/// Example property names: "svn:ignore", "svn:mergeinfo", "tsvn:logminsize"
+		/// </summary>
+		public static PropOperationResult Propset(string assetPath, string property, string valueOverride, bool recursive = false, int timeout = COMMAND_TIMEOUT, IShellMonitor shellMonitor = null)
+		{
+			var depth = recursive ? "infinity" : "empty";
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"propset \"{property}\" \"{valueOverride}\" --depth={depth} \"{SVNFormatPath(assetPath)}\"", timeout, shellMonitor);
+
+			if (!string.IsNullOrEmpty(result.Error)) {
+
+				// URL or local path not found (or invalid working copy path).
+				// svn: E200005: '...' is not under version control
+				// svn: warning: W155010: The node '...' was not found.
+				// svn: E155007: '...' is not a working copy
+				// svn: warning: W160013: URL 'https://...' non-existent in revision 59280
+				// svn: E200009: Could not list all targets because some targets don't exist
+				// svn: E155010: The node '...' was not found.
+				if (result.Error.Contains("E155010") || result.Error.Contains("W155010") || result.Error.Contains("E155007") || result.Error.Contains("W160013") || result.Error.Contains("E200009") || result.Error.Contains("E200005"))
+					return PropOperationResult.NotFound;
+
+				return PropOperationResult.UnknownError;
+			}
+
+			// Output should be something like this:
+			// property 'svn:ignore' set on 'Assets'
+
+			// But we don't really need to check it.
+
+			return PropOperationResult.Success;
 		}
 
 

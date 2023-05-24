@@ -480,6 +480,57 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			m_Integration?.Blame(assetPath, wait);
 		}
 
+		// Feature is working, but menu is commented out so it doesn't clutter the interface.
+		// Uncomment next line if you really want to do svn ignores in Unity.
+		//[MenuItem("Assets/SVN/Ignore Toggle", false, MenuItemPriorityStart + 105)]
+		public static void IgnoreToggleSelected()
+		{
+			IgnoreToggle(GetSelectedAssetPaths().FirstOrDefault());
+		}
+
+		/// <summary>
+		/// Toggles "svn:ignore" for provided asset.
+		/// NOTE: This doesn't account for "svn:global-ignores".
+		/// </summary>
+		public static void IgnoreToggle(string assetPath, bool wait = false)
+		{
+			if (string.IsNullOrEmpty(assetPath))
+				return;
+
+			string parentDirectory = Path.GetDirectoryName(assetPath);
+			string fileName = Path.GetFileName(assetPath);
+
+			List<PropgetEntry> propgetEntries = new List<PropgetEntry>();
+
+			using (var reporter = WiseSVNIntegration.CreateReporter()) {
+				PropOperationResult result = WiseSVNIntegration.Propget(parentDirectory, "svn:ignore", false, propgetEntries, WiseSVNIntegration.COMMAND_TIMEOUT, reporter);
+				if (result != PropOperationResult.Success)
+					return;
+
+				List<string> lines = (propgetEntries.FirstOrDefault().Value ?? "")
+					.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+					.Select(l => l.Trim()).ToList();
+
+				if (lines.Contains(fileName)) {
+					lines.Remove(fileName);
+					lines.Remove(fileName + ".meta");
+
+				} else {
+					lines.Add(fileName);
+					lines.Add(fileName + ".meta");
+				}
+
+				string propValue = string.Join('\n', lines);
+
+				result = WiseSVNIntegration.Propset(parentDirectory, "svn:ignore", propValue, false, WiseSVNIntegration.COMMAND_TIMEOUT, reporter);
+
+				if (result != PropOperationResult.Success)
+					return;
+
+				SVNStatusesDatabase.Instance.InvalidateDatabase();
+			}
+		}
+
 
 
 		[MenuItem("Assets/SVN/Cleanup", false, MenuItemPriorityStart + 106)]
