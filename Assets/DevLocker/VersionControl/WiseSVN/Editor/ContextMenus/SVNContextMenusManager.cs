@@ -507,15 +507,26 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 				if (result != PropOperationResult.Success)
 					return;
 
+				// If prop doesn't exist, error is reported, but success is returned. Ignore the error flag if successful.
+				reporter.ResetErrorFlag();
+
 				List<string> lines = (propgetEntries.FirstOrDefault().Value ?? "")
 					.Split('\n', StringSplitOptions.RemoveEmptyEntries)
 					.Select(l => l.Trim()).ToList();
 
-				if (lines.Contains(fileName)) {
+				if (lines.Contains(fileName) || lines.Contains(fileName + ".meta")) {
 					lines.Remove(fileName);
 					lines.Remove(fileName + ".meta");
 
 				} else {
+
+					var statusData = WiseSVNIntegration.GetStatus(assetPath);
+					var statusDataMeta = WiseSVNIntegration.GetStatus(assetPath + ".meta");
+					if (statusData.Status != VCFileStatus.Unversioned || statusDataMeta.Status != VCFileStatus.Unversioned) {
+						EditorUtility.DisplayDialog("Ignore Fail", "Cannot ignore versioned files. Please remove the files from svn first.", "Ok");
+						return;
+					}
+
 					lines.Add(fileName);
 					lines.Add(fileName + ".meta");
 				}

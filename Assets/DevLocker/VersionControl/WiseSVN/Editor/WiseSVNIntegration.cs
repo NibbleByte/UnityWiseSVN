@@ -1479,6 +1479,11 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (result.Error.Contains("W155010") || result.Error.Contains("E155007") || result.Error.Contains("W160013") || result.Error.Contains("E200009") || result.Error.Contains("E200005"))
 					return PropOperationResult.NotFound;
 
+				// Property doesn't exist (yet). Just return empty list.
+				// svn: warning: W200017: Property 'svn:ignore' not found on '...'
+				if (result.Error.Contains("W200017"))
+					return PropOperationResult.Success;
+
 				return PropOperationResult.UnknownError;
 			}
 
