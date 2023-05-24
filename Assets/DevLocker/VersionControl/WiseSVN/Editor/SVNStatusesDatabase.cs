@@ -348,8 +348,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			var propgets = new List<PropgetEntry>();
 
-			PropgetOperationResult result = WiseSVNIntegration.Propget(repositoryPath, "svn:ignore", true, propgets, WiseSVNIntegration.COMMAND_TIMEOUT, shellMonitor);
-			if (result != PropgetOperationResult.Success) {
+			PropOperationResult result = WiseSVNIntegration.Propget(repositoryPath, "svn:ignore", true, propgets, WiseSVNIntegration.COMMAND_TIMEOUT, shellMonitor);
+			if (result != PropOperationResult.Success) {
 				if (DoTraceLogs) {
 					Debug.LogError($"SVN: Failed to collect svn ignored entries for \"{repositoryPath}\". Type: \"svn:ignore\".");
 				}
@@ -381,8 +381,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			var propgets = new List<PropgetEntry>();
 
-			PropgetOperationResult result = WiseSVNIntegration.Propget(WiseSVNIntegration.ProjectRootNative, "svn:global-ignores", true, propgets, WiseSVNIntegration.COMMAND_TIMEOUT, shellMonitor);
-			if (result != PropgetOperationResult.Success) {
+			PropOperationResult result = WiseSVNIntegration.Propget(WiseSVNIntegration.ProjectRootNative, "svn:global-ignores", true, propgets, WiseSVNIntegration.COMMAND_TIMEOUT, shellMonitor);
+			if (result != PropOperationResult.Success) {
 				if (DoTraceLogs) {
 					Debug.LogError($"SVN: Failed to collect svn ignored entries for \"{WiseSVNIntegration.ProjectRootNative}\". Type: \"svn:global-ignores\".");
 				}
