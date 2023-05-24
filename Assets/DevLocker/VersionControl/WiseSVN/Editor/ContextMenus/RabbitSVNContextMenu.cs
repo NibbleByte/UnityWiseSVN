@@ -8,7 +8,6 @@ using UnityEngine;
 
 namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 {
-#if UNITY_EDITOR_LINUX
 	// RabbitVCS subcommand (or module by their wording) list can be accessed by executing `rabbitvcs`
 	// command in terminal, and the subcommand usage reference by `rabbitvcs <module> -h`. Source code
 	// is available at https://github.com/rabbitvcs/rabbitvcs .
@@ -228,5 +227,4 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			return false;
 		}
 	}
-#endif
 }
