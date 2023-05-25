@@ -1170,6 +1170,30 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 		/// <summary>
+		/// Delete file in SVN directly (without GUI).
+		/// </summary>
+		/// <param name="keepLocal">Will mark files for deletion, without removing them from disk</param>
+		public static bool Delete(string path, bool includeMeta, bool keepLocal, IShellMonitor shellMonitor = null)
+		{
+			if (string.IsNullOrEmpty(path))
+				return true;
+
+			var keepLocalArg = keepLocal ? "--keep-local" : "";
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"delete --force {keepLocalArg} \"{SVNFormatPath(path)}\"", COMMAND_TIMEOUT, shellMonitor);
+			if (result.HasErrors)
+				return false;
+
+			if (includeMeta) {
+				result = ShellUtils.ExecuteCommand(SVN_Command, $"delete --force {keepLocalArg} \"{SVNFormatPath(path + ".meta")}\"", COMMAND_TIMEOUT, shellMonitor);
+				if (result.HasErrors)
+					return false;
+			}
+
+			return true;
+		}
+
+		/// <summary>
 		/// Check if file or folder has conflicts.
 		/// </summary>
 		public static bool HasAnyConflicts(string path, int timeout = COMMAND_TIMEOUT * 4, IShellMonitor shellMonitor = null)

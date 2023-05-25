@@ -265,7 +265,8 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 					EditorGUILayout.EndHorizontal();
 				}
 
-				if (statusData.Status != VCFileStatus.Deleted) {
+				// Marked for deletion file can still exist on disk. In that case - show it.
+				if (statusData.Status != VCFileStatus.Deleted || lockEntry.TargetObject) {
 					if (lockEntry.IsMeta) {
 						EditorGUILayout.ObjectField(lockEntry.TargetObject,
 							lockEntry.TargetObject ? lockEntry.TargetObject.GetType() : typeof(UnityEngine.Object),
