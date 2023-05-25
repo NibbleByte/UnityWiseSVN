@@ -504,7 +504,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		/// Toggles "svn:ignore" for provided asset.
 		/// NOTE: This doesn't account for "svn:global-ignores".
 		/// </summary>
-		public static void IgnoreToggle(string assetPath, bool wait = false)
+		public static void IgnoreToggle(string assetPath)
 		{
 			if (string.IsNullOrEmpty(assetPath))
 				return;
@@ -534,9 +534,28 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 					var statusData = WiseSVNIntegration.GetStatus(assetPath);
 					var statusDataMeta = WiseSVNIntegration.GetStatus(assetPath + ".meta");
-					if (statusData.Status != VCFileStatus.Unversioned || statusDataMeta.Status != VCFileStatus.Unversioned) {
-						EditorUtility.DisplayDialog("Ignore Fail", "Cannot ignore versioned files. Please remove the files from svn first.", "Ok");
-						return;
+
+					bool isVersioned = statusData.Status != VCFileStatus.Unversioned && statusData.Status != VCFileStatus.Deleted;
+					isVersioned |= statusDataMeta.Status != VCFileStatus.Unversioned && statusDataMeta.Status != VCFileStatus.Deleted;
+
+					if (isVersioned) {
+						int choice = EditorUtility.DisplayDialogComplex("Ignore Versioned File",
+							$"Only unversioned files can be ignored, but selected file is versioned (committed).\n" +
+							$"To ignore it, it needs to be marked for deletion in svn. Do you want to do that?\n\n{assetPath}",
+							"Mark file for deletion", "Cancel", "Delete file on disk"
+							);
+
+						switch(choice) {
+							case 0:
+								if (!WiseSVNIntegration.Delete(assetPath, statusDataMeta.Status != VCFileStatus.Unversioned, true, reporter))
+									return;
+								break;
+							case 1:
+								return;
+							case 2:
+								AssetDatabase.DeleteAsset(assetPath);
+								break;
+						}
 					}
 
 					lines.Add(fileName);
