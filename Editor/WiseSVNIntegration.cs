@@ -1613,6 +1613,60 @@ namespace DevLocker.VersionControl.WiseSVN
 			return PropOperationResult.Success;
 		}
 
+		/// <summary>
+		/// Associate changelist <paramref name="changelistName"/> with the <paramref name="assetPath"/>.
+		/// </summary>
+		public static ChangelistOperationResult ChangelistAdd(string assetPath, string changelistName, bool recursive = false, IShellMonitor shellMonitor = null)
+		{
+			var depth = recursive ? "infinity" : "empty";
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"changelist \"{changelistName}\" --depth={depth} \"{SVNFormatPath(assetPath)}\"", COMMAND_TIMEOUT, shellMonitor);
+
+			if (!string.IsNullOrEmpty(result.Error)) {
+
+				// URL or local path not found (or invalid working copy path).
+				// svn: E200005: '...' is not under version control
+				// svn: warning: W155010: The node '...' was not found.
+				// svn: E155007: '...' is not a working copy
+				// svn: warning: W160013: URL 'https://...' non-existent in revision 59280
+				// svn: E200009: Could not list all targets because some targets don't exist
+				// svn: E155010: The node '...' was not found.
+				if (result.Error.Contains("E155010") || result.Error.Contains("W155010") || result.Error.Contains("E155007") || result.Error.Contains("W160013") || result.Error.Contains("E200009") || result.Error.Contains("E200005"))
+					return ChangelistOperationResult.NotFound;
+
+				return ChangelistOperationResult.UnknownError;
+			}
+
+			return ChangelistOperationResult.Success;
+		}
+
+		/// <summary>
+		/// Remove <paramref name="assetPath"/> from the changelist it belongs to.
+		/// </summary>
+		public static ChangelistOperationResult ChangelistRemove(string assetPath, bool recursive = false, IShellMonitor shellMonitor = null)
+		{
+			var depth = recursive ? "infinity" : "empty";
+
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"changelist --remove --depth={depth} \"{SVNFormatPath(assetPath)}\"", COMMAND_TIMEOUT, shellMonitor);
+
+			if (!string.IsNullOrEmpty(result.Error)) {
+
+				// URL or local path not found (or invalid working copy path).
+				// svn: E200005: '...' is not under version control
+				// svn: warning: W155010: The node '...' was not found.
+				// svn: E155007: '...' is not a working copy
+				// svn: warning: W160013: URL 'https://...' non-existent in revision 59280
+				// svn: E200009: Could not list all targets because some targets don't exist
+				// svn: E155010: The node '...' was not found.
+				if (result.Error.Contains("E155010") || result.Error.Contains("W155010") || result.Error.Contains("E155007") || result.Error.Contains("W160013") || result.Error.Contains("E200009") || result.Error.Contains("E200005"))
+					return ChangelistOperationResult.NotFound;
+
+				return ChangelistOperationResult.UnknownError;
+			}
+
+			return ChangelistOperationResult.Success;
+		}
+
 
 
 		/// <summary>
