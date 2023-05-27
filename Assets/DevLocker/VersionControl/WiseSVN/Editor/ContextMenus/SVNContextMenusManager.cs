@@ -540,20 +540,22 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 					if (isVersioned) {
 						int choice = EditorUtility.DisplayDialogComplex("Ignore Versioned File",
-							$"Only unversioned files can be ignored, but selected file is versioned (committed).\n" +
-							$"To ignore it, it needs to be marked for deletion in svn. Do you want to do that?\n\n{assetPath}",
-							"Mark file for deletion", "Cancel", "Delete file on disk"
+							$"Only unversioned files can be ignored, but selected file is versioned (committed). You can:\n" +
+							$"1. Add it to \"ignore-on-commit\" changelist. TortoiseSVN will ignore it by default on commit.\n" +
+							$"2. Mark the file as deleted in svn (without removing it from disk) and ignore it for everybody. You need to commit resulting changes.\n" +
+							$"\n\"{assetPath}\"",
+							"Add to \"ignore-on-commit\"", "Cancel", "Mark file for deletion && ignore"
 							);
 
 						switch(choice) {
 							case 0:
-								if (!WiseSVNIntegration.Delete(assetPath, statusDataMeta.Status != VCFileStatus.Unversioned, true, reporter))
-									return;
-								break;
+								WiseSVNIntegration.ChangelistAdd(assetPath, "ignore-on-commit", recursive: false, reporter);
+								return;
 							case 1:
 								return;
 							case 2:
-								AssetDatabase.DeleteAsset(assetPath);
+								if (!WiseSVNIntegration.Delete(assetPath, statusDataMeta.Status != VCFileStatus.Unversioned, keepLocal: true, reporter))
+									return;
 								break;
 						}
 					}

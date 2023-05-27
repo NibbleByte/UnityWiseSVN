@@ -123,6 +123,13 @@ namespace DevLocker.VersionControl.WiseSVN
 		UnknownError = 100,		// Failed for some reason.
 	}
 
+	public enum ChangelistOperationResult
+	{
+		Success = 0,			// Operation succeeded.
+		NotFound,				// URL target was not found.
+		UnknownError = 100,		// Failed for some reason.
+	}
+
 	public enum CommitOperationResult
 	{
 		Success = 0,			// Operation succeeded.
