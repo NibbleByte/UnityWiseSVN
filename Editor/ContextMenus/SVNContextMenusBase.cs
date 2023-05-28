@@ -77,6 +77,10 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			// Find the most common path of the selected assets.
 			var paths = assetPaths.ToList();
 
+			// If current folder, return it, as matching won't work.
+			if (paths.Contains("."))
+				return ".";
+
 			int matchCharIndex = paths[0].Length;
 
 			for (int i = 1; i < paths.Count; i++) {
