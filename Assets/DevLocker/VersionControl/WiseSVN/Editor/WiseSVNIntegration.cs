@@ -275,6 +275,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		internal static void ClearLastDisplayedError()
 		{
 			m_LastDisplayedError = string.Empty;
+			SVNPreferencesManager.Instance.NeedsToAuthenticate = false;
 		}
 
 		#endregion
@@ -1764,6 +1765,11 @@ namespace DevLocker.VersionControl.WiseSVN
 		internal static void PromptForAuth(string path)
 		{
 			ShellUtils.ExecutePrompt(SVN_Command, $"status  --depth=empty -u \"{SVNFormatPath(path)}\"");
+
+#if UNITY_EDITOR_OSX
+			// Interact with the user since we don't know when the terminal will close.
+			EditorUtility.DisplayDialog("SVN Authenticate", "A terminal window was open. When you authenticated in the terminal window, press \"Ready\".", "Ready");
+#endif
 		}
 
 		/// <summary>
@@ -2116,7 +2122,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					break;
 
 				case StatusOperationResult.AuthenticationFailed:
-					displayMessage = $"SVN Error: Trying to reach server repository failed because authentication is needed!\nTo have working online features authenticate your svn once via CLI.\nGo to the WiseSVN preferences to do this:\"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\".";
+					displayMessage = $"SVN Error: Trying to reach server repository failed because authentication is needed!\nGo to the WiseSVN preferences to do this:\"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\nTo have working online features authenticate your svn once via CLI.";
 					break;
 
 				case StatusOperationResult.UnableToConnectError:
