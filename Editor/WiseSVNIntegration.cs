@@ -1164,6 +1164,11 @@ namespace DevLocker.VersionControl.WiseSVN
 					return false;
 
 				directoryMeta = Path.GetDirectoryName(directoryMeta) + ".meta";
+
+				// The assets folder doesn't have meta - we reached the top.
+				if (directoryMeta.Equals("Assets.meta", StringComparison.OrdinalIgnoreCase))
+					return true;
+
 				directoryMetaStatus = GetStatus(directoryMeta).Status;
 			}
 
