@@ -80,6 +80,13 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (!assetPaths.Any())
 				return;
 
+			// If trying to commit directory that was just added, show the parent, so the directory meta is visible. Exclude root "Assets" and "Packages" folder.
+			var fixedPaths = assetPaths.Select(path =>
+					(path.Contains('/') && Directory.Exists(path) && WiseSVNIntegration.GetStatus(path).Status == VCFileStatus.Added)
+					? Path.GetDirectoryName(path)
+					: path
+					);
+
 			var result = ExecuteCommand("commit", GetWorkingPath(assetPaths), wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
 				Debug.LogError($"SVN Error: {result.Error}");
@@ -114,6 +121,13 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			if (!assetPaths.Any())
 				return;
+
+			// If trying to revert directory that was just added, show the parent, so the directory meta is visible. Exclude root "Assets" and "Packages" folder.
+			var fixedPaths = assetPaths.Select(path =>
+					(path.Contains('/') && Directory.Exists(path) && WiseSVNIntegration.GetStatus(path).Status == VCFileStatus.Added)
+					? Path.GetDirectoryName(path)
+					: path
+					);
 
 			var result = ExecuteCommand("revert", GetWorkingPath(assetPaths), wait);
 			if (!string.IsNullOrEmpty(result.Error)) {
