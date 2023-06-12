@@ -2,7 +2,7 @@
 
 # WiseSVN For Unity
 
-Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) user interface. A must have plugin if you use SVN as your version control system in your project.
+Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https://tortoisesvn.net/) (for Windows), [SnailSVN](https://langui.net/snailsvn) (for MacOS) or [RabbitVCS](http://rabbitvcs.org/) (for Linux) user interface. A must have plugin if you use SVN as your version control system in your project.
 
 [Assets Store](https://assetstore.unity.com/packages/tools/version-control/wise-svn-162636) | [Unity Forum](https://forum.unity.com/threads/wise-svn-powerful-tortoisesvn-snailsvn-integration.844168/) | [Reddit](https://www.reddit.com/r/Unity3D/comments/fgjovk/finally_a_fully_working_tortoisesvn_snailsvn/)
 
@@ -41,11 +41,11 @@ Simple but powerful SVN Integration for Unity 3D utilizing [TortoiseSVN](https:/
 * Minimal performance impact
 * Survives assembly reloads
 * You don't have to leave Unity to do SVN chores.
-* Works on Windows and MacOS (maybe Linux?).
+* Works on Windows, MacOS and Linux.
 * Simple API to integrate with your tools.
   * Use `WiseSVNIntegration.RequestSilence()` and `WiseSVNIntegration.ClearSilence()` to temporarily suppress any WiseSVN pop-ups.
   * Use `WiseSVNIntegration.RequestTemporaryDisable()` and `WiseSVNIntegration.ClearTemporaryDisable()` to temporarily disable any WiseSVN handling of file operations and updates.
-  * Use `SVNContextMenusManager` methods to invoke TortoiseSVN / SnailSVN commands.
+  * Use `SVNContextMenusManager` methods to invoke TortoiseSVN / SnailSVN / RabbitVCS commands.
   * Use `WiseSVNIntegration.*Async()` methods to run direct SVN commands without any GUI (check `ExampleStatusWindow`).
 
 *Check the screenshots below*
@@ -92,11 +92,12 @@ openupm add devlocker.versioncontrol.wisesvn
 ```
 
 #### Prerequisites
-* Have SVN installed
-  * Have installed SVN command line interface (CLI)
-* (Optional) Have [TortoiseSVN](https://tortoisesvn.net/) (for Windows) or [SnailSVN](https://langui.net/snailsvn) (for MacOS) installed.
+* You need to have SVN command line interface (CLI) installed.
+  * **TortoiseSVN (for Windows)** comes with CLI, but needs to be added on installing
+  ![SVN CLI](https://i.stack.imgur.com/ZquvH.png)
+  * **For MacOS or Linux**, select one of the options here: https://subversion.apache.org/packages.html
+* You need to have [TortoiseSVN](https://tortoisesvn.net/) (for Windows), [SnailSVN](https://langui.net/snailsvn) (for MacOS) or [RabbitVCS](http://rabbitvcs.org) (for Linux) installed.
 
-![SVN CLI](https://i.stack.imgur.com/ZquvH.png)
 
 
 

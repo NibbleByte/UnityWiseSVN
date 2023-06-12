@@ -1,6 +1,6 @@
 Title: Wise SVN
 
-Keywords: svn tortoisesvn snailsvn versioncontrol sourcecontrol files
+Keywords: svn tortoisesvn snailsvn rabbitvcs versioncontrol sourcecontrol files
 
 Description:
 &gt;&gt;&gt;
@@ -10,12 +10,14 @@ Description:
 <a href="https://openupm.com/packages/devlocker.versioncontrol.wisesvn">OpenUPM</a>
 &lt;&lt;&lt; <br />
 <br/>
-Simple but powerful SVN Integration for Unity 3D utilizing <a href="https://tortoisesvn.net">TortoiseSVN</a> (for Windows) or <a href="https://langui.net/snailsvn">SnailSVN</a> (for MacOS) user interface. A must have plugin if you use SVN as your version control system in your project.<br />
+Simple but powerful SVN Integration for Unity 3D utilizing <a href="https://tortoisesvn.net">TortoiseSVN</a> (for Windows), <a href="https://langui.net/snailsvn">SnailSVN</a> (for MacOS) or <a href="http://rabbitvcs.org">RabbitVCS</a> (for Linux) user interface. A must have plugin if you use SVN as your version control system in your project.<br />
 <br />
 <strong>======== Prerequisites ========</strong> <br />
-&#8226; Have SVN installed <br />
-&nbsp;&nbsp;&#8594; Have installed SVN command line interface (CLI) <br />
-&#8226; (Optional) Have <a href="https://tortoisesvn.net">TortoiseSVN</a> (for Windows) or <a href="https://langui.net/snailsvn">SnailSVN</a> (for MacOS) installed. <br />
+&#8226; You need to have SVN command line interface (CLI) installed. <br />
+&nbsp;&nbsp;&#8594; <strong>TortoiseSVN (for Windows)</strong> comes with CLI, <a href="https://i.stack.imgur.com/ZquvH.png">but needs to be added on installing</a> <br />
+&nbsp;&nbsp;&#8594; <strong>For MacOS or Linux</strong>, select one of the options here: <a href="https://subversion.apache.org/packages.html">https://subversion.apache.org/packages.html</a> <br />
+&#8226; Have <a href="https://tortoisesvn.net">TortoiseSVN</a> (for Windows), <a href="https://langui.net/snailsvn">SnailSVN</a> (for MacOS) or <a href="http://rabbitvcs.org">RabbitVCS</a> (for Linux) installed. <br />
+&#8226; Test if SVN CLI is accessible from the command line / terminal by typing "svn --version" <br />
 <br />
 <strong>======== Features ========</strong><br />
 &#8226; <em>Hooks up to Unity move and delete file operations and executes respective svn commands to stay in sync.</em><br />
@@ -49,12 +51,12 @@ Simple but powerful SVN Integration for Unity 3D utilizing <a href="https://tort
 &#8226; Minimal performance impact<br />
 &#8226; Survives assembly reloads<br />
 &#8226; You don't have to leave Unity to do SVN chores.<br />
-&#8226; Works on Windows and MacOS (maybe Linux?)<br />
+&#8226; Works on Windows, MacOS and Linux<br />
 <br />
 &#8226; Simple API to integrate with your tools.<br />
 &nbsp;&nbsp;&#8594; Use <em>WiseSVNIntegration.RequestSilence()</em> and <em>WiseSVNIntegration.ClearSilence()</em> to temporarily suppress any WiseSVN pop-ups. <br />
 &nbsp;&nbsp;&#8594; Use <em>WiseSVNIntegration.RequestTemporaryDisable()</em> and <em>WiseSVNIntegration.ClearTemporaryDisable()</em> to temporarily disable any WiseSVN handling of file operations and updates. <br />
-&nbsp;&nbsp;&#8594; Use <em>SVNContextMenusManager</em> methods to invoke TortoiseSVN / SnailSVN commands. <br />
+&nbsp;&nbsp;&#8594; Use <em>SVNContextMenusManager</em> methods to invoke TortoiseSVN / SnailSVN / RabbitVCS commands. <br />
 &nbsp;&nbsp;&#8594; Use <em>WiseSVNIntegration.*Async()</em> methods to run direct SVN commands without any GUI (check `ExampleStatusWindow`). <br />
 <br />
 <strong>======== Usage ========</strong><br />
