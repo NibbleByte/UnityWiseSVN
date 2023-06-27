@@ -505,6 +505,14 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			path = path.Replace('\\', '/');
 
+			// Only files can be locked.
+			// If repository is out of date it may receive entries for existing files on the server that are not present locally yet.
+			if (!File.Exists(path)) {
+				lockDetails.Path = path;
+				lockDetails.OperationResult = StatusOperationResult.TargetPathNotFound;
+				return lockDetails;
+			}
+
 			//
 			// Find the repository url of the path.
 			// We need to call "svn info [repo-url]" in order to get up to date repository information.
