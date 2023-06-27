@@ -295,8 +295,10 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			if (entriesList.Count == 0)
 				return;
 
+			var reporter = new WiseSVNIntegration.ResultConsoleReporter(true, WiseSVNIntegration.Silent, "SVNLockPromptDatabase Operations:");
+
 			var targetsFileToUse = FileUtil.GetUniqueTempPathInProject();   // Not thread safe - call in main thread only.
-			EnqueueOperation(op => WiseSVNIntegration.LockFiles(entriesList.Select(sd => sd.Path), forceLock, lockMessage, "", targetsFileToUse))
+			EnqueueOperation(op => WiseSVNIntegration.LockFiles(entriesList.Select(sd => sd.Path), forceLock, lockMessage, "", targetsFileToUse, WiseSVNIntegration.ONLINE_COMMAND_TIMEOUT, reporter))
 			.Completed += (op) => {
 				if (op.Result == LockOperationResult.NotSupported) {
 					Debug.LogError($"Locking failed, because server repository doesn't support locking. Assets failed to lock:\n{string.Join("\n", entriesList.Select(sd => sd.Path))}");
@@ -308,9 +310,12 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 					}
 					Debug.LogWarning($"Locking failed because server repository has newer changes. Please update first. Assets failed to lock:\n{string.Join("\n", entriesList.Select(sd => sd.Path))}");
 					EditorUtility.DisplayDialog("SVN Lock Prompt", "Lock failed. Check the logs for more info.", "I will!");
+
 				} else if (op.Result != LockOperationResult.Success) {
 					Debug.LogError($"Locking failed with result {op.Result} for assets:\n{string.Join("\n", entriesList.Select(sd => sd.Path))}.");
-					EditorUtility.DisplayDialog("SVN Lock Prompt", "Stealing lock failed. Check the logs for more info.", "I will!");
+					//EditorUtility.DisplayDialog("SVN Lock Prompt", "Stealing lock failed. Check the logs for more info.", "I will!");
+					reporter.Dispose();	// The reporter will pop up an error message.
+
 				} else if (shouldLog) {
 					Debug.Log($"Locked assets:\n{string.Join("\n", entriesList.Select(sd => sd.Path))}");
 				}
