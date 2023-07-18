@@ -52,6 +52,9 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 
 		public const string USER_ABORTED_LOG = "User aborted the operation...";
 
+		// If result error message contains this string token, the operation was interrupted due to time out.
+		public const string TIME_OUT_ERROR_TOKEN = "[ERR_TIME_OUT]";
+
 		public static ShellResult ExecuteCommand(string command, string args)
 		{
 			return ExecuteCommand(command, args, true);
@@ -216,7 +219,7 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 
 				// If process is still running, the timeout kicked in.
 				if (!process.HasExited) {
-					result.Error += $"Command [{shellArgs.Command} {shellArgs.Args}] timed out.";
+					result.Error += $"Command [{shellArgs.Command} {shellArgs.Args}] timed out. {TIME_OUT_ERROR_TOKEN}";
 				}
 			}
 
