@@ -86,15 +86,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		RemoteHasChanges,		// Newer version of the asset exists in the server repository. Update first.
 		NotSupported,			// Locking is not supported by the repository (for example, it is a github emulated svn).
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
-		UnknownError = 100,		// Failed for some reason.
-	}
-
-	public enum LockDetailsOperationResult
-	{
-		Success = 0,			// Operation succeeded.
-		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
-		NotSupported,			// Locking is not supported by the repository (for example, it is a github emulated svn).
-		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
+		Timeout = 90,			// Operation timed out.
 		UnknownError = 100,		// Failed for some reason.
 	}
 
@@ -104,6 +96,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		NotFound,				// URL target was not found.
 		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
+		Timeout = 90,			// Operation timed out.
 		UnknownError = 100,		// Failed for some reason.
 	}
 
@@ -113,6 +106,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		NotFound,				// URL target was not found.
 		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
+		Timeout = 90,			// Operation timed out.
 		UnknownError = 100,		// Failed for some reason.
 	}
 
@@ -120,6 +114,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	{
 		Success = 0,			// Operation succeeded.
 		NotFound,				// URL target was not found.
+		Timeout = 90,			// Operation timed out.
 		UnknownError = 100,		// Failed for some reason.
 	}
 
@@ -127,6 +122,7 @@ namespace DevLocker.VersionControl.WiseSVN
 	{
 		Success = 0,			// Operation succeeded.
 		NotFound,				// URL target was not found.
+		Timeout = 90,			// Operation timed out.
 		UnknownError = 100,		// Failed for some reason.
 	}
 
@@ -139,12 +135,14 @@ namespace DevLocker.VersionControl.WiseSVN
 		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
 		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
 		PrecommitHookError,		// Precommit hook denied the commit on the server side. Talk with your administrator about your commit company policies. Example: always commit with a valid message.
+		Timeout = 90,			// Operation timed out.
 		UnknownError = 100,		// Failed for any other reason.
 	}
 
 	public enum RevertOperationResult
 	{
 		Success = 0,			// Operation succeeded.
+		Timeout = 90,			// Operation timed out.
 		UnknownError = 100,		// Failed for any other reason.
 	}
 
@@ -171,7 +169,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		Success = 0,			// Operation succeeded.
 		SuccessWithConflicts,   // Update was successful, but some folders/files have conflicts.
 		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
-		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
+		UnableToConnectError,   // Unable to connect to repository indicating some network or server problems.
+		Timeout = 90,			// Operation timed out.
 		UnknownError = 100,		// Failed for any other reason.
 	}
 
@@ -183,6 +182,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		NotWorkingCopy,			// This can be returned when project is not a valid svn checkout. (Probably)
 		ExecutableNotFound,		// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
 		TargetPathNotFound,		// File or directory not found on disk.
+		Timeout = 90,			// Operation timed out.
 		UnknownError = 100,		// Failed for any other reason.
 	}
 
