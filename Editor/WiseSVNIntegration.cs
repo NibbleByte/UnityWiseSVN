@@ -2222,7 +2222,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					break;
 
 				default:
-					displayMessage = "SVN error happened while processing the assets. Check the logs.";
+					displayMessage = $"SVN \"{result}\" error occurred while processing the assets. Check the logs for more info.";
 					break;
 			}
 
