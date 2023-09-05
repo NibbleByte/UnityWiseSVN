@@ -259,10 +259,45 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 					}
 				}
 
-				// TODO: This still hangs sometimes. Last fix: added process.CancelOutputRead()
-				//		 Keep an eye if this keeps happening.
-				//		 Useful article: https://newbedev.com/process-sometimes-hangs-while-waiting-for-exit
-				process.Dispose();
+				//process.Dispose();
+				// TODO:
+				// This still hangs sometimes. Last fix: added process.CancelOutputRead()
+				// Useful article: https://newbedev.com/process-sometimes-hangs-while-waiting-for-exit
+				//
+				// Commenting it out for now as I can't fix it.
+				// Last hang encountered: processing a lot of assets after migration of Unity version. Unity hang for a lot of time.
+				// Breaking in with debugger yielded this stack:
+				//
+				// [Native Transition]
+				// WaitHandle.WaitOneNative()
+				// WaitHandle.InternalWaitOne()
+				// WaitHandle.WaitOne()
+				// WaitHandle.WaitOne()
+				// WaitHandle.WaitOne()
+				// AsyncStreamReader.Dispose()
+				// AsyncStreamReader.Close()
+				// Process.Close()
+				// Process.Dispose()
+				// Component.Dispose()
+				// ShellUtils.ExecuteCommand()
+				// ShellUtils.ExecuteCommand()
+				// WiseSVNIntegration.GetStatuses()
+				// WiseSVNIntegration.GetStatus()
+				// SVNStatusesDatabase.PostProcessAssets()
+				// SVNStatusesDatabaseAssetPostprocessor.OnPostprocessAllAssets()
+				// ...
+				// VisualEffectAssetModificationProcessor.OnWillSaveAssets()
+				// ...
+				// AssetModificationProcessorInternal.OnWillSaveAssets()
+				// ...
+				// MaterialPostprocessor.SaveAssetsToDisk()
+				// MaterialReimporter.<> c.< RegisterUpgraderReimport > b__2_0()
+				// EditorApplication.Internal_CallUpdateFunctions()
+				//
+				// The stream Dispose() kept waiting for signal. The wait handler kept returning WaitTimeout:
+				// https://github.com/microsoft/referencesource/blob/51cf7850defa8a17d815b4700b67116e3fa283c2/mscorlib/system/threading/waithandle.cs#L252
+				//
+				// Alternative: create a thread to dispose processes in a concurrent queue. If it hangs, nobody would care (may prevent Unity from closing in Batch mode?).
 			}
 
 			return result;
