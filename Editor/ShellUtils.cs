@@ -259,12 +259,17 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 					}
 				}
 
-				//process.Dispose();
-				// TODO:
-				// This still hangs sometimes. Last fix: added process.CancelOutputRead()
+				// HACK: Dispose sometimes hangs for unknown reason. Hope this helps. Let me know if another hang is experienced.
+				if (string.IsNullOrWhiteSpace(result.Output) && string.IsNullOrWhiteSpace(result.Error)) {
+					Thread.Sleep(50);
+				}
+
+				process.Dispose();
+				// This still hangs sometimes. Fixes tried:
+				// - added process.CancelOutputRead()
+				// - Sleep on empty result. I think it got stuck on empty result from GetStatus() for a file.
 				// Useful article: https://newbedev.com/process-sometimes-hangs-while-waiting-for-exit
 				//
-				// Commenting it out for now as I can't fix it.
 				// Last hang encountered: processing a lot of assets after migration of Unity version. Unity hang for a lot of time.
 				// Breaking in with debugger yielded this stack:
 				//
