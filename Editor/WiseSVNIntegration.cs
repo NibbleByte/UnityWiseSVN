@@ -1989,6 +1989,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				return AssetMoveResult.DidNotMove;
 
 			var oldStatusData = GetStatus(oldPath);
+			bool isFolder = Directory.Exists(oldPath);
 
 			if (oldStatusData.Status == VCFileStatus.Unversioned) {
 
@@ -2020,7 +2021,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				return AssetMoveResult.DidNotMove;
 			}
 
-			if (oldStatusData.IsConflicted || (Directory.Exists(oldPath) && HasAnyConflicts(oldPath))) {
+			if (oldStatusData.IsConflicted || (isFolder && HasAnyConflicts(oldPath))) {
 				if (Silent || EditorUtility.DisplayDialog(
 					"Conflicted files",
 					$"Failed to move the files\n\"{oldPath}\"\nbecause it has conflicts. Resolve them first!",
@@ -2032,6 +2033,23 @@ namespace DevLocker.VersionControl.WiseSVN
 				return AssetMoveResult.FailedMove;
 			}
 
+			if (m_PersonalPrefs.AskOnMovingFolders && isFolder && oldStatusData.Status != VCFileStatus.Unversioned && !Application.isBatchMode) {
+				if (!Silent && !EditorUtility.DisplayDialog(
+					"Move Versioned Folder?",
+					$"Do you really want to move this folder in SVN?\n\"{oldPath}\"",
+					"Yes",
+					"No"
+#if UNITY_2019_4_OR_NEWER
+					, DialogOptOutDecisionType.ForThisSession, "WiseSVN.AskOnMovingFolders"
+				)) {
+#else
+				)) {
+#endif
+					Debug.Log($"User aborted move of folder \"{oldPath}\".");
+					return AssetMoveResult.FailedMove;
+				}
+			}
+
 			using (var reporter = CreateReporter()) {
 
 				if (!CheckAndAddParentFolderIfNeeded(newPath, true, reporter))
@@ -2039,7 +2057,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 
 				if (m_ProjectPrefs.MoveBehaviour == SVNMoveBehaviour.UseAddAndDeleteForAllAssets ||
-					m_ProjectPrefs.MoveBehaviour == SVNMoveBehaviour.UseAddAndDeleteForFolders && Directory.Exists(oldPath)
+					m_ProjectPrefs.MoveBehaviour == SVNMoveBehaviour.UseAddAndDeleteForFolders && isFolder
 					) {
 
 					return MoveAssetByAddDeleteOperations(oldPath, newPath, reporter)

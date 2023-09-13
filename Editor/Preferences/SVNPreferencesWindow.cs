@@ -285,6 +285,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 			EditorGUI.EndDisabledGroup();
 
+			m_PersonalPrefs.AskOnMovingFolders = EditorGUILayout.Toggle(new GUIContent("Ask On Moving Folders", "Ask for confirmation when moving folders inside Unity."), m_PersonalPrefs.AskOnMovingFolders);
+
 			m_PersonalPrefs.SvnCLIPath = EditorGUILayout.TextField(new GUIContent("SVN CLI Path", "Specify SVN CLI (svn.exe) binary path to use or leave empty for the defaults.\n\nNOTE: this will override the project preference. Coordinate this with your team."), m_PersonalPrefs.SvnCLIPath);
 
 			m_PersonalPrefs.ContextMenusClient = (ContextMenusClient)EditorGUILayout.EnumPopup(new GUIContent("Context menus client", "Select what client should be used with the context menus."), m_PersonalPrefs.ContextMenusClient);
