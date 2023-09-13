@@ -45,6 +45,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			public BoolPreference DownloadRepositoryChanges = BoolPreference.SameAsProjectPreference;
 			public bool AutoLockOnModified = false;
 			public bool WarnForPotentialConflicts = true;
+			public bool AskOnMovingFolders = true;
 
 			public int AutoRefreshDatabaseInterval = 60;    // seconds; Less than 0 will disable it.
 			public ContextMenusClient ContextMenusClient = ContextMenusClient.TortoiseSVN;
