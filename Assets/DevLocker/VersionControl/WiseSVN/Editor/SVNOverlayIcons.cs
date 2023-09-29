@@ -25,6 +25,8 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private static GUIContent m_DataIsIncompleteWarning;
 
+		private static int? m_RefreshProgressId;
+
 		static SVNOverlayIcons()
 		{
 			SVNPreferencesManager.Instance.PreferencesChanged += PreferencesChanged;
@@ -58,10 +60,34 @@ namespace DevLocker.VersionControl.WiseSVN
 			SVNStatusesDatabase.Instance.m_GlobalIgnoresCollected = false;
 			SVNStatusesDatabase.Instance.InvalidateDatabase();
 			LockPrompting.SVNLockPromptDatabase.Instance.ClearKnowledge();
+
+			if (m_RefreshProgressId.HasValue) {
+				EditorApplication.update -= UpdateDatabaseRefreshProgress;
+				Progress.Remove(m_RefreshProgressId.Value);
+				m_RefreshProgressId = null;
+			}
+
+			m_RefreshProgressId = Progress.Start("SVN Refresh", $"Checking all svn statuses...", Progress.Options.Indefinite);
+			EditorApplication.update += UpdateDatabaseRefreshProgress;
+		}
+
+		private static void UpdateDatabaseRefreshProgress()
+		{
+			// This called once after OnDatabaseChanged(), as it is in the EditorApplication.update event itself and is already queued for call.
+			// It's called after the m_ProgressId is cleared.
+			if (m_RefreshProgressId.HasValue) {
+				Progress.Report(m_RefreshProgressId.Value, 0.5f);
+			}
 		}
 
 		private static void OnDatabaseChanged()
 		{
+			if (m_RefreshProgressId.HasValue) {
+				EditorApplication.update -= UpdateDatabaseRefreshProgress;
+				Progress.Remove(m_RefreshProgressId.Value);
+				m_RefreshProgressId = null;
+			}
+
 			EditorApplication.RepaintProjectWindow();
 		}
 
