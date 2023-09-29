@@ -43,7 +43,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		};
 
 		public const string PROJECT_PREFERENCES_MENU = "Assets/SVN/SVN Preferences";
-		[MenuItem(PROJECT_PREFERENCES_MENU, false, SVNContextMenusManager.MenuItemPriorityStart + 130)]
+		[MenuItem(PROJECT_PREFERENCES_MENU, false, SVNContextMenusManager.MenuItemPriorityStart + 150)]
 		public static void ShowProjectPreferences()
 		{
 			ShowProjectPreferences(PreferencesTab.Personal);

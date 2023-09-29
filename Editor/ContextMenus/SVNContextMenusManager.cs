@@ -167,27 +167,27 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			}
 		}
 
-		[MenuItem("Assets/SVN/Diff \u2044 Resolve", true, MenuItemPriorityStart)]
+		[MenuItem("Assets/SVN/\U0001F50D  Diff \u2044 Resolve", true, MenuItemPriorityStart)]
 		public static bool DiffResolveValidate()
 		{
 			// Might be cool to return false if SVN status is normal or unversioned, but that might slow down the context menu.
 			return Selection.assetGUIDs.Length == 1;
 		}
 
-		[MenuItem("Assets/SVN/Diff \u2044 Resolve", false, MenuItemPriorityStart)]
+		[MenuItem("Assets/SVN/\U0001F50D  Diff \u2044 Resolve", false, MenuItemPriorityStart)]
 		public static void DiffResolve()
 		{
 			CheckChangesSelected();
 		}
 
-		[MenuItem("Assets/SVN/Check Changes All", false, MenuItemPriorityStart + 5)]
+		[MenuItem("Assets/SVN/\U0001F50D  Check Changes All", false, MenuItemPriorityStart + 5)]
 		public static void CheckChangesAll()
 		{
 			// TortoiseSVN handles nested repositories gracefully. SnailSVN - not so much. :(
 			m_Integration?.CheckChanges(GetRootAssetPath().Concat(SVNStatusesDatabase.Instance.NestedRepositories), false);
 		}
 
-		[MenuItem("Assets/SVN/Check Changes", false, MenuItemPriorityStart + 5)]
+		[MenuItem("Assets/SVN/\U0001F50D  Check Changes", false, MenuItemPriorityStart + 6)]
 		public static void CheckChangesSelected()
 		{
 			if (Selection.assetGUIDs.Length > 1) {
@@ -234,7 +234,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Update All", false, MenuItemPriorityStart + 20)]
+		[MenuItem("Assets/SVN/\u2935  Update All", false, MenuItemPriorityStart + 20)]
 		public static void UpdateAll()
 		{
 			// It is recommended to freeze Unity while updating.
@@ -260,14 +260,14 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Commit All", false, MenuItemPriorityStart + 40)]
+		[MenuItem("Assets/SVN/\u2197  Commit All", false, MenuItemPriorityStart + 40)]
 		public static void CommitAll()
 		{
 			// TortoiseSVN handles nested repositories gracefully. SnailSVN - not so much. :(
 			m_Integration?.Commit(GetRootAssetPath().Concat(SVNStatusesDatabase.Instance.NestedRepositories), false);
 		}
 
-		[MenuItem("Assets/SVN/Commit", false, MenuItemPriorityStart + 40)]
+		[MenuItem("Assets/SVN/\u2197  Commit", false, MenuItemPriorityStart + 41)]
 		public static void CommitSelected()
 		{
 			var paths = GetSelectedAssetPaths().ToList();
@@ -298,7 +298,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Add", false, MenuItemPriorityStart + 40)]
+		[MenuItem("Assets/SVN/\u271A  Add", false, MenuItemPriorityStart + 45)]
 		public static void AddSelected()
 		{
 			m_Integration?.Add(GetSelectedAssetPaths(), true);
@@ -311,14 +311,14 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Revert All", false, MenuItemPriorityStart + 60)]
+		[MenuItem("Assets/SVN/\u21A9  Revert All", false, MenuItemPriorityStart + 60)]
 		public static void RevertAll()
 		{
 			// TortoiseSVN handles nested repositories gracefully. SnailSVN - not so much. :(
 			m_Integration?.Revert(GetRootAssetPath().Concat(SVNStatusesDatabase.Instance.NestedRepositories), false, true);
 		}
 
-		[MenuItem("Assets/SVN/Revert", false, MenuItemPriorityStart + 60)]
+		[MenuItem("Assets/SVN/\u21A9  Revert", false, MenuItemPriorityStart + 61)]
 		public static void RevertSelected()
 		{
 			var paths = GetSelectedAssetPaths().ToList();
@@ -356,7 +356,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Resolve All", false, MenuItemPriorityStart + 60)]
+		[MenuItem("Assets/SVN/\u26A0  Resolve All", false, MenuItemPriorityStart + 65)]
 		private static void ResolveAllMenu()
 		{
 			m_Integration?.ResolveAll(false);
@@ -413,7 +413,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			return false;
 		}
 
-		[MenuItem("Assets/SVN/Get Locks", false, MenuItemPriorityStart + 80)]
+		[MenuItem("Assets/SVN/\U0001F512  Get Locks", false, MenuItemPriorityStart + 80)]
 		public static void GetLocksSelected()
 		{
 			if (m_Integration != null) {
@@ -432,7 +432,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Release Locks", false, MenuItemPriorityStart + 80)]
+		[MenuItem("Assets/SVN/\U0001F513  Release Locks", false, MenuItemPriorityStart + 85)]
 		public static void ReleaseLocksSelected()
 		{
 			if (m_Integration != null) {
@@ -449,13 +449,13 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Show Log All", false, MenuItemPriorityStart + 100)]
+		[MenuItem("Assets/SVN/\u2631  Show Log All", false, MenuItemPriorityStart + 100)]
 		public static void ShowLogAll()
 		{
 			m_Integration?.ShowLog(GetRootAssetPath().First());
 		}
 
-		[MenuItem("Assets/SVN/Show Log", false, MenuItemPriorityStart + 100)]
+		[MenuItem("Assets/SVN/\u2631  Show Log", false, MenuItemPriorityStart + 101)]
 		public static void ShowLogSelected()
 		{
 			m_Integration?.ShowLog(GetSelectedAssetPaths().FirstOrDefault());
@@ -466,7 +466,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			m_Integration?.ShowLog(assetPath, wait);
 		}
 
-		[MenuItem("Assets/SVN/Repo Browser", false, MenuItemPriorityStart + 102)]
+		[MenuItem("Assets/SVN/\U0001F4C1  Repo Browser", false, MenuItemPriorityStart + 104)]
 		public static void RepoBrowserSelected()
 		{
 			m_Integration?.RepoBrowser(GetSelectedAssetPaths().Select(WiseSVNIntegration.AssetPathToURL).FirstOrDefault());
@@ -481,7 +481,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		}
 
 
-		[MenuItem("Assets/SVN/Blame", false, MenuItemPriorityStart + 104)]
+		[MenuItem("Assets/SVN/\U0001F440  Blame", false, MenuItemPriorityStart + 106)]
 		public static void BlameSelected()
 		{
 			m_Integration?.Blame(GetSelectedAssetPaths().FirstOrDefault());
@@ -494,7 +494,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 		// Feature is working, but menu is commented out so it doesn't clutter the interface.
 		// Uncomment next line if you really want to do svn ignores in Unity.
-		//[MenuItem("Assets/SVN/Ignore Toggle", false, MenuItemPriorityStart + 105)]
+		//[MenuItem("Assets/SVN/\u26D4  Ignore Toggle", false, MenuItemPriorityStart + 108)]
 		public static void IgnoreToggleSelected()
 		{
 			IgnoreToggle(GetSelectedAssetPaths().FirstOrDefault());
@@ -577,7 +577,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 
 
 
-		[MenuItem("Assets/SVN/Cleanup", false, MenuItemPriorityStart + 106)]
+		[MenuItem("Assets/SVN/\U0001F9F9  Cleanup", false, MenuItemPriorityStart + 110)]
 		public static void Cleanup()
 		{
 			m_Integration?.Cleanup(true);
