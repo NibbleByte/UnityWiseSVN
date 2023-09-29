@@ -130,7 +130,7 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 
 		private const float ToolbarsTitleWidth = 70f;
 
-		[MenuItem("Assets/SVN/Branch Selector", false, SVNContextMenusManager.MenuItemPriorityStart + 120)]
+		[MenuItem("Assets/SVN/Branch Selector", false, SVNContextMenusManager.MenuItemPriorityStart + 140)]
 		private static void OpenBranchesSelector()
 		{
 			var window = CreateInstance<SVNBranchSelectorWindow>();
@@ -162,9 +162,15 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 			ToolbarTitleStyle = new GUIStyle(ToolbarLabelStyle);
 			ToolbarTitleStyle.font = EditorStyles.boldFont;
 
+#if UNITY_2022_3_OR_NEWER
+			SearchFieldStyle = GUI.skin.GetStyle("ToolbarSearchTextField");
+			SearchFieldCancelStyle = GUI.skin.GetStyle("ToolbarSearchCancelButton");
+			SearchFieldCancelEmptyStyle = GUI.skin.GetStyle("ToolbarSearchCancelButtonEmpty");
+#else
 			SearchFieldStyle = GUI.skin.GetStyle("ToolbarSeachTextField");
 			SearchFieldCancelStyle = GUI.skin.GetStyle("ToolbarSeachCancelButton");
 			SearchFieldCancelEmptyStyle = GUI.skin.GetStyle("ToolbarSeachCancelButtonEmpty");
+#endif
 
 			const string showLogTooltip = "Show Log in this branch at the target asset.";
 			RepoBrowserContent = Preferences.SVNPreferencesManager.LoadTexture("Editor/BranchesIcons/SVN-RepoBrowser", "Repo-Browser in this branch at the target asset.");

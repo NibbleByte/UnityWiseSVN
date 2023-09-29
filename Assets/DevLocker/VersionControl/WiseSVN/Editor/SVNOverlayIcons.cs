@@ -50,7 +50,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		}
 
 		public const string InvalidateDatabaseMenuText = "Assets/SVN/Refresh Icons && Locks";
-		[MenuItem(InvalidateDatabaseMenuText, false, ContextMenus.SVNContextMenusManager.MenuItemPriorityStart + 125)]
+		[MenuItem(InvalidateDatabaseMenuText, false, ContextMenus.SVNContextMenusManager.MenuItemPriorityStart + 145)]
 		public static void InvalidateDatabaseMenu()
 		{
 			WiseSVNIntegration.ClearLastDisplayedError();
