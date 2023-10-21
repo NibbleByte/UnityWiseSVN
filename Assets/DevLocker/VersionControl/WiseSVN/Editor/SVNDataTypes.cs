@@ -334,7 +334,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		public string Path;
 		public string Value;
 
-		public string[] Lines => Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+		public string[] Lines => Value.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
 		public override string ToString()
 		{

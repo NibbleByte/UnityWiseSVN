@@ -523,7 +523,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 				reporter.ResetErrorFlag();
 
 				List<string> lines = (propgetEntries.FirstOrDefault().Value ?? "")
-					.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+					.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
 					.Select(l => l.Trim()).ToList();
 
 				if (lines.Contains(fileName) || lines.Contains(fileName + ".meta")) {
@@ -564,7 +564,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 					lines.Add(fileName + ".meta");
 				}
 
-				string propValue = string.Join('\n', lines);
+				string propValue = string.Join("\n", lines);
 
 				result = WiseSVNIntegration.Propset(parentDirectory, "svn:ignore", propValue, false, WiseSVNIntegration.COMMAND_TIMEOUT, reporter);
 
