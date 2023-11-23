@@ -124,6 +124,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 						SVNStatusesDatabase.Instance.m_GlobalIgnoresCollected = false;
 						SVNStatusesDatabase.Instance.InvalidateDatabase();
 						SVNBranchesDatabase.Instance.InvalidateDatabase();
+						SVNLockedOverlay.Instance.ClearCache();
 						SVNLockPromptDatabaseStarter.TryStartIfNeeded();
 
 						SVNPreferencesManager.Instance.CheckSVNSupport();
