@@ -47,6 +47,12 @@ namespace DevLocker.VersionControl.WiseSVN
 		[NonSerialized]
 		private GUIStyle m_MessageStyle;
 
+		[SerializeField]
+		private bool m_UserClosedOverlay = false;
+
+		[NonSerialized]
+		private bool m_DatabaseChanged = false;
+
 		private SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
 
 		private bool IsActive => m_PersonalPrefs.EnableCoreIntegration
@@ -59,6 +65,12 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			SVNPreferencesManager.Instance.PreferencesChanged += PreferencesChanged;
 			SVNStatusesDatabase.Instance.DatabaseChanged += OnDatabaseChanged;
+		}
+
+		public void ClearCache()
+		{
+			m_CurrentScenes.Clear();
+			m_CurrentPrefabPath = string.Empty;
 		}
 
 		private GUIStyle GetMessageStyle()
@@ -98,6 +110,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private void OnDatabaseChanged()
 		{
+			m_DatabaseChanged = true;
 			EditorApplication.RepaintProjectWindow();
 		}
 
@@ -145,21 +158,13 @@ namespace DevLocker.VersionControl.WiseSVN
 			m_SceneMessage = m_SceneMessage.TrimEnd('\n');
 
 			m_SceneMessageWidth = GetMessageStyle().CalcSize(new GUIContent(m_SceneMessage)).x;
+
+			m_UserClosedOverlay = false;
 		}
 
 		private void CheckPrefab()
 		{
-#if UNITY_2021_3_OR_NEWER
-			var stage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
-#else
-			var stage = UnityEditor.Experimental.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
-#endif
-
-#if UNITY_2020_1_OR_NEWER
-			string prefabPath = stage?.assetPath ?? string.Empty;
-#else
-			string prefabPath = stage?.prefabAssetPath ?? string.Empty;
-#endif
+			string prefabPath = GetOpenedPrefabPath();
 
 			bool prefabIsOpen = !string.IsNullOrEmpty(prefabPath);
 			bool prefabWasOpen = !string.IsNullOrEmpty(m_CurrentPrefabPath);
@@ -173,6 +178,21 @@ namespace DevLocker.VersionControl.WiseSVN
 				RefreshPrefabMessage(prefabPath);
 				return;
 			}
+		}
+
+		private string GetOpenedPrefabPath()
+		{
+#if UNITY_2021_3_OR_NEWER
+			var stage = UnityEditor.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+#else
+			var stage = UnityEditor.Experimental.SceneManagement.PrefabStageUtility.GetCurrentPrefabStage();
+#endif
+
+#if UNITY_2020_1_OR_NEWER
+			return stage?.assetPath ?? string.Empty;
+#else
+			return = stage?.prefabAssetPath ?? string.Empty;
+#endif
 		}
 
 		private void RefreshPrefabMessage(string prefabPath)
@@ -195,6 +215,8 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			m_PrefabMessageWidth = GetMessageStyle().CalcSize(new GUIContent(m_PrefabMessage)).x;
+
+			m_UserClosedOverlay = false;
 		}
 
 		private void SceneViewOnGUI(SceneView sceneView)
@@ -208,8 +230,20 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			CheckPrefab();
 
+			// Force refresh with database as status may have changed.
+			// Call this in OnGUI as refresh calls GUI functions for calculating text width that can run only here.
+			if (m_DatabaseChanged) {
+				if (!m_UserClosedOverlay) {
+					RefreshScenesMessage();
+					RefreshPrefabMessage(GetOpenedPrefabPath());
+				}
 
-			if (!string.IsNullOrEmpty(m_SceneMessage) && string.IsNullOrEmpty(m_CurrentPrefabPath) || !string.IsNullOrEmpty(m_PrefabMessage)) {
+				m_DatabaseChanged = false;
+			}
+
+			bool hasMessage = !string.IsNullOrEmpty(m_SceneMessage) && string.IsNullOrEmpty(m_CurrentPrefabPath) || !string.IsNullOrEmpty(m_PrefabMessage);
+
+			if (!m_UserClosedOverlay && hasMessage) {
 				string targetMessage = string.IsNullOrEmpty(m_PrefabMessage) ? m_SceneMessage : m_PrefabMessage;
 				float targetWidth = string.IsNullOrEmpty(m_PrefabMessage) ? m_SceneMessageWidth : m_PrefabMessageWidth;
 
@@ -242,11 +276,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				GUI.color = Color.white;
 
 				if (GUI.Button(closeRect, "X")) {
-					if (string.IsNullOrEmpty(m_PrefabMessage)) {
-						m_SceneMessage = string.Empty;
-					} else {
-						m_PrefabMessage = string.Empty;
-					}
+					m_UserClosedOverlay = true;
 				}
 
 				GUI.color = prevColor;
