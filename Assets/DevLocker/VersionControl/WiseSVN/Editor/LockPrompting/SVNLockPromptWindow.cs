@@ -226,6 +226,8 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 			m_LockEntriesScroll = EditorGUILayout.BeginScrollView(m_LockEntriesScroll);
 
+			bool hasSelected = false;
+
 			foreach (var lockEntry in m_LockEntries) {
 
 				SVNStatusData statusData = lockEntry.StatusData;
@@ -243,6 +245,8 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 				const float LockCheckBoxWidth = 14;
 				GUILayout.Space(LockColumnSize - LockCheckBoxWidth);
 				lockEntry.ShouldLock = EditorGUILayout.Toggle(lockEntry.ShouldLock, GUILayout.Width(LockCheckBoxWidth)) && !shouldDisableRow;
+
+				hasSelected |= lockEntry.ShouldLock;
 
 				// NOTE: This is copy-pasted below.
 				EditorGUI.BeginDisabledGroup(!lockEntry.ShouldLock);
@@ -425,6 +429,8 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 				Close();
 			}
 
+			EditorGUI.BeginDisabledGroup(!hasSelected);
+
 			GUI.backgroundColor = m_AllowStealingLocks ? Color.red : Color.green;
 			var lockSelectedButtonText = m_AllowStealingLocks ? "Lock OR STEAL Selected" : "Lock Selected";
 
@@ -440,6 +446,8 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 				Close();
 			}
 			GUI.backgroundColor = prevBackgroundColor;
+
+			EditorGUI.EndDisabledGroup();
 
 			EditorGUILayout.EndHorizontal();
 		}
