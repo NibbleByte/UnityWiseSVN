@@ -74,18 +74,26 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 			AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
 			m_Name = name;
 
-			// Assembly reload might have killed the working thread leaving pending update.
-			// Do it again.
-			if (m_PendingUpdate) {
+			if (freshlyCreated) {
+				InvalidateDatabase();
+				
+			} else {
+				EditorApplication.delayCall -= InvalidateDatabase; // Just in case.
+
 				if (IsActive) {
-					StartDatabaseUpdate();
+					
+					// Assembly reload might have killed the working thread leaving pending update.
+					// Do it again.
+					if (m_PendingUpdate) {
+						
+						// Wait one frame so editor stabilizes, otherwise some "svn info ..." commands return empty results (empty lock details).
+						// They still do, but it's more rare now :(
+						EditorApplication.delayCall += StartDatabaseUpdate;
+					}
+					
 				} else {
 					m_PendingUpdate = false;
 				}
-			}
-
-			if (freshlyCreated) {
-				InvalidateDatabase();
 			}
 		}
 
@@ -146,6 +154,7 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 
 			try {
 				m_WorkerThread = new System.Threading.Thread(GatherData);
+				m_WorkerThread.Name = GetType().Name + "-Worker";
 				m_WorkerThread.Start();
 
 			} catch (Exception ex) {
@@ -274,6 +283,13 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 			// Will be done on assembly reload.
 			if (EditorApplication.isCompiling) {
 				m_PendingUpdate = true;
+				return;
+			}
+
+			// Don't start the process while assets are being processed.
+			if (EditorApplication.isUpdating) {
+				EditorApplication.delayCall -= InvalidateDatabase;
+				EditorApplication.delayCall += InvalidateDatabase;
 				return;
 			}
 

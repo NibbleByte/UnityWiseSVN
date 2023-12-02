@@ -249,6 +249,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		public bool IsValid => !string.IsNullOrEmpty(Path) && OperationResult == StatusOperationResult.Success;
 
 		public static LockDetails Empty => new LockDetails() {Path = string.Empty, Owner = string.Empty, Message = string.Empty, Date = string.Empty, OperationResult = StatusOperationResult.Success};
+		
+		// HACK: used to check if returned response was empty, as it sometimes happen after assembly reload, unclear why.
+		internal bool m_GotEmptyResponse;
 
 		public bool Equals(LockDetails other)
 		{
