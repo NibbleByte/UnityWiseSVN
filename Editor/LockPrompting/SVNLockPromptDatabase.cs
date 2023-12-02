@@ -239,7 +239,10 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 			for(int i = 0; i < m_KnownData.Count; ++i) {
 				var knownData = m_KnownData[i];
 				if (knownData.Path == statusData.Path) {
-					if (knownData.EqualStatuses(statusData, false)) {
+					// Compare statuses including lock & remote ones, but exclude fetched lock details as we don't care if owner or date changed.
+					if (knownData.EqualStatuses(statusData, true)
+					    && knownData.LockStatus == statusData.LockStatus 
+					    && knownData.RemoteStatus == statusData.RemoteStatus) {
 						return false;
 					} else {
 						m_KnownData[i] = statusData;

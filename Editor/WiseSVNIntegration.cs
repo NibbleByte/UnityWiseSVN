@@ -557,6 +557,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					}
 
 					lockDetails.OperationResult = StatusOperationResult.UnknownError;
+					lockDetails.m_GotEmptyResponse = string.IsNullOrEmpty(result.Output) && string.IsNullOrEmpty(result.Error);
 					return lockDetails;
 				}
 			}
@@ -602,6 +603,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					}
 
 					lockDetails.OperationResult = StatusOperationResult.UnknownError;
+					lockDetails.m_GotEmptyResponse = string.IsNullOrEmpty(result.Output) && string.IsNullOrEmpty(result.Error);
 					return lockDetails;
 				}
 
@@ -2344,6 +2346,14 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (!offline && fetchLockDetails) {
 						if (statusData.LockStatus != VCLockStatus.NoLock && statusData.LockStatus != VCLockStatus.BrokenLock) {
 							statusData.LockDetails = FetchLockDetails(statusData.Path, timeout, shellMonitor);
+							
+							// HACK: sometimes "svn info ..." commands return empty results (empty lock details) after assembly reload.
+							//		 if that happens, try a few more times.
+							for (int i = 0; i < 3 && statusData.LockDetails.m_GotEmptyResponse; ++i) {
+								System.Threading.Thread.Sleep(20);
+								statusData.LockDetails = FetchLockDetails(statusData.Path, timeout, shellMonitor);
+								//Debug.LogError($"Attempt {i} {statusData.LockDetails.m_GotEmptyResponse} {statusData.Path}");
+							}
 						}
 					}
 
