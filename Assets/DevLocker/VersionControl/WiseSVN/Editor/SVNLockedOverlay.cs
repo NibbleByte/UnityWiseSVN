@@ -191,7 +191,7 @@ namespace DevLocker.VersionControl.WiseSVN
 #if UNITY_2020_1_OR_NEWER
 			return stage?.assetPath ?? string.Empty;
 #else
-			return = stage?.prefabAssetPath ?? string.Empty;
+			return stage?.prefabAssetPath ?? string.Empty;
 #endif
 		}
 
