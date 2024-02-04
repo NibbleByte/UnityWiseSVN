@@ -32,9 +32,14 @@ namespace DevLocker.VersionControl.WiseSVN
 		[SerializeField]
 		private float m_SceneMessageWidth;
 		[SerializeField]
+		private GUIContent m_SceneMessageIcon;
+
+		[SerializeField]
 		private string m_PrefabMessage;
 		[SerializeField]
 		private float m_PrefabMessageWidth;
+		[SerializeField]
+		private GUIContent m_PrefabMessageIcon;
 
 
 
@@ -82,6 +87,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				m_MessageStyle.active.textColor = Color.white;
 				m_MessageStyle.focused.textColor = Color.white;
 				m_MessageStyle.hover.textColor = Color.white;
+				m_MessageStyle.contentOffset = new Vector2(0f, -2f);
 			}
 
 			return m_MessageStyle;
@@ -147,10 +153,15 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				if (statusData.RemoteStatus != VCRemoteFileStatus.None) {
 					m_SceneMessage += $"Scene \"{scene.name}\" is out of date in SVN!\n";
+					m_SceneMessageIcon = SVNPreferencesManager.Instance.GetRemoteStatusIconContent(VCRemoteFileStatus.Modified);
+
 				} else if (statusData.LockStatus == VCLockStatus.LockedOther || statusData.LockStatus == VCLockStatus.LockedButStolen) {
 					m_SceneMessage += $"Scene \"{scene.name}\" is locked by {statusData.LockDetails.Owner} in SVN!\n";
+					m_SceneMessageIcon = SVNPreferencesManager.Instance.GetLockStatusIconContent(VCLockStatus.LockedOther);
+
 				} else if (statusData.LockStatus == VCLockStatus.BrokenLock) {
 					m_SceneMessage += $"Scene \"{scene.name}\" lock is broken in SVN!\n";
+					m_SceneMessageIcon = SVNPreferencesManager.Instance.GetLockStatusIconContent(VCLockStatus.BrokenLock);
 				}
 
 			}
@@ -206,10 +217,15 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				if (statusData.RemoteStatus != VCRemoteFileStatus.None) {
 					m_PrefabMessage = $"Prefab \"{Path.GetFileNameWithoutExtension(prefabPath)}\" is out of date in SVN!";
+					m_PrefabMessageIcon = SVNPreferencesManager.Instance.GetRemoteStatusIconContent(VCRemoteFileStatus.Modified);
+
 				} else if (statusData.LockStatus == VCLockStatus.LockedOther || statusData.LockStatus == VCLockStatus.LockedButStolen) {
 					m_PrefabMessage = $"Prefab \"{Path.GetFileNameWithoutExtension(prefabPath)}\" is locked by {statusData.LockDetails.Owner} in SVN!";
+					m_PrefabMessageIcon = SVNPreferencesManager.Instance.GetLockStatusIconContent(VCLockStatus.LockedOther);
+
 				} else if (statusData.LockStatus == VCLockStatus.BrokenLock) {
 					m_PrefabMessage = $"Prefab \"{Path.GetFileNameWithoutExtension(prefabPath)}\" lock is broken in SVN!";
+					m_PrefabMessageIcon = SVNPreferencesManager.Instance.GetLockStatusIconContent(VCLockStatus.BrokenLock);
 				}
 
 			}
@@ -246,6 +262,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			if (!m_UserClosedOverlay && hasMessage) {
 				string targetMessage = string.IsNullOrEmpty(m_PrefabMessage) ? m_SceneMessage : m_PrefabMessage;
 				float targetWidth = string.IsNullOrEmpty(m_PrefabMessage) ? m_SceneMessageWidth : m_PrefabMessageWidth;
+				GUIContent icon = string.IsNullOrEmpty(m_PrefabMessage) ? m_SceneMessageIcon : m_PrefabMessageIcon;
 
 				float width = Mathf.Max(300, targetWidth + 40f);
 				const float height = 70f;
@@ -264,11 +281,17 @@ namespace DevLocker.VersionControl.WiseSVN
 				closeRect.y = messageRect.y - closeOffset;
 				closeRect.width = closeRect.height = closeSize;
 
+				Rect iconRect = new Rect();
+				iconRect.width = iconRect.height = 40f;
+				iconRect.x = messageRect.x + messageRect.width / 2f - iconRect.width / 2f;
+				iconRect.y = messageRect.y + messageRect.height - iconRect.height / 2f - 4f;
+
 				var prevBackgroundColor = GUI.backgroundColor;
 				GUI.backgroundColor = Color.red;
 
 
 				GUI.Box(messageRect, targetMessage, GetMessageStyle());
+				GUI.Label(iconRect, icon);
 
 				// HACK: the text color of the box is done in the style, because it breaks
 				//		 when unity starts and displays it immediately.
