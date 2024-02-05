@@ -66,9 +66,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		private SVNPreferencesManager.PersonalPreferences m_PersonalPrefs => SVNPreferencesManager.Instance.PersonalPrefs;
 		private SVNPreferencesManager.ProjectPreferences m_ProjectPrefs => SVNPreferencesManager.Instance.ProjectPrefs;
 
-		private SVNPreferencesManager.PersonalPreferences m_PersonalCachedPrefs;
-		private SVNPreferencesManager.ProjectPreferences m_ProjectCachedPrefs;
-		private bool m_DownloadRepositoryChangesCached = false;
+		private volatile SVNPreferencesManager.PersonalPreferences m_PersonalCachedPrefs;
+		private volatile SVNPreferencesManager.ProjectPreferences m_ProjectCachedPrefs;
+		private volatile bool m_DownloadRepositoryChangesCached = false;
 
 
 		/// <summary>
@@ -85,18 +85,18 @@ namespace DevLocker.VersionControl.WiseSVN
 		public override double RefreshInterval => m_PersonalPrefs.AutoRefreshDatabaseInterval;
 
 		// Any assets contained in these folders are considered unversioned.
-		private string[] m_UnversionedFolders = new string[0];
+		private volatile string[] m_UnversionedFolders = new string[0];
 
 		// Nested SVN repositories (that have ".svn" in them). NOTE: These are not external, just check-out inside check-out.
 		public IReadOnlyCollection<string> NestedRepositories => Array.AsReadOnly(m_NestedRepositories);
-		private string[] m_NestedRepositories = new string[0];
+		private volatile string[] m_NestedRepositories = new string[0];
 
 		// SVN-Ignored files and folders.
-		private string[] m_IgnoredEntries = new string[0];
+		private volatile string[] m_IgnoredEntries = new string[0];
 		// SVN-Global-ignored entries are stored separately as they are checked only once, because they are much slower.
-		private string[] m_GlobalIgnoredEntries = new string[0];
+		private volatile string[] m_GlobalIgnoredEntries = new string[0];
 
-		public bool m_GlobalIgnoresCollected = false;
+		public volatile bool m_GlobalIgnoresCollected = false;
 
 		/// <summary>
 		/// The collected statuses are not complete due to some reason (for example, they were too many).
@@ -198,7 +198,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					}
 				}
 
-				timings.AppendLine("Gather Status Data - " + (stopwatch.ElapsedMilliseconds / 1000f));
+				timings.AppendLine($"Gather {statuses.Count} Status Data - {stopwatch.ElapsedMilliseconds / 1000f}s");
 				stopwatch.Restart();
 
 
@@ -207,13 +207,13 @@ namespace DevLocker.VersionControl.WiseSVN
 #if UNITY_2018_4_OR_NEWER
 					GatherIgnoresInThread("Packages", ignoredEntries, reporter);
 #endif
-					timings.AppendLine("Gather svn:ignore - " + (stopwatch.ElapsedMilliseconds / 1000f));
+					timings.AppendLine($"Gather {ignoredEntries.Count} ignores - {stopwatch.ElapsedMilliseconds / 1000f}s");
 					stopwatch.Restart();
 
 					if (!m_GlobalIgnoresCollected) {
 						GatherGlobalIgnoresInThread(globalIgnoredEntries, reporter);
 
-						timings.AppendLine("Gather svn:global-ignores - " + (stopwatch.ElapsedMilliseconds / 1000f));
+						timings.AppendLine($"Gather {globalIgnoredEntries.Count} svn:global-ignores - {stopwatch.ElapsedMilliseconds / 1000f}s");
 						stopwatch.Restart();
 					}
 				}

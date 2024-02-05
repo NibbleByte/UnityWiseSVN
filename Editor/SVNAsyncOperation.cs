@@ -2,6 +2,7 @@
 
 using DevLocker.VersionControl.WiseSVN.Shell;
 using System.Collections.Concurrent;
+using System.Text;
 using System.Threading;
 using UnityEditor;
 
@@ -33,7 +34,12 @@ namespace DevLocker.VersionControl.WiseSVN
 		public event OutputLineEventHandler CommandOutput;
 		public event OutputLineEventHandler StandardOutput;
 		public event OutputLineEventHandler ErrorOutput;
-		public event OutputLineEventHandler AnyOutput;	// For convenience - called for any of the above.
+		public event OutputLineEventHandler AnyOutput;  // For convenience - called for any of the above.
+
+		// These will be filled with the aggregated outputs after the task has completed (instead of subscribing for the events above).
+		public string FinishedOutput { get; private set; }
+		public string FinishedError { get; private set; }
+		public string FinishedCombined { get; private set; }
 
 		public bool AbortRequested { get; private set; }
 
@@ -43,6 +49,10 @@ namespace DevLocker.VersionControl.WiseSVN
 		private readonly ConcurrentQueue<string> m_Commands = new ConcurrentQueue<string>();
 		private readonly ConcurrentQueue<string> m_StandardOutput = new ConcurrentQueue<string>();
 		private readonly ConcurrentQueue<string> m_ErrorOutput = new ConcurrentQueue<string>();
+
+		private StringBuilder m_FinishedOutputBuilder = new StringBuilder();
+		private StringBuilder m_FinishedErrorBuilder = new StringBuilder();
+		private StringBuilder m_FinishedCombinedBuilder = new StringBuilder();
 
 		public SVNAsyncOperation(OperationHandler operationHandler)
 		{
@@ -110,6 +120,10 @@ namespace DevLocker.VersionControl.WiseSVN
 				EditorApplication.update -= Update;
 				AssemblyReloadEvents.beforeAssemblyReload -= AssemblyReload;
 
+				FinishedOutput = m_FinishedOutputBuilder.ToString();
+				FinishedError = m_FinishedErrorBuilder.ToString();
+				FinishedCombined = m_FinishedCombinedBuilder.ToString();
+
 				Completed?.Invoke(this);
 			};
 		}
@@ -134,6 +148,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		public void AppendCommand(string command, string args)
 		{
 			m_Commands.Enqueue($"{command} {args}");
+			m_FinishedOutputBuilder.AppendLine($"{command} {args}");
+			m_FinishedCombinedBuilder.AppendLine($"{command} {args}");
 		}
 
 		/// <summary>
@@ -142,6 +158,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		public void AppendOutputLine(string line)
 		{
 			m_StandardOutput.Enqueue(line);
+			m_FinishedOutputBuilder.AppendLine(line);
+			m_FinishedCombinedBuilder.AppendLine(line);
 		}
 
 		/// <summary>
@@ -150,6 +168,8 @@ namespace DevLocker.VersionControl.WiseSVN
 		public void AppendErrorLine(string line)
 		{
 			m_ErrorOutput.Enqueue(line);
+			m_FinishedErrorBuilder.AppendLine(line);
+			m_FinishedCombinedBuilder.AppendLine(line);
 		}
 
 		/// <summary>

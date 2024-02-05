@@ -55,7 +55,7 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 		// Is update pending?
 		// If last update didn't make it, this flag will still be true.
 		// Useful if assembly reload happens and stops the work of the database update.
-		[SerializeField] private bool m_PendingUpdate = false;
+		[SerializeField] private volatile bool m_PendingUpdate = false;
 
 		// Indicates that while update was happening, another one was requested, hinting that newer data is available,
 		// so discard the currently collected one and repeat the gather process.
@@ -76,21 +76,21 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 
 			if (freshlyCreated) {
 				InvalidateDatabase();
-				
+
 			} else {
 				EditorApplication.delayCall -= InvalidateDatabase; // Just in case.
 
 				if (IsActive) {
-					
+
 					// Assembly reload might have killed the working thread leaving pending update.
 					// Do it again.
 					if (m_PendingUpdate) {
-						
+
 						// Wait one frame so editor stabilizes, otherwise some "svn info ..." commands return empty results (empty lock details).
 						// They still do, but it's more rare now :(
 						EditorApplication.delayCall += StartDatabaseUpdate;
 					}
-					
+
 				} else {
 					m_PendingUpdate = false;
 				}
