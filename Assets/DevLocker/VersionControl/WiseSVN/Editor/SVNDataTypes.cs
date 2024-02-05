@@ -80,34 +80,50 @@ namespace DevLocker.VersionControl.WiseSVN
 
 	public enum LockOperationResult
 	{
-		Success = 0,			// Operation succeeded.
-		LockedByOther,			// File is locked by another working copy (may be the same user). Use Force to enforce the operation.
-		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
-		RemoteHasChanges,		// Newer version of the asset exists in the server repository. Update first.
-		NotSupported,			// Locking is not supported by the repository (for example, it is a github emulated svn).
-		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
-		Timeout = 90,			// Operation timed out.
-		UnknownError = 100,		// Failed for some reason.
+		Success = 0,				// Operation succeeded.
+
+		LockedByOther,				// File is locked by another working copy (may be the same user). Use Force to enforce the operation.
+		RemoteHasChanges,			// Newer version of the asset exists in the server repository. Update first.
+		NotSupported,				// Locking is not supported by the repository (for example, it is a github emulated svn).
+
+		// Copy-pasted from StatusOperationResult
+		AuthenticationFailed = 50,	// User needs to log in using normal SVN client and save their authentication.
+		UnableToConnectError = 55,	// Unable to connect to repository indicating some network or server problems.
+		NotWorkingCopy = 60,		// This can be returned when project is not a valid svn checkout. (Probably)
+		ExecutableNotFound = 65,	// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
+		TargetPathNotFound = 70,	// File or directory not found on disk.
+		Timeout = 90,				// Operation timed out.
+		UnknownError = 100,			// Failed for any other reason.
 	}
 
 	public enum ListOperationResult
 	{
-		Success = 0,			// Operation succeeded.
-		NotFound,				// URL target was not found.
-		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
-		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
-		Timeout = 90,			// Operation timed out.
-		UnknownError = 100,		// Failed for some reason.
+		Success = 0,				// Operation succeeded.
+		NotFound,					// URL target was not found.
+
+		// Copy-pasted from StatusOperationResult
+		AuthenticationFailed = 50,	// User needs to log in using normal SVN client and save their authentication.
+		UnableToConnectError = 55,	// Unable to connect to repository indicating some network or server problems.
+		NotWorkingCopy = 60,		// This can be returned when project is not a valid svn checkout. (Probably)
+		ExecutableNotFound = 65,	// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
+		TargetPathNotFound = 70,	// File or directory not found on disk.
+		Timeout = 90,				// Operation timed out.
+		UnknownError = 100, 		// Failed for any other reason.
 	}
 
 	public enum LogOperationResult
 	{
-		Success = 0,			// Operation succeeded.
-		NotFound,				// URL target was not found.
-		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
-		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
-		Timeout = 90,			// Operation timed out.
-		UnknownError = 100,		// Failed for some reason.
+		Success = 0,				// Operation succeeded.
+		NotFound,					// URL target was not found.
+
+		// Copy-pasted from StatusOperationResult
+		AuthenticationFailed = 50,	// User needs to log in using normal SVN client and save their authentication.
+		UnableToConnectError = 55,	// Unable to connect to repository indicating some network or server problems.
+		NotWorkingCopy = 60,		// This can be returned when project is not a valid svn checkout. (Probably)
+		ExecutableNotFound = 65,	// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
+		TargetPathNotFound = 70,	// File or directory not found on disk.
+		Timeout = 90,				// Operation timed out.
+		UnknownError = 100, 		// Failed for any other reason.
 	}
 
 	public enum PropOperationResult
@@ -128,15 +144,20 @@ namespace DevLocker.VersionControl.WiseSVN
 
 	public enum CommitOperationResult
 	{
-		Success = 0,			// Operation succeeded.
-		OutOfDateError,			// Some folders/files have pending changes in the repository. Update them before trying to commit.
-		ConflictsError,			// Some folders/files have conflicts. Clear them before trying to commit.
-		UnversionedError,		// Can't commit unversioned files directly. Add them before trying to commit. Recursive skips unversioned files.
-		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
-		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
-		PrecommitHookError,		// Precommit hook denied the commit on the server side. Talk with your administrator about your commit company policies. Example: always commit with a valid message.
-		Timeout = 90,			// Operation timed out.
-		UnknownError = 100,		// Failed for any other reason.
+		Success = 0,				// Operation succeeded.
+		OutOfDateError,				// Some folders/files have pending changes in the repository. Update them before trying to commit.
+		ConflictsError,				// Some folders/files have conflicts. Clear them before trying to commit.
+		UnversionedError,			// Can't commit unversioned files directly. Add them before trying to commit. Recursive skips unversioned files.
+		PrecommitHookError, 		// Precommit hook denied the commit on the server side. Talk with your administrator about your commit company policies. Example: always commit with a valid message.
+
+		// Copy-pasted from StatusOperationResult
+		AuthenticationFailed = 50,	// User needs to log in using normal SVN client and save their authentication.
+		UnableToConnectError = 55,	// Unable to connect to repository indicating some network or server problems.
+		NotWorkingCopy = 60,		// This can be returned when project is not a valid svn checkout. (Probably)
+		ExecutableNotFound = 65,	// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
+		TargetPathNotFound = 70,	// File or directory not found on disk.
+		Timeout = 90,				// Operation timed out.
+		UnknownError = 100, 		// Failed for any other reason.
 	}
 
 	public enum RevertOperationResult
@@ -150,40 +171,47 @@ namespace DevLocker.VersionControl.WiseSVN
 	// http://svnbook.red-bean.com/en/1.8/svn.ref.svn.html#svn.ref.svn.sw.accept
 	public enum UpdateResolveConflicts
 	{
-		Postpone,       // Take no resolution action at all and instead allow the conflicts to be recorded for future resolution.
-		Working,        // Assuming that you've manually handled the conflict resolution, choose the version of the file as it currently stands in your working copy.
-		Base,           // Choose the file that was the (unmodified) BASE revision before you tried to integrate changes from the server into your working copy.
+		Postpone,		// Take no resolution action at all and instead allow the conflicts to be recorded for future resolution.
+		Working,		// Assuming that you've manually handled the conflict resolution, choose the version of the file as it currently stands in your working copy.
+		Base,   		// Choose the file that was the (unmodified) BASE revision before you tried to integrate changes from the server into your working copy.
 
-		MineConflict,   // Resolve conflicted files by preferring local modifications over the changes fetched from the server in conflicting regions of each file's content.
+		MineConflict,	// Resolve conflicted files by preferring local modifications over the changes fetched from the server in conflicting regions of each file's content.
 		TheirsConflict, // Resolve conflicted files by preferring the changes fetched from the server over local modifications in conflicting regions of each file's content.
-		MineFull,       // Resolve conflicted files by preserving all local modifications and discarding all changes fetched from the server during the operation which caused the conflict.
-		TheirsFull,     // Resolve conflicted files by discarding all local modifications and integrating all changes fetched from the server during the operation which caused the conflict.
+		MineFull,		// Resolve conflicted files by preserving all local modifications and discarding all changes fetched from the server during the operation which caused the conflict.
+		TheirsFull, 	// Resolve conflicted files by discarding all local modifications and integrating all changes fetched from the server during the operation which caused the conflict.
 
 		// These need to have an environment variable set to work or pass editor as an argument.
-		Edit,           // Open each conflicted file in a text editor for manual resolution of line-based conflicts.
-		Launch,         // Launch an interactive merge conflict resolution tool for each conflicted file.
+		Edit,   		// Open each conflicted file in a text editor for manual resolution of line-based conflicts.
+		Launch, 		// Launch an interactive merge conflict resolution tool for each conflicted file.
 	}
 
 	public enum UpdateOperationResult
 	{
-		Success = 0,			// Operation succeeded.
-		SuccessWithConflicts,   // Update was successful, but some folders/files have conflicts.
-		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
-		UnableToConnectError,   // Unable to connect to repository indicating some network or server problems.
-		Timeout = 90,			// Operation timed out.
-		UnknownError = 100,		// Failed for any other reason.
+		Success = 0,				// Operation succeeded.
+		SuccessWithConflicts,		// Update was successful, but some folders/files have conflicts.
+
+		// Copy-pasted from StatusOperationResult
+		AuthenticationFailed = 50,	// User needs to log in using normal SVN client and save their authentication.
+		UnableToConnectError = 55,	// Unable to connect to repository indicating some network or server problems.
+		NotWorkingCopy = 60,		// This can be returned when project is not a valid svn checkout. (Probably)
+		ExecutableNotFound = 65,	// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
+		TargetPathNotFound = 70,	// File or directory not found on disk.
+		Timeout = 90,				// Operation timed out.
+		UnknownError = 100, 		// Failed for any other reason.
 	}
 
+	// NOTE: This enum is copy-pasted inside other enums so they "inherit" from it. Keep them synched.
 	public enum StatusOperationResult
 	{
-		Success = 0,			// Operation succeeded.
-		AuthenticationFailed,	// User needs to log in using normal SVN client and save their authentication.
-		UnableToConnectError,	// Unable to connect to repository indicating some network or server problems.
-		NotWorkingCopy,			// This can be returned when project is not a valid svn checkout. (Probably)
-		ExecutableNotFound,		// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
-		TargetPathNotFound,		// File or directory not found on disk.
-		Timeout = 90,			// Operation timed out.
-		UnknownError = 100,		// Failed for any other reason.
+		Success = 0,    		// Operation succeeded.
+
+		AuthenticationFailed = 50,	// User needs to log in using normal SVN client and save their authentication.
+		UnableToConnectError = 55,	// Unable to connect to repository indicating some network or server problems.
+		NotWorkingCopy = 60,		// This can be returned when project is not a valid svn checkout. (Probably)
+		ExecutableNotFound = 65,	// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
+		TargetPathNotFound = 70,	// File or directory not found on disk.
+		Timeout = 90,				// Operation timed out.
+		UnknownError = 100, 		// Failed for any other reason.
 	}
 
 
@@ -203,7 +231,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		public string Path;
 
 		public string MovedTo;		// Displays where asset was moved to. Should have Deleted status.
-		public string MovedFrom;    // Displays where asset was moved from. Should have Added status.
+		public string MovedFrom;	// Displays where asset was moved from. Should have Added status.
 		public bool IsMovedFile => !string.IsNullOrEmpty(MovedTo) || !string.IsNullOrEmpty(MovedFrom);
 
 		public LockDetails LockDetails;
@@ -249,8 +277,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		public bool IsValid => !string.IsNullOrEmpty(Path) && OperationResult == StatusOperationResult.Success;
 
 		public static LockDetails Empty => new LockDetails() {Path = string.Empty, Owner = string.Empty, Message = string.Empty, Date = string.Empty, OperationResult = StatusOperationResult.Success};
-		
+
 		// HACK: used to check if returned response was empty, as it sometimes happen after assembly reload, unclear why.
+		// NOTE: This may have been fixed by the proper closing of the streams in the ShellUtils.
 		internal bool m_GotEmptyResponse;
 
 		public bool Equals(LockDetails other)
@@ -274,7 +303,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		public bool FetchCommitMessages;
 		public bool StopOnCopy;		// NOTE: "StopOnCopy = false" may result in entries that do not match requested path (since they were moved).
 		public int Limit;
-		public string SearchQuery;  // Search query may have additional "--search" or "--search-and" options. Check the SVN documentation.
+		public string SearchQuery;	// Search query may have additional "--search" or "--search-and" options. Check the SVN documentation.
 
 		// REVISION or {DATE}. Leave empty for no range limitation.
 		public string RangeStart;
@@ -358,7 +387,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		Texture = 1 << 9,			// t:Texture
 
 		Animation = 1 << 12,		// t:AnimationClip
-		Animator = 1 << 13,         // t:AnimatorController, t:AnimatorOverrideController
+		Animator = 1 << 13, 		// t:AnimatorController, t:AnimatorOverrideController
 
 		Script = 1 << 16,			// t:Script
 		UIElementsAssets = 1 << 17,

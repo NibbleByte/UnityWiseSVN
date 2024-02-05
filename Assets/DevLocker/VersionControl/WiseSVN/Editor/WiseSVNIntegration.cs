@@ -353,7 +353,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth={depth} {offlineArg} \"{SVNFormatPath(path)}\"", timeout, shellMonitor);
 
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 
 				// svn: warning: W155010: The node '...' was not found.
 				// This can be returned when path is under unversioned directory. In that case we consider it is unversioned as well.
@@ -362,35 +362,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					return StatusOperationResult.Success;
 				}
 
-				// svn: warning: W155007: '...' is not a working copy!
-				// This can be returned when project is not a valid svn checkout. (Probably)
-				if (result.Error.Contains("W155007"))
-					return StatusOperationResult.NotWorkingCopy;
-
-				// System.ComponentModel.Win32Exception (0x80004005): ApplicationName='...', CommandLine='...', Native error= The system cannot find the file specified.
-				// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
-				if (result.Error.Contains("0x80004005"))
-					return StatusOperationResult.ExecutableNotFound;
-
-				// User needs to log in using normal SVN client and save their authentication.
-				// svn: E170013: Unable to connect to a repository at URL '...'
-				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
-				// svn: E215004: No more credentials or we tried too many times.
-				// Authentication failed
-				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
-					return StatusOperationResult.AuthenticationFailed;
-
-				// Unable to connect to repository indicating some network or server problems.
-				// svn: E170013: Unable to connect to a repository at URL '...'
-				// svn: E731001: No such host is known.
-				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
-					return StatusOperationResult.UnableToConnectError;
-
-				// Operation took too long, shell utils time out kicked in.
-				if (result.Error.Contains(ShellUtils.TIME_OUT_ERROR_TOKEN))
-					return StatusOperationResult.Timeout;
-
-				return StatusOperationResult.UnknownError;
+				return ParseCommonStatusError(result.Error);
 			}
 
 			// If -u is used, additional line is added at the end:
@@ -435,6 +407,39 @@ namespace DevLocker.VersionControl.WiseSVN
 			};
 
 			return operation;
+		}
+
+		private static StatusOperationResult ParseCommonStatusError(string error)
+		{
+			// svn: warning: W155007: '...' is not a working copy!
+			// This can be returned when project is not a valid svn checkout. (Probably)
+			if (error.Contains("W155007"))
+				return StatusOperationResult.NotWorkingCopy;
+
+			// System.ComponentModel.Win32Exception (0x80004005): ApplicationName='...', CommandLine='...', Native error= The system cannot find the file specified.
+			// Could not find the command executable. The user hasn't installed their CLI (Command Line Interface) so we're missing an "svn.exe" in the PATH environment.
+			if (error.Contains("0x80004005"))
+				return StatusOperationResult.ExecutableNotFound;
+
+			// User needs to log in using normal SVN client and save their authentication.
+			// svn: E170013: Unable to connect to a repository at URL '...'
+			// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
+			// svn: E215004: No more credentials or we tried too many times.
+			// Authentication failed
+			if (error.Contains("E230001") || error.Contains("E215004"))
+				return StatusOperationResult.AuthenticationFailed;
+
+			// Unable to connect to repository indicating some network or server problems.
+			// svn: E170013: Unable to connect to a repository at URL '...'
+			// svn: E731001: No such host is known.
+			if (error.Contains("E170013") || error.Contains("E731001"))
+				return StatusOperationResult.UnableToConnectError;
+
+			// Operation took too long, shell utils time out kicked in.
+			if (error.Contains(ShellUtils.TIME_OUT_ERROR_TOKEN))
+				return StatusOperationResult.Timeout;
+
+			return StatusOperationResult.UnknownError;
 		}
 
 
@@ -527,7 +532,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				url = ExtractLineValue("URL:", result.Output);
 
-				if (!string.IsNullOrEmpty(result.Error) || string.IsNullOrEmpty(url)) {
+				if (result.HasErrors || string.IsNullOrEmpty(url)) {
 
 					// svn: warning: W155010: The node '...' was not found.
 					// This can be returned when path is under unversioned directory. In that case we consider it is unversioned as well.
@@ -570,7 +575,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 				lockDetails.Owner = ExtractLineValue("Lock Owner:", result.Output);
 
-				if (!string.IsNullOrEmpty(result.Error) || string.IsNullOrEmpty(lockDetails.Owner)) {
+				if (result.HasErrors || string.IsNullOrEmpty(lockDetails.Owner)) {
 
 					// Owner will be missing if there is no lock. If true, just find something familiar to confirm it was not an error.
 					if (result.Output.IndexOf("URL:", StringComparison.OrdinalIgnoreCase) != -1) {
@@ -578,31 +583,7 @@ namespace DevLocker.VersionControl.WiseSVN
 						return lockDetails;
 					}
 
-					// User needs to log in using normal SVN client and save their authentication.
-					// svn: E170013: Unable to connect to a repository at URL '...'
-					// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
-					// svn: E215004: No more credentials or we tried too many times.
-					// Authentication failed
-					if (result.Error.Contains("E230001") || result.Error.Contains("E215004")) {
-						lockDetails.OperationResult = StatusOperationResult.AuthenticationFailed;
-						return lockDetails;
-					}
-
-					// Unable to connect to repository indicating some network or server problems.
-					// svn: E170013: Unable to connect to a repository at URL '...'
-					// svn: E731001: No such host is known.
-					if (result.Error.Contains("E170013") || result.Error.Contains("E731001")) {
-						lockDetails.OperationResult = StatusOperationResult.UnableToConnectError;
-						return lockDetails;
-					}
-
-					// Operation took too long, shell utils time out kicked in.
-					if (result.Error.Contains(ShellUtils.TIME_OUT_ERROR_TOKEN)) {
-						lockDetails.OperationResult = StatusOperationResult.Timeout;
-						return lockDetails;
-					}
-
-					lockDetails.OperationResult = StatusOperationResult.UnknownError;
+					lockDetails.OperationResult = ParseCommonStatusError(result.Error);
 					lockDetails.m_GotEmptyResponse = string.IsNullOrEmpty(result.Output) && string.IsNullOrEmpty(result.Error);
 					return lockDetails;
 				}
@@ -680,21 +661,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			if (result.Error.Contains("W160035"))
 				return LockOperationResult.LockedByOther;
 
-			if (!string.IsNullOrEmpty(result.Error)) {
-
-				// User needs to log in using normal SVN client and save their authentication.
-				// svn: E170013: Unable to connect to a repository at URL '...'
-				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
-				// svn: E215004: No more credentials or we tried too many times.
-				// Authentication failed
-				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
-					return LockOperationResult.AuthenticationFailed;
-
-				// Unable to connect to repository indicating some network or server problems.
-				// svn: E170013: Unable to connect to a repository at URL '...'
-				// svn: E731001: No such host is known.
-				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
-					return LockOperationResult.UnableToConnectError;
+			if (result.HasErrors) {
 
 				// Locking is not supported by the repository (for example, it is a github emulated svn).
 				// svn: warning: W160042: Path 'package.json' doesn't exist in HEAD revision (405 Method Not Allowed)
@@ -707,11 +674,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (result.Error.Contains("W160042"))
 					return LockOperationResult.RemoteHasChanges;
 
-				// Operation took too long, shell utils time out kicked in.
-				if (result.Error.Contains(ShellUtils.TIME_OUT_ERROR_TOKEN))
-					return LockOperationResult.Timeout;
-
-				return LockOperationResult.UnknownError;
+				return (LockOperationResult) ParseCommonStatusError(result.Error);
 			}
 
 			// '... some file ...' locked by user '...'.
@@ -783,27 +746,9 @@ namespace DevLocker.VersionControl.WiseSVN
 			if (result.Error.Contains("W160040"))
 				return LockOperationResult.LockedByOther;
 
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 
-				// User needs to log in using normal SVN client and save their authentication.
-				// svn: E170013: Unable to connect to a repository at URL '...'
-				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
-				// svn: E215004: No more credentials or we tried too many times.
-				// Authentication failed
-				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
-					return LockOperationResult.AuthenticationFailed;
-
-				// Unable to connect to repository indicating some network or server problems.
-				// svn: E170013: Unable to connect to a repository at URL '...'
-				// svn: E731001: No such host is known.
-				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
-					return LockOperationResult.UnableToConnectError;
-
-				// Operation took too long, shell utils time out kicked in.
-				if (result.Error.Contains(ShellUtils.TIME_OUT_ERROR_TOKEN))
-					return LockOperationResult.Timeout;
-
-				return LockOperationResult.UnknownError;
+				return (LockOperationResult) ParseCommonStatusError(result.Error);
 			}
 
 			// '...' unlocked.
@@ -869,25 +814,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (result.Error.Contains("E155027"))
 					return UpdateOperationResult.SuccessWithConflicts;
 
-				// User needs to log in using normal SVN client and save their authentication.
-				// svn: E170013: Unable to connect to a repository at URL '...'
-				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
-				// svn: E215004: No more credentials or we tried too many times.
-				// Authentication failed
-				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
-					return UpdateOperationResult.AuthenticationFailed;
-
-				// Unable to connect to repository indicating some network or server problems.
-				// svn: E170013: Unable to connect to a repository at URL '...'
-				// svn: E731001: No such host is known.
-				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
-					return UpdateOperationResult.UnableToConnectError;
-
-				// Operation took too long, shell utils time out kicked in.
-				if (result.Error.Contains(ShellUtils.TIME_OUT_ERROR_TOKEN))
-					return UpdateOperationResult.Timeout;
-
-				return UpdateOperationResult.UnknownError;
+				return (UpdateOperationResult) ParseCommonStatusError(result.Error);
 			}
 
 
@@ -999,25 +926,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (result.Error.Contains("E165001"))
 					return CommitOperationResult.PrecommitHookError;
 
-				// User needs to log in using normal SVN client and save their authentication.
-				// svn: E170013: Unable to connect to a repository at URL '...'
-				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
-				// svn: E215004: No more credentials or we tried too many times.
-				// Authentication failed
-				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
-					return CommitOperationResult.AuthenticationFailed;
-
-				// Unable to connect to repository indicating some network or server problems.
-				// svn: E170013: Unable to connect to a repository at URL '...'
-				// svn: E731001: No such host is known.
-				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
-					return CommitOperationResult.UnableToConnectError;
-
-				// Operation took too long, shell utils time out kicked in.
-				if (result.Error.Contains(ShellUtils.TIME_OUT_ERROR_TOKEN))
-					return CommitOperationResult.Timeout;
-
-				return CommitOperationResult.UnknownError;
+				return (CommitOperationResult) ParseCommonStatusError(result.Error);
 			}
 
 			return CommitOperationResult.Success;
@@ -1253,7 +1162,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status --depth=infinity \"{SVNFormatPath(path)}\"", timeout, shellMonitor);
 
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 
 				// svn: warning: W155010: The node '...' was not found.
 				// This can be returned when path is under unversioned directory. In that case we consider it is unversioned as well.
@@ -1279,21 +1188,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"list --depth {depth} \"{SVNFormatPath(url)}\"", timeout, shellMonitor);
 
-			if (!string.IsNullOrEmpty(result.Error)) {
-
-				// User needs to log in using normal SVN client and save their authentication.
-				// svn: E170013: Unable to connect to a repository at URL '...'
-				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
-				// svn: E215004: No more credentials or we tried too many times.
-				// Authentication failed
-				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
-					return ListOperationResult.AuthenticationFailed;
-
-				// Unable to connect to repository indicating some network or server problems.
-				// svn: E170013: Unable to connect to a repository at URL '...'
-				// svn: E731001: No such host is known.
-				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
-					return ListOperationResult.UnableToConnectError;
+			if (result.HasErrors) {
 
 				// URL or local path not found (or invalid working copy path).
 				// svn: warning: W155010: The node '...' was not found.
@@ -1303,11 +1198,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (result.Error.Contains("W155010") || result.Error.Contains("E155007") || result.Error.Contains("W160013") || result.Error.Contains("E200009"))
 					return ListOperationResult.NotFound;
 
-				// Operation took too long, shell utils time out kicked in.
-				if (result.Error.Contains(ShellUtils.TIME_OUT_ERROR_TOKEN))
-					return ListOperationResult.Timeout;
-
-				return ListOperationResult.UnknownError;
+				return (ListOperationResult) ParseCommonStatusError(result.Error);
 			}
 
 			var output = result.Output.Replace("\r", "");
@@ -1366,21 +1257,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			var relativeURL = AssetPathToRelativeURL(assetPathOrUrl);
 
-			if (!string.IsNullOrEmpty(result.Error)) {
-
-				// User needs to log in using normal SVN client and save their authentication.
-				// svn: E170013: Unable to connect to a repository at URL '...'
-				// svn: E230001: Server SSL certificate verification failed: issuer is not trusted
-				// svn: E215004: No more credentials or we tried too many times.
-				// Authentication failed
-				if (result.Error.Contains("E230001") || result.Error.Contains("E215004"))
-					return LogOperationResult.AuthenticationFailed;
-
-				// Unable to connect to repository indicating some network or server problems.
-				// svn: E170013: Unable to connect to a repository at URL '...'
-				// svn: E731001: No such host is known.
-				if (result.Error.Contains("E170013") || result.Error.Contains("E731001"))
-					return LogOperationResult.UnableToConnectError;
+			if (result.HasErrors) {
 
 				// URL is local path that is not a proper SVN working copy.
 				// svn: E155010: The node '...' was not found.
@@ -1390,11 +1267,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (result.Error.Contains("E155010") || result.Error.Contains("E155007") || result.Error.Contains("E160013") || result.Error.Contains("E200009"))
 					return LogOperationResult.NotFound;
 
-				// Operation took too long, shell utils time out kicked in.
-				if (result.Error.Contains(ShellUtils.TIME_OUT_ERROR_TOKEN))
-					return LogOperationResult.Timeout;
-
-				return LogOperationResult.UnknownError;
+				return (LogOperationResult)ParseCommonStatusError(result.Error);
 			}
 
 			try {
@@ -1553,7 +1426,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"propget \"{property}\" --depth={depth} -v \"{SVNFormatPath(assetPath)}\"", timeout, shellMonitor);
 
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 
 				// URL or local path not found (or invalid working copy path).
 				// svn: E200005: '...' is not under version control
@@ -1655,7 +1528,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"propset \"{property}\" \"{valueOverride}\" --depth={depth} \"{SVNFormatPath(assetPath)}\"", timeout, shellMonitor);
 
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 
 				// URL or local path not found (or invalid working copy path).
 				// svn: E200005: '...' is not under version control
@@ -1691,7 +1564,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"changelist \"{changelistName}\" --depth={depth} \"{SVNFormatPath(assetPath)}\"", COMMAND_TIMEOUT, shellMonitor);
 
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 
 				// URL or local path not found (or invalid working copy path).
 				// svn: E200005: '...' is not under version control
@@ -1722,7 +1595,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"changelist --remove --depth={depth} \"{SVNFormatPath(assetPath)}\"", COMMAND_TIMEOUT, shellMonitor);
 
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 
 				// URL or local path not found (or invalid working copy path).
 				// svn: E200005: '...' is not under version control
@@ -2348,6 +2221,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 							// HACK: sometimes "svn info ..." commands return empty results (empty lock details) after assembly reload.
 							//		 if that happens, try a few more times.
+							// NOTE: This may have been fixed by the proper closing of the streams in the ShellUtils.
 							for (int i = 0; i < 3 && statusData.LockDetails.m_GotEmptyResponse; ++i) {
 								System.Threading.Thread.Sleep(20);
 								statusData.LockDetails = FetchLockDetails(statusData.Path, timeout, shellMonitor);
@@ -2430,7 +2304,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			var path = AssetDatabase.GUIDToAssetPath(Selection.assetGUIDs.FirstOrDefault());
 
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"status \"{SVNFormatPath(path)}\"");
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 				return;
 			}
