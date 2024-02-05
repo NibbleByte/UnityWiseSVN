@@ -2152,11 +2152,10 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			if (Directory.Exists(oldPath)) {
 				Directory.Move(oldPath, newPath);
-				Directory.Move(oldPath + ".meta", newPath + ".meta");
 			} else {
 				File.Move(oldPath, newPath);
-				File.Move(oldPath + ".meta", newPath + ".meta");
 			}
+			File.Move(oldPath + ".meta", newPath + ".meta");
 
 			// Reset after the danger is gone (manual file operations)
 			reporter.ResetErrorFlag();
@@ -2346,7 +2345,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (!offline && fetchLockDetails) {
 						if (statusData.LockStatus != VCLockStatus.NoLock && statusData.LockStatus != VCLockStatus.BrokenLock) {
 							statusData.LockDetails = FetchLockDetails(statusData.Path, timeout, shellMonitor);
-							
+
 							// HACK: sometimes "svn info ..." commands return empty results (empty lock details) after assembly reload.
 							//		 if that happens, try a few more times.
 							for (int i = 0; i < 3 && statusData.LockDetails.m_GotEmptyResponse; ++i) {

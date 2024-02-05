@@ -14,7 +14,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 	internal class WiseSVNProjectPreferencesSettingsProvider : SettingsProvider
 	{
 		private const string m_SettingsProviderName = "WiseSVN";
-		private readonly static string[] m_Keywords = new[] { "Wise", "SVN", "TortoiseSVM", "SnailSVN" };
+		private readonly static string[] m_Keywords = new[] { "Wise", "SVN", "TortoiseSVN", "SnailSVN", "RabbitSVN" };
 
 		private WiseSVNProjectPreferencesSettingsProvider(string path, SettingsScope scope)
 			: base(path, scope)
