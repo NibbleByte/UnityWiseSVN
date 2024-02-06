@@ -70,7 +70,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ExecuteCommand("update", GetWorkingPath(assetPaths), wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -88,7 +88,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 					);
 
 			var result = ExecuteCommand("commit", GetWorkingPath(assetPaths), wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -112,7 +112,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			var pathsArg = AssetPathsToContextPaths(includeMeta ? assetPaths.Concat(metas) : assetPaths, false);
 
 			var result = ExecuteCommand("add", pathsArg, WiseSVNIntegration.ProjectRootNative, wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -130,7 +130,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 					);
 
 			var result = ExecuteCommand("revert", GetWorkingPath(assetPaths), wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -154,7 +154,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ExecuteCommand("lock", AssetPathsToContextPaths(assetPaths, includeMeta), WiseSVNIntegration.ProjectRootNative, wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -165,7 +165,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ExecuteCommand("unlock", AssetPathsToContextPaths(assetPaths, includeMeta), WiseSVNIntegration.ProjectRootNative, wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -178,7 +178,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			var pathArg = Directory.Exists(assetPath) ? assetPath : Path.GetDirectoryName(assetPath);
 
 			var result = ExecuteCommand("log", pathArg, wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -191,7 +191,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			// Support only one file.
 
 			var result = ExecuteCommand("blame", assetPath, WiseSVNIntegration.ProjectRootNative, wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -200,7 +200,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		{
 			// NOTE: SnailSVN doesn't pop up dialog for clean up. It just does some shady stuff in the background and a notification is shown some time later.
 			var result = ExecuteCommand("cleanup", WiseSVNIntegration.ProjectRootNative, wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -211,7 +211,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			Debug.LogError($"SnailSVN doesn't support Repo-Browser very well. Opening Repo-Browser for the current working copy.");
 
 			var result = ExecuteCommand("repo-browser", string.Empty, WiseSVNIntegration.ProjectRootNative, wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -219,7 +219,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		public override void Switch(string localPath, string url, bool wait = false)
 		{
 			var result = ExecuteCommand("switch", string.Empty, WiseSVNIntegration.ProjectRootNative, wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}

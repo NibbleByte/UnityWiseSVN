@@ -26,7 +26,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:repostatus /path:\"{pathsArg}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -38,7 +38,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:diff /path:\"{pathsArg}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -53,7 +53,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:update /path:\"{pathsArg}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -68,7 +68,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:commit /path:\"{pathsArg}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -96,7 +96,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:add /path:\"{pathsArg}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -111,7 +111,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:revert /path:\"{pathsArg}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -121,7 +121,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		public override void ResolveAll(bool wait = false)
 		{
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:resolve /path:\"{WiseSVNIntegration.ProjectRootNative}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -138,7 +138,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			}
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:conflicteditor /path:\"{AssetPathToContextPaths(assetPath, false)}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -155,7 +155,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:lock /path:\"{pathsArg}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -170,7 +170,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:unlock /path:\"{pathsArg}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -185,7 +185,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:log /path:\"{pathsArg}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -202,7 +202,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:blame /path:\"{pathsArg}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -212,7 +212,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		public override void Cleanup(bool wait = false)
 		{
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:cleanup /path:\"{WiseSVNIntegration.ProjectRootNative}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -224,7 +224,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:repobrowser /path:\"{url}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -235,7 +235,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:switch /path:\"{localPath}\" /url:\"{url}\"", wait);
-			if (!string.IsNullOrEmpty(result.Error)) {
+			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
