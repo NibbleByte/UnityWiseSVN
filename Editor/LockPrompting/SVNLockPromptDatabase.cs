@@ -110,6 +110,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 
 			// Most popular extensions?
 			if (assetPath.EndsWith(".psd", StringComparison.OrdinalIgnoreCase)
+			    || assetPath.EndsWith(".psb", StringComparison.OrdinalIgnoreCase)
 			    || assetPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
 			    || assetPath.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase)
 			    || assetPath.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
@@ -241,7 +242,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 				if (knownData.Path == statusData.Path) {
 					// Compare statuses including lock & remote ones, but exclude fetched lock details as we don't care if owner or date changed.
 					if (knownData.EqualStatuses(statusData, true)
-					    && knownData.LockStatus == statusData.LockStatus 
+					    && knownData.LockStatus == statusData.LockStatus
 					    && knownData.RemoteStatus == statusData.RemoteStatus) {
 						return false;
 					} else {
