@@ -180,10 +180,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			var timings = new StringBuilder("SVNStatusesDatabase Gathering Data Timings:\n");
 			var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-			var reporter = DoTraceLogs
-				? new WiseSVNIntegration.ResultConsoleReporter(true, WiseSVNIntegration.Silent, "SVNStatusesDatabase Operations:")
-				: null;
-			using (reporter) {
+			using (var reporter = new WiseSVNIntegration.ResultConsoleReporter(true, WiseSVNIntegration.Silent, "SVNStatusesDatabase Operations:")) {
 
 				GatherStatusDataInThreadRecursive("Assets", statuses, unversionedFolders, nestedRepositories, reporter);
 #if UNITY_2018_4_OR_NEWER
@@ -274,6 +271,9 @@ namespace DevLocker.VersionControl.WiseSVN
 				m_UnversionedFolders = unversionedFolders.ToArray();
 				m_NestedRepositories = nestedRepositories.ToArray();
 
+				if (!DoTraceLogs && LastError != StatusOperationResult.UnknownError) {
+					reporter.ClearLogsAndErrorFlag();
+				}
 			} // Dispose reporter.
 
 			timings.AppendLine("Gather Processing Data - " + (stopwatch.ElapsedMilliseconds / 1000f));
