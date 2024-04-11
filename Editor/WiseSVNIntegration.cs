@@ -365,10 +365,21 @@ namespace DevLocker.VersionControl.WiseSVN
 				return ParseCommonStatusError(result.Error);
 			}
 
-			// If -u is used, additional line is added at the end:
+			// If -u is used, an additional line is added toward the end of the output but _before_ any change list entries:
 			// Status against revision:     14
-			bool emptyOutput = (offline && string.IsNullOrWhiteSpace(result.Output)) ||
-							   (!offline && result.Output.StartsWith("Status", StringComparison.Ordinal));
+			//
+			// --- Changelist 'Scene Changes':
+			// M                4   Assets\Scenes\SampleScene.unity
+			//
+			// Remove the first line if it begins with "Status" in this case so that the check for an empty output works in the cases where
+			// there are one or more change list entries.
+			if (!offline && result.Output != null && result.Output.StartsWith("Status", StringComparison.Ordinal)) {
+				using var sr = new StringReader(result.Output);
+				sr.ReadLine();
+				result.Output = sr.ReadToEnd();
+			}
+
+			bool emptyOutput = string.IsNullOrWhiteSpace(result.Output);
 
 			// Empty result could also mean: file doesn't exist.
 			// Note: svn-deleted files still have svn status, so always check for status before files on disk.
@@ -2164,12 +2175,25 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (line.StartsWith("Performing status", StringComparison.Ordinal))
 						continue;
 
-					// If user has files in the "ignore-on-commit" list, this is added at the end plus empty line:
-					// ---Changelist 'ignore-on-commit': ...
+					// If the user has files in one or more change lists such as the TortoiseSVN-reserved "ignore-on-commit"
+					// change list and/or user-created change lists, these are added at the end plus an empty line per change
+					// list:
+					// --- Changelist 'Script Changes':
+					// A       Assets\Scripts\NewScript.cs
+					// A       Assets\Scripts\NewScript.cs.meta
+					//
+					// --- Changelist 'ignore-on-commit':
+					// A       Assets\Scripts\OtherScript.cs
+					// A       Assets\Scripts\OtherScript.cs.meta
+					//
+					// --- Changelist 'Scene Changes':
+					// M       Assets\Scenes\SampleScene.unity
+					//
+					// Skip the header and blank lines but get the statuses.
 					if (string.IsNullOrWhiteSpace(line))
 						continue;
 					if (line.StartsWith("---", StringComparison.Ordinal))
-						break;
+						continue;
 
 					// Rules are described in "svn help status".
 					var statusData = new SVNStatusData();
