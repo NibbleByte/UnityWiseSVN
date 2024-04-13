@@ -173,17 +173,17 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 #endif
 
 			const string showLogTooltip = "Show Log in this branch at the target asset.";
-			RepoBrowserContent = Preferences.SVNPreferencesManager.LoadTexture("Editor/BranchesIcons/SVN-RepoBrowser", "Repo-Browser in this branch at the target asset.");
-			ShowLogContent = Preferences.SVNPreferencesManager.LoadTexture("Editor/BranchesIcons/SVN-ShowLog", showLogTooltip);
-			SwitchBranchContent = Preferences.SVNPreferencesManager.LoadTexture("Editor/BranchesIcons/SVN-Switch", "Switch working copy to another branch.\nOpens TortoiseSVN dialog.");
+			RepoBrowserContent = Preferences.SVNPreferencesManager.LoadTexture("BranchesIcons/SVN-RepoBrowser", "Repo-Browser in this branch at the target asset.");
+			ShowLogContent = Preferences.SVNPreferencesManager.LoadTexture("BranchesIcons/SVN-ShowLog", showLogTooltip);
+			SwitchBranchContent = Preferences.SVNPreferencesManager.LoadTexture("BranchesIcons/SVN-Switch", "Switch working copy to another branch.\nOpens TortoiseSVN dialog.");
 
-			ScanForConflictsContent = Preferences.SVNPreferencesManager.LoadTexture("Editor/BranchesIcons/SVN-ScanForConflicts", "Scan all branches for potential conflicts.\nThis will look for any changes made to the target asset in the branches.");
+			ScanForConflictsContent = Preferences.SVNPreferencesManager.LoadTexture("BranchesIcons/SVN-ScanForConflicts", "Scan all branches for potential conflicts.\nThis will look for any changes made to the target asset in the branches.");
 
-			ConflictsPendingContent = Preferences.SVNPreferencesManager.LoadTexture("Editor/BranchesIcons/SVN-ConflictsScan-Pending", "Pending - waiting to be scanned for conflicts.\n\n" + showLogTooltip);
-			ConflictsFoundContent = Preferences.SVNPreferencesManager.LoadTexture("Editor/BranchesIcons/SVN-Conflicts-Found", "The target asset was modified in this branch - potential conflicts.\n\n" + showLogTooltip);
-			ConflictsNormalContent = Preferences.SVNPreferencesManager.LoadTexture("Editor/BranchesIcons/SVN-ConflictsScan-Normal", "No conflicts were found by the scan.\n\n" + showLogTooltip);
-			ConflictsAddedContent = Preferences.SVNPreferencesManager.LoadTexture("Editor/BranchesIcons/SVN-ConflictsScan-Added", "Asset was added in this branch.\n\n" + showLogTooltip);
-			ConflictsMissingContent = Preferences.SVNPreferencesManager.LoadTexture("Editor/BranchesIcons/SVN-ConflictsScan-Missing", "Asset was missing. It may have been deleted or never existed in this branch.\n\n" + showLogTooltip);
+			ConflictsPendingContent = Preferences.SVNPreferencesManager.LoadTexture("BranchesIcons/SVN-ConflictsScan-Pending", "Pending - waiting to be scanned for conflicts.\n\n" + showLogTooltip);
+			ConflictsFoundContent = Preferences.SVNPreferencesManager.LoadTexture("BranchesIcons/SVN-Conflicts-Found", "The target asset was modified in this branch - potential conflicts.\n\n" + showLogTooltip);
+			ConflictsNormalContent = Preferences.SVNPreferencesManager.LoadTexture("BranchesIcons/SVN-ConflictsScan-Normal", "No conflicts were found by the scan.\n\n" + showLogTooltip);
+			ConflictsAddedContent = Preferences.SVNPreferencesManager.LoadTexture("BranchesIcons/SVN-ConflictsScan-Added", "Asset was added in this branch.\n\n" + showLogTooltip);
+			ConflictsMissingContent = Preferences.SVNPreferencesManager.LoadTexture("BranchesIcons/SVN-ConflictsScan-Missing", "Asset was missing. It may have been deleted or never existed in this branch.\n\n" + showLogTooltip);
 			ConflictsErrorContent = new GUIContent(EditorGUIUtility.FindTexture("console.erroricon.sml"), "Error while scanning this branch. Check the console logs for more info.\n\n" + showLogTooltip);
 
 			if (RepoBrowserContent.image == null) RepoBrowserContent.text = "R";

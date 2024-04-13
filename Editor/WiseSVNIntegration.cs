@@ -2159,7 +2159,7 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (lineLen > 6 && line[6] == '>')
 						continue;
 
-					// If there are any conflicts, the report will have two additional lines like this:
+					// If there are any conflicts, the report will have two additional lines like this after any changelists:
 					// Summary of conflicts:
 					// Text conflicts: 1
 					if (line.StartsWith("Summary", StringComparison.Ordinal))

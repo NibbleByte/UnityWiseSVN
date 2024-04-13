@@ -614,13 +614,13 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 			style.name = "";	// UIElements matches button styles by name and overrides everything.
 
 			if (style.hover.background == null) {
-				var path = EditorGUIUtility.isProSkin ? "Editor/SVNElementsUI/SVN_Button_Hover_Dark" : "Editor/SVNElementsUI/SVN_Button_Hover_Light";
+				var path = EditorGUIUtility.isProSkin ? "SVNElementsUI/SVN_Button_Hover_Dark" : "SVNElementsUI/SVN_Button_Hover_Light";
 				style.hover.background = Resources.Load<Texture2D>(path);
 
 			}
 
 			if (style.active.background == null) {
-				var path = EditorGUIUtility.isProSkin ? "Editor/SVNElementsUI/SVN_Button_Active_Dark" : "Editor/SVNElementsUI/SVN_Button_Active_Light";
+				var path = EditorGUIUtility.isProSkin ? "SVNElementsUI/SVN_Button_Active_Dark" : "SVNElementsUI/SVN_Button_Active_Light";
 				style.active.background = Resources.Load<Texture2D>(path);
 
 			}
