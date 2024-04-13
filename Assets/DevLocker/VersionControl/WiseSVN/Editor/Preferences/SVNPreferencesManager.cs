@@ -257,23 +257,23 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		private void LoadTextures()
 		{
 			FileStatusIcons = new GUIContent[Enum.GetValues(typeof(VCFileStatus)).Length];
-			FileStatusIcons[(int)VCFileStatus.Normal] = LoadTexture("Editor/SVNOverlayIcons/SVNNormalIcon");
-			FileStatusIcons[(int)VCFileStatus.Added] = LoadTexture("Editor/SVNOverlayIcons/SVNAddedIcon");
-			FileStatusIcons[(int)VCFileStatus.Modified] = LoadTexture("Editor/SVNOverlayIcons/SVNModifiedIcon");
-			FileStatusIcons[(int)VCFileStatus.Replaced] = LoadTexture("Editor/SVNOverlayIcons/SVNModifiedIcon");
-			FileStatusIcons[(int)VCFileStatus.Deleted] = LoadTexture("Editor/SVNOverlayIcons/SVNDeletedIcon");
-			FileStatusIcons[(int)VCFileStatus.Conflicted] = LoadTexture("Editor/SVNOverlayIcons/SVNConflictIcon");
-			FileStatusIcons[(int)VCFileStatus.Ignored] = LoadTexture("Editor/SVNOverlayIcons/SVNIgnoredIcon", "This item is in a svn-ignore list. It is not tracked by SVN.");
-			FileStatusIcons[(int)VCFileStatus.Unversioned] = LoadTexture("Editor/SVNOverlayIcons/SVNUnversionedIcon");
-			FileStatusIcons[(int)VCFileStatus.Excluded] = LoadTexture("Editor/SVNOverlayIcons/SVNReadOnlyIcon", "This item is excluded from monitoring by WiseSVN, but it may still be tracked by SVN. Check the WiseSVN preferences - Excludes setting.");
+			FileStatusIcons[(int)VCFileStatus.Normal] = LoadTexture("SVNOverlayIcons/SVNNormalIcon");
+			FileStatusIcons[(int)VCFileStatus.Added] = LoadTexture("SVNOverlayIcons/SVNAddedIcon");
+			FileStatusIcons[(int)VCFileStatus.Modified] = LoadTexture("SVNOverlayIcons/SVNModifiedIcon");
+			FileStatusIcons[(int)VCFileStatus.Replaced] = LoadTexture("SVNOverlayIcons/SVNModifiedIcon");
+			FileStatusIcons[(int)VCFileStatus.Deleted] = LoadTexture("SVNOverlayIcons/SVNDeletedIcon");
+			FileStatusIcons[(int)VCFileStatus.Conflicted] = LoadTexture("SVNOverlayIcons/SVNConflictIcon");
+			FileStatusIcons[(int)VCFileStatus.Ignored] = LoadTexture("SVNOverlayIcons/SVNIgnoredIcon", "This item is in a svn-ignore list. It is not tracked by SVN.");
+			FileStatusIcons[(int)VCFileStatus.Unversioned] = LoadTexture("SVNOverlayIcons/SVNUnversionedIcon");
+			FileStatusIcons[(int)VCFileStatus.Excluded] = LoadTexture("SVNOverlayIcons/SVNReadOnlyIcon", "This item is excluded from monitoring by WiseSVN, but it may still be tracked by SVN. Check the WiseSVN preferences - Excludes setting.");
 
 			LockStatusIcons = new GUIContent[Enum.GetValues(typeof(VCLockStatus)).Length];
-			LockStatusIcons[(int)VCLockStatus.LockedHere] = LoadTexture("Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon", "You have locked this file.\nClick for more details.");
-			LockStatusIcons[(int)VCLockStatus.BrokenLock] = LoadTexture("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon", "You have a lock that is no longer valid (someone else stole it and released it).\nClick for more details.");
-			LockStatusIcons[(int)VCLockStatus.LockedOther] = LoadTexture("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon", "Someone else locked this file.\nClick for more details.");
-			LockStatusIcons[(int)VCLockStatus.LockedButStolen] = LoadTexture("Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon", "Your lock was stolen by someone else.\nClick for more details.");
+			LockStatusIcons[(int)VCLockStatus.LockedHere] = LoadTexture("SVNOverlayIcons/Locks/SVNLockedHereIcon", "You have locked this file.\nClick for more details.");
+			LockStatusIcons[(int)VCLockStatus.BrokenLock] = LoadTexture("SVNOverlayIcons/Locks/SVNLockedOtherIcon", "You have a lock that is no longer valid (someone else stole it and released it).\nClick for more details.");
+			LockStatusIcons[(int)VCLockStatus.LockedOther] = LoadTexture("SVNOverlayIcons/Locks/SVNLockedOtherIcon", "Someone else locked this file.\nClick for more details.");
+			LockStatusIcons[(int)VCLockStatus.LockedButStolen] = LoadTexture("SVNOverlayIcons/Locks/SVNLockedOtherIcon", "Your lock was stolen by someone else.\nClick for more details.");
 
-			RemoteStatusIcons = LoadTexture("Editor/SVNOverlayIcons/Others/SVNRemoteChangesIcon", "Asset is out of date. Update to avoid conflicts.");
+			RemoteStatusIcons = LoadTexture("SVNOverlayIcons/Others/SVNRemoteChangesIcon", "Asset is out of date. Update to avoid conflicts.");
 		}
 
 		public static GUIContent LoadTexture(string path, string tooltip = null)
