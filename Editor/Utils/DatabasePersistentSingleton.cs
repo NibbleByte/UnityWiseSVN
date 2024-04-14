@@ -155,6 +155,7 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 			try {
 				m_WorkerThread = new System.Threading.Thread(GatherData);
 				m_WorkerThread.Name = GetType().Name + "-Worker";
+				m_WorkerThread.IsBackground = true;
 				m_WorkerThread.Start();
 
 			} catch (Exception ex) {
