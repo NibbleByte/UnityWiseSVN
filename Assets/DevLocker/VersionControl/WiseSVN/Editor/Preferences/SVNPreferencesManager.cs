@@ -349,6 +349,33 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 		public void CheckSVNSupport()
 		{
+#if UNITY_EDITOR_OSX
+			// The terminal runs with PATH environment variable that has more paths included than Unity (or any GUI app).
+			// It reads additional paths from '/etc/paths' and '/etc/paths.d' and any user profile at ~.
+			// Read more here: https://forum.unity.com/threads/modifing-path-variable-in-macos-for-unity.500616/#post-9810975
+			//
+			// Unity PATH variable by default: /usr/bin:/bin:/usr/sbin:/sbin
+			// Homebrew spits out binaries at '/usr/local/bin' for Intel or '/opt/homebrew/bin' for ARM.
+			// MacPorts spits out binaries at '/opt/local/bin' (not tested).
+			// Add all these paths.
+			string pathEnvVariable = Environment.GetEnvironmentVariable("PATH");
+
+			if (!pathEnvVariable.Contains("/usr/local/bin")) {
+				pathEnvVariable += ":/usr/local/bin";
+				Environment.SetEnvironmentVariable("PATH", pathEnvVariable);
+			}
+
+			if (!pathEnvVariable.Contains("/opt/homebrew/bin")) {
+				pathEnvVariable += ":/opt/homebrew/bin";
+				Environment.SetEnvironmentVariable("PATH", pathEnvVariable);
+			}
+
+			if (!pathEnvVariable.Contains("/opt/local/bin")) {
+				pathEnvVariable += ":/opt/local/bin";
+				Environment.SetEnvironmentVariable("PATH", pathEnvVariable);
+			}
+#endif
+
 			string svnError;
 			try {
 				svnError = WiseSVNIntegration.CheckForSVNErrors();
@@ -386,26 +413,9 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 						"/Applications/Xcode.app/Contents/Developer/usr/bin/svn",
 						"/opt/subversion/bin/svn",
 						"/opt/local/bin/svn",
+						"/opt/homebrew/bin/svn",
 
-						//
-						// SnailSVN comes with bundled up svn binaries. Use those if needed, starting with the higher version. Premium and free.
-						//
-
-						// Arm64
-						"/Applications/SnailSVN.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/arm64/1.14.x/svn",
-						"/Applications/SnailSVNLite.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/arm64/1.14.x/svn",
-
-						// Intel x64
-						"/Applications/SnailSVN.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/x86_64/1.14.x/svn",
-						"/Applications/SnailSVN.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/x86_64/1.11.x/svn",
-						"/Applications/SnailSVN.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/x86_64/1.10.x/svn",
-						"/Applications/SnailSVN.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/x86_64/1.9.x/svn",
-
-
-						"/Applications/SnailSVNLite.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/x86_64/1.14.x/svn",
-						"/Applications/SnailSVNLite.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/x86_64/1.11.x/svn",
-						"/Applications/SnailSVNLite.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/x86_64/1.10.x/svn",
-						"/Applications/SnailSVNLite.app/Contents/PlugIns/SnailSVNExtension.appex/Contents/XPCServices/SnailSVNCache.xpc/Contents/Resources/subversion/x86_64/1.9.x/svn",
+						// SnailSVN comes with bundled up svn binaries. Don't use them as they don't actually work. Running those executables produces errors.
 					};
 
 					foreach(string osxPath in osxDefaultBinariesPaths) {
@@ -416,12 +426,16 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 						try {
 							string secondSvnError = WiseSVNIntegration.CheckForSVNErrors();
-							if (!string.IsNullOrEmpty(secondSvnError))
+							// Exclude "not a working copy". Check below.
+							if (!string.IsNullOrEmpty(secondSvnError) && !secondSvnError.Contains("W155007"))
 								continue;
 
 							PersonalPrefs.EnableCoreIntegration = true;	// Save this enabled!
 							SavePreferences(PersonalPrefs, ProjectPrefs);
 							Debug.Log($"SVN binaries missing in PATH environment variable. Found them at \"{osxPath}\". Setting this as personal preference.\n\n{svnError}");
+
+							CheckSVNSupport();
+
 							return;
 
 						} catch(Exception) {
@@ -435,7 +449,8 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 				WiseSVNIntegration.LogStatusErrorHint(StatusOperationResult.ExecutableNotFound, $"\nTemporarily disabling WiseSVN integration. Please fix the error and restart Unity.\n\n{svnError}");
 #if UNITY_EDITOR_OSX
-				Debug.LogError($"If you installed SVN via Homebrew or similar, you may need to add \"/usr/local/bin\" (or wherever svn binaries can be found) to your PATH environment variable and restart. Example:\nsudo launchctl config user path /usr/local/bin\nAlternatively, you may add SVN CLI path in your WiseSVN preferences at:\n{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}");
+				// DEPRECATED: setting PATH environment variable should have handled this. If not let user report it.
+				//Debug.LogError($"If you installed SVN via Homebrew or similar, you may need to add \"/usr/local/bin\" (or wherever svn binaries can be found) to your PATH environment variable and restart. Example:\nsudo launchctl config user path /usr/local/bin\nAlternatively, you may add SVN CLI path in your WiseSVN preferences at:\n{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}");
 #endif
 				return;
 			}

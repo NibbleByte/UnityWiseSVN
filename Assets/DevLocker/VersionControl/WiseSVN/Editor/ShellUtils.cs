@@ -375,16 +375,22 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 			return result;
 		}
 
-		public static void ExecutePrompt(string command, string args, string workingDirectory = null)
+		public static void ExecutePrompt(string command, string args, string workingDirectory = null, string hint = null)
 		{
 #if UNITY_EDITOR_OSX
 			// OSX doesn't open terminal window even with UseShellExecute = false.
 			// Write command in a bash script, then open the Terminal application itself feeding it the script.
 
-			string scriptPath = ".Prompt_Command.sh";
-			File.WriteAllText(scriptPath, $"echo \"{command} {args}\"\n{command} {args}");
-			Process.Start("chmod", $"+x {scriptPath}");	 // Must be executable.
-			Process process = Process.Start("/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal", $"{Directory.GetCurrentDirectory()}/{scriptPath}");
+			workingDirectory = workingDirectory ?? ".";
+			string scriptPath = $"{workingDirectory}/.Prompt_Command.sh";
+			string scriptContents = $"clear\n" +
+				$"echo \"\n{command} {args.Replace("\"","\\\"")}\n{hint}\"\n" +
+				$"cd \"{workingDirectory}\"\n" +
+				$"{command} {args}"
+				;
+			File.WriteAllText(scriptPath, scriptContents);
+			Process.Start("chmod", $"+x \"{scriptPath}\"");	 // Must be executable.
+			Process process = Process.Start("/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal", $"\"{scriptPath}\"");
 
 			// Waiting for terminal to close doesn't work - script finishes, but terminal remains open, which may be confusing for the user.
 			Thread.Sleep(1000);

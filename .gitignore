@@ -72,3 +72,6 @@ crashlytics-build.properties
 /[Aa]ssets/[Ss]treamingAssets/aa/*
 /.vsconfig
 /Packages/com.unity.asset-store-tools
+
+# SVN repository
+.svn

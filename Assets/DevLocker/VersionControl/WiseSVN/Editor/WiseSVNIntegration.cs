@@ -685,6 +685,11 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (result.Error.Contains("W160042"))
 					return LockOperationResult.RemoteHasChanges;
 
+				// svn: E155008: The node '...' is not a file
+				// Locking directories is not supported.
+				if (result.Error.Contains("is not a file"))
+					return LockOperationResult.DirectoryLockNotSupported;
+
 				return (LockOperationResult) ParseCommonStatusError(result.Error);
 			}
 
@@ -758,6 +763,11 @@ namespace DevLocker.VersionControl.WiseSVN
 				return LockOperationResult.LockedByOther;
 
 			if (result.HasErrors) {
+
+				// svn: E155008: The node '...' is not a file
+				// Locking directories is not supported.
+				if (result.Error.Contains("is not a file"))
+					return LockOperationResult.DirectoryLockNotSupported;
 
 				return (LockOperationResult) ParseCommonStatusError(result.Error);
 			}
@@ -1724,7 +1734,9 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		internal static void PromptForAuth(string path)
 		{
-			ShellUtils.ExecutePrompt(SVN_Command, $"status  --depth=empty -u \"{SVNFormatPath(path)}\"");
+			string hint = "\nNOTE: You may need to enter your Personal Access Token as your password.\n      Check with your provider.\n";
+
+			ShellUtils.ExecutePrompt(SVN_Command, $"status  --depth=empty -u \"{SVNFormatPath(path)}\"", path, hint);
 
 #if UNITY_EDITOR_OSX
 			// Interact with the user since we don't know when the terminal will close.
@@ -2115,7 +2127,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 					if (string.IsNullOrEmpty(userPath)) {
 						displayMessage = $"SVN CLI (Command Line Interface) not found by WiseSVN. " +
-							$"Please install it or specify path to a valid \"svn\" executable in the svn preferences at \"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"" +
+							$"Please install it or specify path to a valid \"svn\" executable in the WiseSVN preferences at \"{SVNPreferencesWindow.PROJECT_PREFERENCES_MENU}\"\n" +
 							$"You can also disable permanently the SVN integration.";
 					} else {
 						displayMessage = $"Cannot find the \"svn\" executable specified in the svn preferences:\n\"{userPath}\"\n\n" +

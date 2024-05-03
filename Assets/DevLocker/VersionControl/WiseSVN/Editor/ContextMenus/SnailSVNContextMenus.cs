@@ -42,6 +42,36 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			});
 		}
 
+		private void ExecuteProtocol(string action, string workingFolder)
+		{
+			if (!workingFolder.StartsWith('/'))
+			{
+				workingFolder = Path.Combine(WiseSVNIntegration.ProjectRootNative, workingFolder);
+			}
+
+			// The snailsvn.sh currently doesn't accept somne actions, but with some reverse engineering, managed to make it work like this.
+			// open "snailsvnfree://action/SomeFolderHere/UnityProject/Assets"
+			string url = $"{GetClientProtocol()}://{action}{System.Uri.EscapeUriString(workingFolder)}";
+			Application.OpenURL(url);
+		}
+
+		private void ExecuteProtocol(string action, string workingFolder, string path)
+		{
+			if (!workingFolder.StartsWith('/'))
+			{
+				workingFolder = Path.Combine(WiseSVNIntegration.ProjectRootNative, workingFolder);
+			}
+			if (!path.StartsWith('/'))
+			{
+				path = Path.Combine(WiseSVNIntegration.ProjectRootNative, path);
+			}
+
+			// The snailsvn.sh currently doesn't accept somne actions, but with some reverse engineering, managed to make it work like this.
+			// open "snailsvnfree://action/SomeFolderHere/UnityProject/Assets"
+			string url = $"{GetClientProtocol()}://{action}{System.Uri.EscapeUriString(workingFolder)}?{System.Uri.EscapeUriString(path)}";
+			Application.OpenURL(url);
+		}
+
 		private string GetClientProtocol() => File.Exists(ClientPremiumCommand) ? ClientPremiumProtocol : ClientLightProtocol;
 
 		public override void CheckChanges(IEnumerable<string> assetPaths, bool includeMeta, bool wait = false)
@@ -53,10 +83,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 			if (string.IsNullOrEmpty(path))
 				return;
 
-			// The snailsvn.sh currently doesn't accept "check-for-modifications" argument, but with some reverse engineering, managed to make it work like this.
-			// open "snailsvnfree://check-for-modifications/SomeFolderHere/UnityProject/Assets"
-			string url = $"{GetClientProtocol()}://check-for-modifications{System.Uri.EscapeUriString(Path.Combine(WiseSVNIntegration.ProjectRootNative, path))}";
-			Application.OpenURL(url);
+			ExecuteProtocol("check-for-modifications", path);
 		}
 
 		public override void DiffChanges(string assetPath, bool wait = false)
@@ -87,7 +114,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 					: path
 					);
 
-			var result = ExecuteCommand("commit", GetWorkingPath(assetPaths), wait);
+			var result = ExecuteCommand("commit", GetWorkingPath(fixedPaths), wait);
 			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
@@ -129,7 +156,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 					: path
 					);
 
-			var result = ExecuteCommand("revert", GetWorkingPath(assetPaths), wait);
+			var result = ExecuteCommand("revert", GetWorkingPath(fixedPaths), wait);
 			if (result.HasErrors) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
