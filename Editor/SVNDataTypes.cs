@@ -84,7 +84,8 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		LockedByOther,				// File is locked by another working copy (may be the same user). Use Force to enforce the operation.
 		RemoteHasChanges,			// Newer version of the asset exists in the server repository. Update first.
-		NotSupported,				// Locking is not supported by the repository (for example, it is a github emulated svn).
+		NotSupported,               // Locking is not supported by the repository (for example, it is a github emulated svn).
+		DirectoryLockNotSupported,  // Locking directories is not supported.
 
 		// Copy-pasted from StatusOperationResult
 		AuthenticationFailed = 50,	// User needs to log in using normal SVN client and save their authentication.
