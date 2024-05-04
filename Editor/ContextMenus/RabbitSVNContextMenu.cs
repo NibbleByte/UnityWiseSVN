@@ -172,7 +172,17 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 
 		public override void Blame(string assetPath, bool wait = false)
 		{
-			UnityEditor.EditorUtility.DisplayDialog("Not Supported", "RabbitSVN does not support Blame function yet.", "OK");
+			if (string.IsNullOrEmpty(assetPath))
+				return;
+
+			string pathsArg = AssetPathToContextPaths(assetPath, false);
+			if (string.IsNullOrEmpty(pathsArg))
+				return;
+
+			var result = ShellUtils.ExecuteCommand(ClientCommand, $"annotate {pathsArg}", wait);
+			if (MayHaveRabbitVCSError(result.Error)) {
+				Debug.LogError($"Git Error: {result.Error}");
+			}
 		}
 
 		public override void Cleanup(bool wait = false)

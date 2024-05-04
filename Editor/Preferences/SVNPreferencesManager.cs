@@ -241,7 +241,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 #elif UNITY_EDITOR_OSX
 				PersonalPrefs.ContextMenusClient = ContextMenusClient.SnailSVN;
 #else
-				PersonalPrefs.ContextMenusClient = ContextMenusClient.CLI;
+				PersonalPrefs.ContextMenusClient = ContextMenusClient.RabbitVCS;
 #endif
 			}
 
