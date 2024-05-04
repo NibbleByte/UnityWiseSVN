@@ -1738,7 +1738,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			ShellUtils.ExecutePrompt(SVN_Command, $"status  --depth=empty -u \"{SVNFormatPath(path)}\"", path, hint);
 
-#if UNITY_EDITOR_OSX
+#if !UNITY_EDITOR_WIN
 			// Interact with the user since we don't know when the terminal will close.
 			EditorUtility.DisplayDialog("SVN Authenticate", "A terminal window was open. When you authenticated in the terminal window, press \"Ready\".", "Ready");
 #endif

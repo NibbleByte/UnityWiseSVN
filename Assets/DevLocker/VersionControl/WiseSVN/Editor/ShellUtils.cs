@@ -377,20 +377,25 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 
 		public static void ExecutePrompt(string command, string args, string workingDirectory = null, string hint = null)
 		{
-#if UNITY_EDITOR_OSX
-			// OSX doesn't open terminal window even with UseShellExecute = false.
+#if !UNITY_EDITOR_WIN
+			// OSX / Linux doesn't open terminal window even with UseShellExecute = false.
 			// Write command in a bash script, then open the Terminal application itself feeding it the script.
 
 			workingDirectory = workingDirectory ?? ".";
 			string scriptPath = $"{workingDirectory}/.Prompt_Command.sh";
 			string scriptContents = $"clear\n" +
-				$"echo \"\n{command} {args.Replace("\"","\\\"")}\n{hint}\"\n" +
+				$"echo \"\n{hint}\n$ {command} {args.Replace("\"","\\\"")}\"\n" +
 				$"cd \"{workingDirectory}\"\n" +
 				$"{command} {args}"
 				;
 			File.WriteAllText(scriptPath, scriptContents);
 			Process.Start("chmod", $"+x \"{scriptPath}\"");	 // Must be executable.
+#if UNITY_EDITOR_OSX
 			Process process = Process.Start("/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal", $"\"{scriptPath}\"");
+#else
+			// Tested on Ubuntu 24.04
+			Process process = Process.Start("gnome-terminal", $"--window --execute \"{scriptPath}\"");
+#endif
 
 			// Waiting for terminal to close doesn't work - script finishes, but terminal remains open, which may be confusing for the user.
 			Thread.Sleep(1000);
