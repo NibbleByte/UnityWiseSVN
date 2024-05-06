@@ -102,14 +102,14 @@ openupm add devlocker.versioncontrol.wisesvn
 
 
 ## Overlay Icons
-* Unversioned <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNUnversionedIcon.png" width="16">
-* Modified <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNModifiedIcon.png" width="16">
-* Added <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNAddedIcon.png" width="16">
-* Deleted <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNDeletedIcon.png" width="16">
-* Conflict <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/SVNConflictIcon.png" width="16">
-* Locked by me <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/Locks/SVNLockedHereIcon.png" width="16">
-* Locked by others <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/Locks/SVNLockedOtherIcon.png" width="16">
-* Server has changes, update <img src="./Assets/DevLocker/VersionControl/WiseSVN/Resources/Editor/SVNOverlayIcons/Others/SVNRemoteChangesIcon.png" width="16">
+* Unversioned <img src="./Assets/DevLocker/VersionControl/WiseSVN/Editor/Resources/SVNOverlayIcons/SVNUnversionedIcon.png" width="16">
+* Modified <img src="./Assets/DevLocker/VersionControl/WiseSVN/Editor/Resources/SVNOverlayIcons/SVNModifiedIcon.png" width="16">
+* Added <img src="./Assets/DevLocker/VersionControl/WiseSVN/Editor/Resources/SVNOverlayIcons/SVNAddedIcon.png" width="16">
+* Deleted <img src="./Assets/DevLocker/VersionControl/WiseSVN/Editor/Resources/SVNOverlayIcons/SVNDeletedIcon.png" width="16">
+* Conflict <img src="./Assets/DevLocker/VersionControl/WiseSVN/Editor/Resources/SVNOverlayIcons/SVNConflictIcon.png" width="16">
+* Locked by me <img src="./Assets/DevLocker/VersionControl/WiseSVN/Editor/Resources/SVNOverlayIcons/Locks/SVNLockedHereIcon.png" width="16">
+* Locked by others <img src="./Assets/DevLocker/VersionControl/WiseSVN/Editor/Resources/SVNOverlayIcons/Locks/SVNLockedOtherIcon.png" width="16">
+* Server has changes, update <img src="./Assets/DevLocker/VersionControl/WiseSVN/Editor/Resources/SVNOverlayIcons/Others/SVNRemoteChangesIcon.png" width="16">
 
 ## Screenshots
 ![OverlayIcons1](Docs/Screenshots/WiseSVN-OverlayIcons-Shot.png)
