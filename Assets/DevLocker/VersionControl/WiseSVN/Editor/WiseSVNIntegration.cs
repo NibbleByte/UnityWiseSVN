@@ -126,6 +126,12 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// </summary>
 		public static bool Silent => m_SilenceCount > 0;
 
+#if UNITY_2018_1_OR_NEWER
+		internal static bool IsBuildingPlayer => Application.isBatchMode || BuildPipeline.isBuildingPlayer;
+#else
+		internal static bool IsBuildingPlayer => UnityEditorInternal.InternalEditorUtility.inBatchMode || BuildPipeline.isBuildingPlayer;
+#endif
+
 		/// <summary>
 		/// Should the SVN Integration log operations.
 		/// </summary>
@@ -1094,7 +1100,7 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			// Moving to unversioned folder -> add it to svn.
-			if (newDirectoryStatusData.Status == VCFileStatus.Unversioned) {
+			if (newDirectoryStatusData.Status == VCFileStatus.Unversioned && !IsBuildingPlayer) {
 
 				if (!Silent && promptUser && !EditorUtility.DisplayDialog(
 					"Unversioned directory",
@@ -1762,7 +1768,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		// NOTE: This is called separately for the file and its meta.
 		private static void OnWillCreateAsset(string path)
 		{
-			if (!Enabled || TemporaryDisabled)
+			if (!Enabled || TemporaryDisabled || IsBuildingPlayer)
 				return;
 
 			var pathStatusData = GetStatus(path);
@@ -1825,7 +1831,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private static AssetDeleteResult OnWillDeleteAsset(string path, RemoveAssetOptions option)
 		{
-			if (!Enabled || TemporaryDisabled || SVNPreferencesManager.ShouldExclude(m_PersonalPrefs.Exclude.Concat(m_ProjectPrefs.Exclude), path))
+			if (!Enabled || TemporaryDisabled || IsBuildingPlayer || SVNPreferencesManager.ShouldExclude(m_PersonalPrefs.Exclude.Concat(m_ProjectPrefs.Exclude), path))
 				return AssetDeleteResult.DidNotDelete;
 
 			var oldStatus = GetStatus(path).Status;
@@ -1883,7 +1889,7 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private static AssetMoveResult OnWillMoveAsset(string oldPath, string newPath)
 		{
-			if (!Enabled || TemporaryDisabled || SVNPreferencesManager.ShouldExclude(m_PersonalPrefs.Exclude.Concat(m_ProjectPrefs.Exclude), oldPath))
+			if (!Enabled || TemporaryDisabled || IsBuildingPlayer || SVNPreferencesManager.ShouldExclude(m_PersonalPrefs.Exclude.Concat(m_ProjectPrefs.Exclude), oldPath))
 				return AssetMoveResult.DidNotMove;
 
 			var oldStatusData = GetStatus(oldPath);
@@ -1931,7 +1937,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				return AssetMoveResult.FailedMove;
 			}
 
-			if (m_PersonalPrefs.AskOnMovingFolders && isFolder && oldStatusData.Status != VCFileStatus.Unversioned && !Application.isBatchMode) {
+			if (m_PersonalPrefs.AskOnMovingFolders && isFolder && oldStatusData.Status != VCFileStatus.Unversioned) {
 				if (!Silent && !EditorUtility.DisplayDialog(
 					"Move Versioned Folder?",
 					$"Do you really want to move this folder in SVN?\n\"{oldPath}\"",
