@@ -1892,6 +1892,8 @@ namespace DevLocker.VersionControl.WiseSVN
 			if (!Enabled || TemporaryDisabled || IsBuildingPlayer || SVNPreferencesManager.ShouldExclude(m_PersonalPrefs.Exclude.Concat(m_ProjectPrefs.Exclude), oldPath))
 				return AssetMoveResult.DidNotMove;
 
+			const string caseInsensitiveRenameSuffix = "-move-temp";
+
 			var oldStatusData = GetStatus(oldPath);
 			bool isFolder = Directory.Exists(oldPath);
 
@@ -1937,7 +1939,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				return AssetMoveResult.FailedMove;
 			}
 
-			if (m_PersonalPrefs.AskOnMovingFolders && isFolder && oldStatusData.Status != VCFileStatus.Unversioned) {
+			if (m_PersonalPrefs.AskOnMovingFolders && isFolder && oldStatusData.Status != VCFileStatus.Unversioned && !newPath.EndsWith(caseInsensitiveRenameSuffix)) {
 				if (!Silent && !EditorUtility.DisplayDialog(
 					"Move Versioned Folder?",
 					$"Do you really want to move this folder in SVN?\n\"{oldPath}\"",
@@ -1954,11 +1956,19 @@ namespace DevLocker.VersionControl.WiseSVN
 				}
 			}
 
+			// Trying to change some of the letters to be in another case which fails on Windows. To bypass this, do the rename in two steps.
+			if (oldPath.Equals(newPath, StringComparison.OrdinalIgnoreCase) && !oldPath.Equals(newPath, StringComparison.Ordinal)) {
+				AssetMoveResult moveResult = OnWillMoveAsset(oldPath, newPath + caseInsensitiveRenameSuffix);
+				if (moveResult != AssetMoveResult.DidMove)
+					return moveResult;
+
+				oldPath = newPath + caseInsensitiveRenameSuffix;
+			}
+
 			using (var reporter = CreateReporter()) {
 
 				if (!CheckAndAddParentFolderIfNeeded(newPath, true, reporter))
 					return AssetMoveResult.FailedMove;
-
 
 				if (m_ProjectPrefs.MoveBehaviour == SVNMoveBehaviour.UseAddAndDeleteForAllAssets ||
 					m_ProjectPrefs.MoveBehaviour == SVNMoveBehaviour.UseAddAndDeleteForFolders && isFolder
@@ -1969,7 +1979,6 @@ namespace DevLocker.VersionControl.WiseSVN
 						: AssetMoveResult.FailedMove
 						;
 				}
-
 
 				var result = ShellUtils.ExecuteCommand(SVN_Command, $"move \"{SVNFormatPath(oldPath)}\" \"{newPath}\"", COMMAND_TIMEOUT, reporter);
 				if (result.HasErrors) {
