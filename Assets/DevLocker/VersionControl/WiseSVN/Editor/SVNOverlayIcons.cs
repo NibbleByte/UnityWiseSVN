@@ -55,6 +55,11 @@ namespace DevLocker.VersionControl.WiseSVN
 		[MenuItem(InvalidateDatabaseMenuText, false, ContextMenus.SVNContextMenusManager.MenuItemPriorityStart + 145)]
 		public static void InvalidateDatabaseMenu()
 		{
+			if (!SVNPreferencesManager.Instance.PersonalPrefs.EnableCoreIntegration || !SVNPreferencesManager.Instance.PersonalPrefs.PopulateStatusesDatabase) {
+				EditorUtility.DisplayDialog("Integration Disabled", "Can't refresh the icons as the WiseSVN integration is disabled. Check in the WiseSVN preferences.", "Ok");
+				return;
+			}
+
 			WiseSVNIntegration.ClearLastDisplayedError();
 			SVNPreferencesManager.Instance.TemporarySilenceLockPrompts = false;
 			SVNStatusesDatabase.Instance.m_GlobalIgnoresCollected = false;
