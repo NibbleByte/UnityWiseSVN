@@ -463,6 +463,11 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 				}
 			}
 
+			if (GUILayout.Button("Copy Report Data to Clipboard", GUILayout.MaxWidth(EditorGUIUtility.labelWidth))) {
+				WiseSVNIntegration.CopyDebugData(GetVersion());
+			}
+
+
 			EditorGUILayout.LabelField("About:", EditorStyles.boldLabel);
 			{
 				var urlStyle = new GUIStyle(EditorStyles.label);

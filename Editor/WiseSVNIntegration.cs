@@ -179,17 +179,23 @@ namespace DevLocker.VersionControl.WiseSVN
 		// Used to track the shell commands output for errors and log them on Dispose().
 		public class ResultConsoleReporter : IShellMonitor, IDisposable
 		{
+			public bool HasErrors => m_HasErrors;
+
 			private readonly ConcurrentQueue<string> m_CombinedOutput = new ConcurrentQueue<string>();
 
+			// All the combined output set on Dispose.
+			public string FinalOutput { get; private set; }
+
+			public bool RecordOutputLines = false;
 			private bool m_HasErrors = false;
 			private bool m_HasCommand = false;
-			private bool m_LogOutput;
+			private bool m_LogCombinedOutputOnDispose;  // ... if no error happened
 			private bool m_Silent;
 
 
-			public ResultConsoleReporter(bool logOutput, bool silent, string initialText = "")
+			public ResultConsoleReporter(bool logOutputOnDispose, bool silent, string initialText = "")
 			{
-				m_LogOutput = logOutput;
+				m_LogCombinedOutputOnDispose = logOutputOnDispose;
 				m_Silent = silent;
 
 				if (!string.IsNullOrEmpty(initialText)) {
@@ -208,7 +214,9 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			public void AppendOutputLine(string line)
 			{
-				// Not used for now...
+				if (RecordOutputLines) {
+					m_CombinedOutput.Enqueue(line);
+				}
 			}
 
 			// Because using AppendOutputLine() will output all the SVN operation spam that we parse.
@@ -250,19 +258,21 @@ namespace DevLocker.VersionControl.WiseSVN
 				if (!m_CombinedOutput.IsEmpty) {
 					StringBuilder output = new StringBuilder();
 					string line;
-					while(m_CombinedOutput.TryDequeue(out line)) {
+					while (m_CombinedOutput.TryDequeue(out line)) {
 						output.AppendLine(line);
 					}
 
+					FinalOutput = output.ToString();
+
 					if (m_HasErrors) {
-						Debug.LogError(output);
+						Debug.LogError(FinalOutput);
 						if (!m_Silent) {
 							if (m_MainThread == System.Threading.Thread.CurrentThread) {
-								DisplayError("SVN error happened while processing the assets. Check the logs.");
+								DisplayError("Git error happened while processing the assets. Check the logs.");
 							}
 						}
-					} else if (m_LogOutput && m_HasCommand) {
-						Debug.Log(output);
+					} else if (m_LogCombinedOutputOnDispose && m_HasCommand) {
+						Debug.Log(FinalOutput);
 					}
 
 					m_HasErrors = false;
@@ -2343,6 +2353,37 @@ namespace DevLocker.VersionControl.WiseSVN
 #else
 			EditorUtility.DisplayDialog("SVN Error", message, "I will!");
 #endif
+		}
+
+		internal static void CopyDebugData(string pluginVersion)
+		{
+			var reporter = new ResultConsoleReporter(true, true) { RecordOutputLines = true };
+			using (reporter) {
+
+				reporter.AppendTraceLine($"========== Report Data ==========");
+				reporter.AppendTraceLine($"WiseSVN Version: {pluginVersion}");
+				reporter.AppendTraceLine($"Unity Version: {Application.unityVersion}");
+				reporter.AppendTraceLine($"Operating System: {SystemInfo.operatingSystem}");
+				reporter.AppendTraceLine($"System Memory: {SystemInfo.systemMemorySize}");
+				reporter.AppendTraceLine($"CPU Type: {SystemInfo.processorType}");
+				reporter.AppendTraceLine($"Environment PATH:\n{Environment.GetEnvironmentVariable("PATH")}");
+				reporter.AppendTraceLine($"");
+				reporter.AppendTraceLine($"");
+
+				string[] commands = new[] {
+					"--version",
+					"info",
+					"status --depth=infinity -u",
+				};
+
+				foreach (string command in commands) {
+					var result = ShellUtils.ExecuteCommand(SVN_Command, command, ONLINE_COMMAND_TIMEOUT, reporter);
+					if (result.HasErrors)
+						break;
+				}
+			}
+
+			EditorGUIUtility.systemCopyBuffer = reporter.FinalOutput;
 		}
 
 		// Use for debug.
