@@ -651,13 +651,13 @@ namespace DevLocker.VersionControl.WiseSVN
 				return VCFileStatus.Excluded;
 
 			foreach (string ignoredPath in m_IgnoredEntries) {
-				if (path.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase)) {
+				if (WiseSVNIntegration.ArePathsNested(ignoredPath, path)) {
 					return VCFileStatus.Ignored;
 				}
 			}
 
 			foreach (string ignoredPath in m_GlobalIgnoredEntries) {
-				if (path.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase)) {
+				if (WiseSVNIntegration.ArePathsNested(ignoredPath, path)) {
 					return VCFileStatus.Ignored;
 				}
 			}
@@ -695,7 +695,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				path = AssetDatabase.GUIDToAssetPath(guid);
 
 				foreach (string unversionedFolder in m_UnversionedFolders) {
-					if (path.StartsWith(unversionedFolder, StringComparison.OrdinalIgnoreCase))
+					if (WiseSVNIntegration.ArePathsNested(unversionedFolder, path))
 						return new SVNStatusData() { Path = path, Status = VCFileStatus.Unversioned, LockDetails = LockDetails.Empty };
 				}
 			}
@@ -704,7 +704,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				path = path ?? AssetDatabase.GUIDToAssetPath(guid);
 
 				foreach (string ignoredPath in m_IgnoredEntries) {
-					if (path.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase)) {
+					if (WiseSVNIntegration.ArePathsNested(ignoredPath, path)) {
 						return new SVNStatusData() { Path = path, Status = VCFileStatus.Ignored, LockDetails = LockDetails.Empty };
 					}
 				}
@@ -714,7 +714,7 @@ namespace DevLocker.VersionControl.WiseSVN
 				path = path ?? AssetDatabase.GUIDToAssetPath(guid);
 
 				foreach (string ignoredPath in m_GlobalIgnoredEntries) {
-					if (path.StartsWith(ignoredPath, StringComparison.OrdinalIgnoreCase)) {
+					if (WiseSVNIntegration.ArePathsNested(ignoredPath, path)) {
 						return new SVNStatusData() { Path = path, Status = VCFileStatus.Ignored, LockDetails = LockDetails.Empty };
 					}
 				}

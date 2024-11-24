@@ -319,12 +319,16 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		// NOTE: Copy pasted from SearchAssetsFilter.
 		public static bool ShouldExclude(IEnumerable<string> excludes, string path)
 		{
+			if (path.EndsWith(".meta")) {
+				path = path.Substring(0, path.Length - ".meta".Length);
+			}
+
 			foreach(var exclude in excludes) {
 
 				bool isExcludePath = exclude.Contains("/");    // Check if this is a path or just a filename
 
 				if (isExcludePath) {
-					if (path.StartsWith(exclude, StringComparison.OrdinalIgnoreCase))
+					if (WiseSVNIntegration.ArePathsNested(exclude, path))
 						return true;
 
 				} else {
