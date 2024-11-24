@@ -2330,6 +2330,21 @@ namespace DevLocker.VersionControl.WiseSVN
 			yield return str;
 		}
 
+		// Check if child path is inside the parent. This will make sure that similar names don't get mixed up:
+		// Assets/Art
+		// Assets/Art/foo.png
+		// Assets/ArtPrototyping
+		// Assets/ArtPrototyping/foo.png
+		internal static bool ArePathsNested(string parentPath, string childPath)
+		{
+			if (parentPath.EndsWith('/')) {
+				parentPath = parentPath.TrimEnd('/');
+			}
+
+			return childPath.StartsWith(parentPath, StringComparison.OrdinalIgnoreCase) &&
+				(childPath.Length == parentPath.Length || childPath[parentPath.Length] == '/');
+		}
+
 		private static void DisplayError(string message)
 		{
 			EditorApplication.update -= DisplayPendingMessages;

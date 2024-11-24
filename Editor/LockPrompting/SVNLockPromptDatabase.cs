@@ -373,7 +373,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 				}
 
 				var lockPromptParam = m_ProjectPrefs.LockPromptParameters
-					.FirstOrDefault(al => assetPath.StartsWith(al.TargetFolder, StringComparison.OrdinalIgnoreCase));
+					.FirstOrDefault(al => WiseSVNIntegration.ArePathsNested(al.TargetFolder, assetPath));
 
 				if (string.IsNullOrEmpty(lockPromptParam.TargetFolder))
 					continue;
@@ -409,7 +409,7 @@ namespace DevLocker.VersionControl.WiseSVN.LockPrompting
 					}
 
 					var lockPromptParam = m_ProjectPrefs.LockPromptParameters
-						.FirstOrDefault(al => assetPath.StartsWith(al.TargetFolder, StringComparison.OrdinalIgnoreCase));
+						.FirstOrDefault(al => WiseSVNIntegration.ArePathsNested(al.TargetFolder, assetPath));
 
 					if (string.IsNullOrEmpty(lockPromptParam.TargetFolder))
 						continue;
