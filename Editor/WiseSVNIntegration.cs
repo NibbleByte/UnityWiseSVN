@@ -268,7 +268,7 @@ namespace DevLocker.VersionControl.WiseSVN
 						Debug.LogError(FinalOutput);
 						if (!m_Silent) {
 							if (m_MainThread == System.Threading.Thread.CurrentThread) {
-								DisplayError("Git error happened while processing the assets. Check the logs.");
+								DisplayError("SVN error happened while processing the assets. Check the logs.");
 							}
 						}
 					} else if (m_LogCombinedOutputOnDispose && m_HasCommand) {

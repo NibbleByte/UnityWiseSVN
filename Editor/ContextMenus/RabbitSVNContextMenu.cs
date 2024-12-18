@@ -181,7 +181,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"annotate {pathsArg}", wait);
 			if (MayHaveRabbitVCSError(result.Error)) {
-				Debug.LogError($"Git Error: {result.Error}");
+				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
 
