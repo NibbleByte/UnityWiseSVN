@@ -304,6 +304,10 @@ namespace DevLocker.VersionControl.WiseSVN.Utils
 
 			m_LastRefreshTime = EditorApplication.timeSinceStartup;
 
+			// If interval is set too short or network is slow this may trigger endless request via m_RepeatUpdateRequested.
+			if (m_PendingUpdate)
+				return;
+
 			InvalidateDatabase();
 		}
 
