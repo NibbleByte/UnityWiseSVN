@@ -1902,6 +1902,10 @@ namespace DevLocker.VersionControl.WiseSVN
 			if (!Enabled || TemporaryDisabled || IsBuildingPlayer || SVNPreferencesManager.ShouldExclude(m_PersonalPrefs.Exclude.Concat(m_ProjectPrefs.Exclude), oldPath))
 				return AssetMoveResult.DidNotMove;
 
+			// Rename will fail, let Unity show the error. Can happen if renaming via code with AssetDatabase.RenameAsset().
+			if (Directory.Exists(newPath) || File.Exists(newPath))
+				return AssetMoveResult.DidNotMove;
+
 			const string caseInsensitiveRenameSuffix = "-move-temp";
 
 			var oldStatusData = GetStatus(oldPath);
