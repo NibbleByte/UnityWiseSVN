@@ -2324,6 +2324,9 @@ namespace DevLocker.VersionControl.WiseSVN
 
 		private static string SVNFormatPath(string path)
 		{
+			if (string.IsNullOrEmpty(path))
+				return "";
+
 			// NOTE: @ is added at the end of path, to avoid problems when file name contains @, and SVN mistakes that as "At revision" syntax".
 			//		https://stackoverflow.com/questions/757435/how-to-escape-characters-in-subversion-managed-file-names
 			return path + "@";
