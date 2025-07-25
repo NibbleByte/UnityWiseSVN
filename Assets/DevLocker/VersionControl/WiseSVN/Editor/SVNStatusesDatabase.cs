@@ -178,10 +178,13 @@ namespace DevLocker.VersionControl.WiseSVN
 
 			using (var reporter = new WiseSVNIntegration.ResultConsoleReporter(true, WiseSVNIntegration.Silent, "SVNStatusesDatabase Operations:")) {
 
-				GatherStatusDataInThreadRecursive("Assets", statuses, unversionedFolders, nestedRepositories, reporter);
-#if UNITY_2018_4_OR_NEWER
-				GatherStatusDataInThreadRecursive("Packages", statuses, unversionedFolders, nestedRepositories, reporter);
-#endif
+				//GatherStatusDataInThreadRecursive("Assets", statuses, unversionedFolders, nestedRepositories, reporter);
+				//GatherStatusDataInThreadRecursive("Packages", statuses, unversionedFolders, nestedRepositories, reporter);
+
+				// Instead of asking twice, do it once for everything and filter by path.
+				GatherStatusDataInThreadRecursive("", statuses, unversionedFolders, nestedRepositories, reporter);
+				statuses.RemoveAll(s => !s.Path.StartsWith("Assets/") && !s.Path.StartsWith("Packages/"));
+
 				var slashes = new char[] { '/', '\\' };
 
 				// Add excluded items explicitly so their icon shows even when "Normal status green icon" is disabled.
@@ -196,10 +199,14 @@ namespace DevLocker.VersionControl.WiseSVN
 
 
 				if (m_PersonalCachedPrefs.PopulateIgnoresDatabase) {
-					GatherIgnoresInThread("Assets", ignoredEntries, reporter);
-#if UNITY_2018_4_OR_NEWER
-					GatherIgnoresInThread("Packages", ignoredEntries, reporter);
-#endif
+					//GatherIgnoresInThread("Assets", ignoredEntries, reporter);
+					//GatherIgnoresInThread("Packages", ignoredEntries, reporter);
+
+					// Instead of asking twice, do it once for everything and filter by path.
+					GatherIgnoresInThread("", ignoredEntries, reporter);
+					ignoredEntries.RemoveAll(p => !p.StartsWith("Assets/") && !p.StartsWith("Packages/"));
+
+
 					timings.AppendLine($"Gather {ignoredEntries.Count} ignores - {stopwatch.ElapsedMilliseconds / 1000f}s");
 					stopwatch.Restart();
 
@@ -367,7 +374,9 @@ namespace DevLocker.VersionControl.WiseSVN
 					if (line.Contains('/') || line.Contains('\\'))
 						continue;
 
-					var matchedEntries = Directory.EnumerateFileSystemEntries(propget.Path, line, SearchOption.TopDirectoryOnly);
+					var matchedEntries = Directory.EnumerateFileSystemEntries(propget.Path, line, SearchOption.TopDirectoryOnly)
+						.Select(p => p.Replace('\\', '/'));
+
 					foundIgnoredEntries.AddRange(matchedEntries);
 				}
 			}
