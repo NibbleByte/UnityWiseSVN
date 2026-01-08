@@ -146,6 +146,8 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 			processStartInfo.WindowStyle = ProcessWindowStyle.Hidden;
 			processStartInfo.UseShellExecute = false;
 			processStartInfo.WorkingDirectory = shellArgs.WorkingDirectory;
+			processStartInfo.EnvironmentVariables["LANG"] = "en";
+			processStartInfo.EnvironmentVariables["LC_CTYPE"] = "en_US.UTF-8";
 
 			Process process;
 			try {
