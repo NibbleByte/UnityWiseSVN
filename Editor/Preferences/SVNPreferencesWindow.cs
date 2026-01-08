@@ -560,7 +560,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 
 					string versionLine = File.ReadAllLines(pathToPackage).Where(l => l.Contains("\"version\": ")).FirstOrDefault();
 					if (!string.IsNullOrEmpty(versionLine)) {
-						m_Version = "WiseSVN " + System.Text.RegularExpressions.Regex.Match(versionLine, @"\d\.\d\.\d").Value;
+						m_Version = "WiseSVN " + System.Text.RegularExpressions.Regex.Match(versionLine, @"\d+\.\d+\.\d+").Value;
 						return m_Version;
 					}
 				}
