@@ -1752,11 +1752,13 @@ namespace DevLocker.VersionControl.WiseSVN
 		{
 			string hint = "\nNOTE: You may need to enter your Personal Access Token as your password.\n      Check with your provider.\n";
 
-			ShellUtils.ExecutePrompt(SVN_Command, $"status  --depth=empty -u \"{SVNFormatPath(path)}\"", path, hint);
+			bool terminalClosed = true;
+			ShellUtils.ExecutePrompt(SVN_Command, $"status  --depth=empty -u \"{SVNFormatPath(path)}\"", ref terminalClosed, path, hint);
 
 #if !UNITY_EDITOR_WIN
 			// Interact with the user since we don't know when the terminal will close.
-			EditorUtility.DisplayDialog("SVN Authenticate", "A terminal window was open. When you authenticated in the terminal window, press \"Ready\".", "Ready");
+			if (!terminalClosed)
+				EditorUtility.DisplayDialog("SVN Authenticate", "A terminal window was open. When you authenticated in the terminal window, press \"Ready\".", "Ready");
 #endif
 		}
 

@@ -1,5 +1,6 @@
 // MIT License Copyright(c) 2022 Filip Slavov, https://github.com/NibbleByte/UnityWiseSVN
 
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -377,7 +378,7 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 			return result;
 		}
 
-		public static void ExecutePrompt(string command, string args, string workingDirectory = null, string hint = null)
+		public static void ExecutePrompt(string command, string args, ref bool terminalClosed, string workingDirectory = null, string hint = null)
 		{
 #if !UNITY_EDITOR_WIN
 			// OSX / Linux doesn't open terminal window even with UseShellExecute = false.
@@ -394,13 +395,43 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 			Process.Start("chmod", $"+x \"{scriptPath}\"");	 // Must be executable.
 #if UNITY_EDITOR_OSX
 			Process process = Process.Start("/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal", $"\"{scriptPath}\"");
+			terminalClosed = false;
 #else
-			// Tested on Ubuntu 24.04
-			Process process = Process.Start("gnome-terminal", $"--window --execute \"{scriptPath}\"");
+			(string, string, bool)[] terminals = {
+				// Preferred terminal https://gitlab.freedesktop.org/terminal-wg/specifications/-/merge_requests/3
+				("xdg-terminal-exec", $"--hold -- sh \"{scriptPath}\"", true),
+				("gnome-terminal", $"--window --wait -- sh \"{scriptPath}\"", true),
+				// Tested on Ubuntu 24.04
+				("gnome-terminal", $"--window --execute \"{scriptPath}\"", false),
+				("konsole", $"-e \"sh {scriptPath}\"", true),
+			};
+			bool terminalFound = false;
+			foreach (var (terminal, terminalArgs, waitForExit) in terminals) {
+				try {
+					Process process = Process.Start(terminal, terminalArgs);
+					if (process != null) {
+						terminalFound = true;
+						if (waitForExit) {
+							process.WaitForExit();
+							terminalClosed = true;
+						}
+						else {
+							terminalClosed = false;
+						}
+						break;
+					}
+				} catch (System.ComponentModel.Win32Exception) {
+					// Not found
+				}
+			}
+			if (!terminalFound) {
+				throw new Exception("Terminal not found. Please install xdg-terminal-exec, gnome-terminal, konsole or a supported terminal.");
+			}
 #endif
 
 			// Waiting for terminal to close doesn't work - script finishes, but terminal remains open, which may be confusing for the user.
-			Thread.Sleep(1000);
+			if (!terminalClosed)
+				Thread.Sleep(1000);
 
 			File.Delete(scriptPath);
 
