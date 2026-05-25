@@ -378,7 +378,7 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 			return result;
 		}
 
-		public static void ExecutePrompt(string command, string args, ref bool terminalClosed, string workingDirectory = null, string hint = null)
+		public static void ExecutePrompt(string command, string args, string workingDirectory = null, string hint = null)
 		{
 #if !UNITY_EDITOR_WIN
 			// OSX / Linux doesn't open terminal window even with UseShellExecute = false.
@@ -392,32 +392,31 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 				$"{command} {args}"
 				;
 			File.WriteAllText(scriptPath, scriptContents);
-			Process.Start("chmod", $"+x \"{scriptPath}\"");	 // Must be executable.
+
+			var chmodProcess = Process.Start("chmod", $"+x \"{scriptPath}\"");	 // Must be executable.
+			chmodProcess.WaitForExit();
+
+
 #if UNITY_EDITOR_OSX
+			bool terminalClosed = false;
 			Process process = Process.Start("/System/Applications/Utilities/Terminal.app/Contents/MacOS/Terminal", $"\"{scriptPath}\"");
-			terminalClosed = false;
 #else
-			(string, string, bool)[] terminals = {
+			bool terminalClosed = true;
+
+			(string, string)[] terminals = {
 				// Preferred terminal https://gitlab.freedesktop.org/terminal-wg/specifications/-/merge_requests/3
-				("xdg-terminal-exec", $"--hold -- sh \"{scriptPath}\"", true),
-				("gnome-terminal", $"--window --wait -- sh \"{scriptPath}\"", true),
-				// Tested on Ubuntu 24.04
-				("gnome-terminal", $"--window --execute \"{scriptPath}\"", false),
-				("konsole", $"-e \"sh {scriptPath}\"", true),
+				("xdg-terminal-exec", $"--hold -- sh \"{scriptPath}\""),
+				("gnome-terminal", $"--window --wait -- sh \"{scriptPath}\""),
+				("konsole", $"-e \"sh {scriptPath}\""),
 			};
+
 			bool terminalFound = false;
-			foreach (var (terminal, terminalArgs, waitForExit) in terminals) {
+			foreach (var (terminal, terminalArgs) in terminals) {
 				try {
 					Process process = Process.Start(terminal, terminalArgs);
 					if (process != null) {
 						terminalFound = true;
-						if (waitForExit) {
-							process.WaitForExit();
-							terminalClosed = true;
-						}
-						else {
-							terminalClosed = false;
-						}
+						process.WaitForExit();
 						break;
 					}
 				} catch (System.ComponentModel.Win32Exception) {
@@ -435,8 +434,11 @@ namespace DevLocker.VersionControl.WiseSVN.Shell
 
 			File.Delete(scriptPath);
 
-#else
+			// Interact with the user since we don't know when the terminal will close.
+			if (!terminalClosed)
+				UnityEditor.EditorUtility.DisplayDialog("Waiting for Terminal", "A terminal window was open requesting your input.\nWhen you are done with it, press \"Ready\".", "Ready");
 
+#else
 			ProcessStartInfo processStartInfo = new ProcessStartInfo(command, args);
 			processStartInfo.WindowStyle = ProcessWindowStyle.Normal;
 			processStartInfo.CreateNoWindow = false;
