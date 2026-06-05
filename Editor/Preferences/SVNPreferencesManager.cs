@@ -487,7 +487,7 @@ namespace DevLocker.VersionControl.WiseSVN.Preferences
 		internal void TryToAuthenticate()
 		{
 			if (EditorUtility.DisplayDialog("SVN Authenticate",
-				"This process will open a terminal window and starts an online request to your SVN repository. It will ask you to authenticate.\n\nThis is part of the SVN CLI process. WiseSVN doesn't know or store your username and password.",
+				"This process will open a terminal window and start an online request to your SVN repository. It will ask you to authenticate.\n\nThis is part of the SVN CLI process. WiseSVN doesn't know or store your username and password.",
 				"Proceed",
 				"Cancel")) {
 

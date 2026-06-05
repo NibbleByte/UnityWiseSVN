@@ -104,6 +104,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// </summary>
 		public StatusOperationResult LastError { get; private set; }
 
+		[SerializeField]
+		private bool m_PartialBranchingWarned = false;
+
 		//
 		//=============================================================================
 		//
@@ -476,6 +479,8 @@ namespace DevLocker.VersionControl.WiseSVN
 				return;
 			}
 
+			bool hasPartialBranch = false;
+
 			// Process the gathered statuses in the main thread, since Unity API is not thread-safe.
 			foreach (var pair in pendingData) {
 
@@ -519,7 +524,16 @@ namespace DevLocker.VersionControl.WiseSVN
 				SetStatusData(guid, statusData, false, true, isMeta);
 
 				AddModifiedFolders(statusData);
+
+				if (statusData.SwitchedExternalStatus == VCSwitchedExternal.Switched) {
+					hasPartialBranch = true;
+				}
 			}
+
+			if (!m_PartialBranchingWarned && hasPartialBranch != m_PartialBranchingWarned && !WiseSVNIntegration.Silent) {
+				EditorUtility.DisplayDialog("SVN Partial Branching", "Project has some files coming from a different branch. This is most likely a mistake.\n\nWhen switching between branches always do it from the top folder of the checkout and select \"Fully recursive\"!", "Ok");
+			}
+			m_PartialBranchingWarned = hasPartialBranch;
 		}
 
 		private void AddModifiedFolders(SVNStatusData statusData)
