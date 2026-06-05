@@ -484,6 +484,21 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 			m_Integration?.RepoBrowser(url, wait);
 		}
 
+		[MenuItem("Assets/SVN/\U0001F4CD  Switch Branch", false, MenuItemPriorityStart + 105)]
+		public static void SwitchAll()
+		{
+			Switch(WiseSVNIntegration.WorkingCopyRootPath(), WiseSVNIntegration.WorkingCopyRootURL(), wait: true);
+		}
+
+		/// <summary>
+		/// Open Switch dialog. localPath specifies the target directory and url the URL to switch to.
+		/// Most likely you want the root of the working copy (checkout), not just the Unity project. To get it use WiseSVNIntegration.WorkingCopyRootPath();
+		/// </summary>
+		public static void Switch(string localPath, string url, bool wait = false)
+		{
+			m_Integration?.Switch(localPath, url, wait);
+		}
+
 
 		[MenuItem("Assets/SVN/\U0001F440  Blame", false, MenuItemPriorityStart + 106)]
 		public static void BlameSelected()
@@ -591,15 +606,6 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		public static void CleanupAndDontWait()
 		{
 			m_Integration?.Cleanup(false);
-		}
-
-		/// <summary>
-		/// Open Switch dialog. localPath specifies the target directory and url the URL to switch to.
-		/// Most likely you want the root of the working copy (checkout), not just the Unity project. To get it use WiseSVNIntegration.WorkingCopyRootPath();
-		/// </summary>
-		public static void Switch(string localPath, string url, bool wait = false)
-		{
-			m_Integration?.Switch(localPath, url, wait);
 		}
 	}
 }
