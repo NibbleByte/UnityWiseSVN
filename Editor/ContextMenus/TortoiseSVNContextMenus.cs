@@ -212,7 +212,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 		public override void Cleanup(bool wait = false)
 		{
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:cleanup /path:\"{WiseSVNIntegration.ProjectRootNative}\"", wait);
-			if (result.HasErrors) {
+			if (result.HasErrors && result.ErrorCode != -1) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
@@ -235,7 +235,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus.Implementation
 				return;
 
 			var result = ShellUtils.ExecuteCommand(ClientCommand, $"/command:switch /path:\"{localPath}\" /url:\"{url}\"", wait);
-			if (result.HasErrors) {
+			if (result.HasErrors && result.ErrorCode != -1) {
 				Debug.LogError($"SVN Error: {result.Error}");
 			}
 		}
