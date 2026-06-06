@@ -1687,7 +1687,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// <summary>
 		/// Get working copy root path on disk (the root of your checkout). Working copy root can be different from the Unity project folder.
 		/// </summary>
-		public static string WorkingCopyRootPath()
+		public static string GetWorkingCopyRootPath()
 		{
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(ProjectRootNative)}\"", COMMAND_TIMEOUT);
 
@@ -1700,9 +1700,9 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// <summary>
 		/// Get working copy root URL at your svn repository. Working copy root can be different from the Unity project folder.
 		/// </summary>
-		public static string WorkingCopyRootURL()
+		public static string GetWorkingCopyRootURL()
 		{
-			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(WorkingCopyRootPath())}\"", COMMAND_TIMEOUT);
+			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(GetWorkingCopyRootPath())}\"", COMMAND_TIMEOUT);
 
 			if (result.HasErrors)
 				return string.Empty;
@@ -1714,7 +1714,7 @@ namespace DevLocker.VersionControl.WiseSVN
 		/// Get the revision number of the last change at specified location.
 		/// Returns -1 if failed.
 		/// </summary>
-		public static int LastChangedRevision(string assetPathOrUrl)
+		public static int GetLastChangedRevision(string assetPathOrUrl)
 		{
 			var result = ShellUtils.ExecuteCommand(SVN_Command, $"info \"{SVNFormatPath(assetPathOrUrl)}\"", COMMAND_TIMEOUT);
 

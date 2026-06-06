@@ -487,7 +487,7 @@ namespace DevLocker.VersionControl.WiseSVN.ContextMenus
 		[MenuItem("Assets/SVN/\U0001F4CD  Switch Branch", false, MenuItemPriorityStart + 105)]
 		public static void SwitchAll()
 		{
-			Switch(WiseSVNIntegration.WorkingCopyRootPath(), WiseSVNIntegration.WorkingCopyRootURL(), wait: true);
+			Switch(WiseSVNIntegration.GetWorkingCopyRootPath(), WiseSVNIntegration.GetWorkingCopyRootURL(), wait: true);
 		}
 
 		/// <summary>
