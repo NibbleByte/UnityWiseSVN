@@ -436,7 +436,7 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 								"Yes!", "No"
 								);
 							if (confirm && UnityEditor.SceneManagement.EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) {
-								var localPathNative = WiseSVNIntegration.WorkingCopyRootPath();
+								var localPathNative = WiseSVNIntegration.GetWorkingCopyRootPath();
 								var targetUrl = branchProject.BranchURL;
 
 								if (branchProject.BranchURL != branchProject.UnityProjectURL) {
@@ -716,7 +716,7 @@ namespace DevLocker.VersionControl.WiseSVN.Branches
 				}
 
 				if (jobData.LimitType == ConflictsScanLimitType.Revisions) {
-					var lastChangedRevision = WiseSVNIntegration.LastChangedRevision(targetURL);
+					var lastChangedRevision = WiseSVNIntegration.GetLastChangedRevision(targetURL);
 					if (lastChangedRevision < 0) {
 						// Probably doesn't exist in this branch.
 						logParams.RangeStart = "";
