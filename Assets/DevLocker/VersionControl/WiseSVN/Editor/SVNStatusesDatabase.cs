@@ -366,6 +366,10 @@ namespace DevLocker.VersionControl.WiseSVN
 			// Also all ignored entries do not appear in the "svn status" command, which we consider as "normal" status.
 			// This is why we need to collect actual ignored files, as there is no good other way to recognize them.
 			foreach (PropgetEntry propget in propgets) {
+
+				if (!File.Exists(propget.Path) && !Directory.Exists(propget.Path))
+					continue;
+
 				foreach (string line in propget.Lines) {
 
 					// Skip hidden folders starting with ".". Some people put comments starting with "#".
@@ -398,6 +402,9 @@ namespace DevLocker.VersionControl.WiseSVN
 			}
 
 			foreach (PropgetEntry propget in propgets) {
+
+				if (!File.Exists(propget.Path) && !Directory.Exists(propget.Path))
+					continue;
 
 				// Start folder is returned as "."
 				if (propget.Path == ".") {
